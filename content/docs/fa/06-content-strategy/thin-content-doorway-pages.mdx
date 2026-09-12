@@ -1,0 +1,93 @@
+---
+title: محتوای نازک و صفحهٔ doorway
+description: صفحه‌ای که برای قیف کوئری وجود دارد — قالب شهر/کلمه، مقدمهٔ spun — در مقابل سندی واقعی که شغل را تمام می‌کند.
+module: 06-content-strategy
+topic_order: 6
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Thin content** URLی است که کوئری را راضی نمی‌کند: آرشیو تگ خالی، «راهنمای» سه‌جمله‌ای، صفحهٔ افیلیت بدون ارزش اضافه، متن scrape یا spun.
+
+**Doorway** (سیاست اسپم گوگل) URL مقیاس‌شده‌ای است که کاربر را بفرستد جلو — معمولاً خیلی لندینگ نزدیک-تکراری برای واریانت کوئری (`/plumber-tehran`، `/plumber-karaj`، …) با جوهر یکتای کم.
+
+هر URL لوکیشن doorway نیست. شعبهٔ واقعی با NAP، ساعت، و کپی یکتا سئوی لوکال است (ماژول ۰۵). CSV شهر با یک H1 عوض‌شده doorway است.
+
+تعمیر: سند یکتا برای شغل واقعی؛ کارخانه را 301/410 کن؛ ۱۰٬۰۰۰ doorway را `noindex` نکن و در sitemap لینک نگه دار.
+
+## چرا مهم است
+
+Doorway می‌تواند «کار کند» تا classifier یا آپدیت اسپم. پاکسازی مهاجرت است. پیشگیری تقویمی است که حجم-بدون-جوهر را رد می‌کند.
+
+<CorrectExample title="درست">
+یک کافه `/locations/example-st` با NAP و عکس واقعی دارد. شهرهای نزدیکی که سرویس **نمی‌دهی** صفحه نیستند. راهنمای `/guides/espresso-machines` شغل commercial را یک‌بار پوشش می‌دهد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="صفحهٔ برنامه‌ای شهر × خدمت با boilerplate مشترک و جعبهٔ سرچ doorway است. تگ نازک وبلاگ را duplicate می‌کند.">
+```html
+<h1>SEO in {city}</h1>
+<p>We are the leading SEO agency in {city}. Contact us.</p>
+<form action="/"><input name="q" /></form>
+```
+
+`{city}` × ۴۰۰. همان پاراگراف. بدون دفتر.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. taxonomy نازک را noindex کن (تگ، نویسندهٔ خالی، آرشیو تاریخ) مگر hub باشند.
+2. پلاگین «لندینگ انبوه» که per شهر پست می‌سازد نصب نکن.
+
+**Rank Math**
+
+1. Rank Math هر CPT که تیک بزنی را sitemap می‌کند. `city-landing` را ایندکس‌پذیر ثبت نکن.
+2. ریدایرکت: کارخانه را به hub واقعی 301 کن، نه به `/` به‌عنوان کشوی آشغال (soft 404).
+
+**AIOSEO**
+
+1. همان انضباط sitemap.
+2. «SEO برای هر لوکیشن» فقط وقتی لوکیشن وجود دارد (ماژول ۰۵).
+
+**جا خالی واقعی:** Rank Math/AIOSEO/SEOPress CPT را آسان می‌کنند. Yoast اگر WP منتشر کند باز ایندکس می‌کند. doorway انتخاب IA است.
+
+## پیاده‌سازی کد
+
+```ts
+export function generateStaticParams() {
+  return getRealLocations().map((loc) => ({ slug: loc.slug }));
+  // not: cities.map((c) => ({ slug: c }))
+}
+```
+
+App Router: `generateStaticParams` از موجودی **واقعی** (محصولی که می‌فروشی، دفتری که نیرو داری، داکی که نوشتی). Pages Router: `getStaticPaths` همان. `[city]/[service]/page.tsx` که فقط رشته interpolate می‌کند پیاده‌سازی doorway است.
+
+`robots` / canonical کارخانه‌ای را که از فوتر لینک می‌دهی نجات نمی‌دهد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «اگر ۳۰۰ کلمه داشته باشند doorway خوب است.»
+- **DEPRECATED:** صفحهٔ افیلیت بدون ارزیابی اصلی به‌عنوان «محتوا.»
+- doorway را noindex کن ولی در لندینگ آگهی + sitemap نگه دار.
+- pagination نازک همان ده پست به‌عنوان «محتوای بیشتر.»
+- صدا زدن صفحهٔ شهر AI «programmatic SEO» به‌عنوان تعریف (موضوع سیاست AI).
+
+## نکته‌های سطح بالا / پروداکشن
+
+Programmatic SEO *مشروع* = دادهٔ یکتا (موجودی واقعی، اندازه‌گیری واقعی، موجودی واقعی) در مقیاس. اگر تنها توکن یکتا اسم شهر است، doorway است.
+
+ممیزی: یکتایی title در crawl، simhash بدنه، الگوی اینلینک. هزاران URL با همان ۸۰ توکن اول بو است.
+
+اگر کارخانه به ارث بردی: اول ژنراتور را قطع کن، بعد هرس (موضوع ممیزی)، بعد درخواست recrawl. هر شهر را به صفحهٔ پول‌ساز نامرتبط 301 نکن (شبیه soft-404).
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| crawl عنوان | شغل یکتا | قالب `{city}` |
+| بدنه | first-party یا NAP واقعی | boilerplate + توکن |
+| params | لوکیشن/محصول واقعی | CSV شهر |
+| GSC | — | الگوی اسپم / نازک / doorway در coverage |

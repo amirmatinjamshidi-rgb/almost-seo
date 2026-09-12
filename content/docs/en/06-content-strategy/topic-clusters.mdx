@@ -1,0 +1,116 @@
+---
+title: Topic clusters
+description: Pillar plus supporting URLs plus internal links — the publishing pattern that turns keyword clusters into an IA you can maintain.
+module: 06-content-strategy
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **topic cluster** is how you *publish*: one **pillar** (hub) that covers the parent job, **supporting** URLs for distinct child jobs, and **internal links** both ways. Module 01 clustering decides *how many* URLs. This page is the editorial machine that ships them without cannibalization.
+
+Shape:
+
+- Pillar = the IA hub (`/guides/espresso-machines`). Unique intro, map of children, not a dump of every child article pasted twice.
+- Support = one intent each (`plumbed-in vs tank`, `maintenance`). Not a synonym of the pillar.
+- Links: pillar lists children with real `<a href>`; children link up and sideways. Orphans are a strategy failure, not a crawler mystery.
+
+Do not call 40 unrelated blog posts a cluster because they share a tag. Tags are not an IA.
+
+## Why it matters
+
+Calendars that ignore clusters ship cannibal URLs and thin tails. Clusters let specialists own a topic in Search instead of spraying one-off posts.
+
+<CorrectExample>
+Pillar `/guides/espresso-machines` plus two children. Hub HTML lists both. Each child has an H1 the pillar does not copy.
+
+```html
+<h1>Espresso machines</h1>
+<ul>
+  <li><a href="/guides/espresso-machines/plumbed-in-vs-tank">Plumbed-in vs tank</a></li>
+  <li><a href="/guides/espresso-machines/maintenance">Maintenance</a></li>
+</ul>
+```
+</CorrectExample>
+
+<IncorrectExample why="A tag archive plus three spun ‘ultimate guides’ is not a cluster. Googlebot sees duplicates; writers see a checklist.">
+```txt
+/blog/espresso-guide
+/blog/espresso-guide-2026
+/blog/best-espresso-guide
+/tag/espresso
+```
+
+No hub, no distinct H1s, related-posts widget as the only links.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Mark the pillar as cornerstone. Supporting posts link to it in the body, not only in a widget.
+2. Do not make the tag archive the pillar if it is a thin loop.
+
+**Rank Math**
+
+1. Rank Math pillar / focus keyword: one pillar URL. Do not clone it for “cluster members.”
+2. Related posts: disable if it links three cannibals together.
+
+**AIOSEO**
+
+1. Same cornerstone-style flag. Category can be the hub **if** it has unique copy, not ten posts and an H1 that is the keyword only.
+2. Do not auto-generate “cluster” landing pages from a keyword list.
+
+**Feature gap:** Plugins store a flag. They do not design the map. SEOPress has no magic cluster builder. The map lives in a sheet or git.
+
+## Code implementation
+
+```ts
+export const espressoCluster = {
+  pillar: "/guides/espresso-machines",
+  children: [
+    "/guides/espresso-machines/plumbed-in-vs-tank",
+    "/guides/espresso-machines/maintenance",
+  ],
+};
+
+export function ClusterNav({ cluster }: { cluster: typeof espressoCluster }) {
+  return (
+    <nav>
+      <a href={cluster.pillar}>Hub</a>
+      {cluster.children.map((href) => (
+        <a key={href} href={href}>{href.split("/").pop()}</a>
+      ))}
+    </nav>
+  );
+}
+```
+
+App Router: `generateStaticParams` from the cluster map, not from a raw keyword CSV (Module 01). Pages Router: same. This encyclopedia’s folders (`06-content-strategy/…`) are the same pattern.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Every cluster needs exactly eight spokes.” Count comes from distinct intents.
+- **DEPRECATED:** Tag pages as pillars by default.
+- Publishing the pillar last “when we have all spokes” and leaving orphans live for months.
+- Linking only with a related-posts plugin.
+- English pillar + Persian thin copies without hreflang (Modules 02 / 03).
+
+## Senior / production notes
+
+Owner per cluster (editor, not “the blog”). New idea: does it join an existing pillar or start a new one? If it is a synonym, it is a heading, not a URL.
+
+After ship: add the child to the pillar list in the **same release**. GSC queries that hit the wrong spoke are a cluster bug.
+
+Do not mix a transactional PDP into an informational pillar as a “spoke” unless the SERP agrees (Module 01 intent).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Crawl from pillar | All children via HTML | Widget-only / orphans |
+| H1s | Distinct jobs | Synonym clones |
+| GSC | Queries collapse onto the right URL | Split across clones |
+| Nav | Matches the map | Tag soup |

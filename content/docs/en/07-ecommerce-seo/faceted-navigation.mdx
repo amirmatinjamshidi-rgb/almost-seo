@@ -1,0 +1,131 @@
+---
+title: Faceted navigation
+description: Filters are UX — only allowlisted combinations become landing pages. The rest canonical, noindex, hash, or robots-disallow. Empty combos 404.
+module: 07-ecommerce-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Faceted navigation** lets shoppers filter a category (color, size, brand, price, sort). Each extra dimension can mint a new URL. A 2,000-SKU catalog can emit millions of combinations.
+
+Write a **facet policy** before the theme ships (duplicate content at scale, Module 03):
+
+| Bucket | Typical | Index | Crawl |
+| --- | --- | --- | --- |
+| Landing | One facet with real demand + unique copy (`red running shoes`) | Yes, self-canonical, sitemap, linked from the hub | Yes |
+| Useful, not Search | Sort, view, session, price slider, multi-select stacks | `noindex,follow` **or** canonical to the clean category | Yes so Google can read the tag |
+| Trap | Infinite combos, empty sets, duplicate filter order | Never | Stop: `robots.txt` Disallow, or **hash** filters (`#color=red`) so no crawlable URL exists |
+
+Google’s crawling doc (updated 2025-12): if you do **not** need facets in Search, **prevent crawling**. `rel=canonical` and `rel=nofollow` on facet links are weaker. `robots.txt` Disallow means Google **cannot** see a canonical or `noindex` on that URL — do not stack Disallow with those tags and expect them to work.
+
+Empty or nonsense combinations: HTTP **404** on that URL, not a 200 empty grid and not a 302 to a generic error page.
+
+The old Search Console **URL Parameters** tool is gone. Architecture is the control.
+
+## Why it matters
+
+Googlebot that spends the week on `?sort=` never finishes new PDPs (crawl budget, Module 03). Self-canonical on every combo inflates the index. A real long-tail shelf (`/c/shoes/red`) can rank — only if you **chose** it.
+
+<CorrectExample>
+Allowlist: `/c/espresso-machines` indexable. `/c/espresso-machines/plumbed-in` is a child category with unique copy, in the sitemap. `?sort=price` canonicals to the clean category (or `noindex`). `?color=red&size=58mm&sort=price` is not linked in HTML; `robots.txt` Disallows stacked query filters. Zero-result combo returns 404.
+</CorrectExample>
+
+<IncorrectExample why="Every widget link is indexable, self-canonical, and in the sitemap. Empty filters 200. Crawl never reaches new SKUs.">
+```txt
+/c/espresso-machines?color=red&size=58&sort=price&view=grid
+<link rel="canonical" href="https://www.example.com/c/espresso-machines?color=red&size=58&sort=price&view=grid" />
+```
+
+Footer dumps 50,000 filter URLs. `Disallow: /*?*` **and** a canonical on those URLs — Googlebot never reads the canonical.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not implement a facet policy. Canonical on the archive follows the request URL unless you override.
+2. If a filter plugin prints crawlable links in the footer, Yoast cannot unsay them. Change the filter plugin.
+
+**Rank Math**
+
+1. Canonical / noindex on **term** archives is not a per-query-string policy. FacetWP / Woo layered nav need their own SEO settings.
+2. Do not “canonical all URLs to the shop home.”
+
+**AIOSEO**
+
+1. Same: taxonomy robots ≠ filter parameters.
+2. Disable duplicate sitemap entries for filtered URLs if a filter plugin adds them.
+
+**Feature gap:** Rank Math / AIOSEO / SEOPress expose more archive toggles; none replace an allowlist. WooCommerce native layered nav and FacetWP mint `?filtering=` / path URLs — that is the footgun. SEOPress WooCommerce canonicals are a separate checklist (variations vs parent), not facet IA.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+const LANDING_COLORS = new Set(["red", "black"]);
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ color?: string; sort?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { color, sort } = await searchParams;
+  const clean = `https://www.example.com/c/${slug}`;
+
+  if (sort) {
+    return { alternates: { canonical: clean }, robots: { index: false, follow: true } };
+  }
+
+  if (color && LANDING_COLORS.has(color)) {
+    return { alternates: { canonical: `${clean}/${color}` } };
+  }
+
+  if (color) {
+    return { alternates: { canonical: clean }, robots: { index: false, follow: true } };
+  }
+
+  return { alternates: { canonical: clean } };
+}
+```
+
+App Router: prefer path allowlist (`/c/[slug]/[color]`) for landing facets; keep sort in `searchParams` with `noindex` or canonical. Pages Router: same split in `getServerSideProps`. Hash filters (`#sort=price`) if the combo must never be crawled.
+
+`app/robots.ts`: Disallow known trap parameters. Do not Disallow the landing facet paths.
+
+Empty combo: `notFound()` (404), not a 200 “0 products.”
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Search Console URL Parameters tool as the facet control.
+- **DEPRECATED:** “Canonical alone fixes crawl budget.” Canonical is a hint after crawl.
+- `robots.txt` Disallow **plus** `noindex` on the same pattern.
+- Indexing sort/view as landing pages.
+- 200 on zero-result filters (Google: 404).
+- Comma/semicolon parameter separators crawlers miss (`&` is the documented separator).
+- Path filters in random order (`/red/shoes` and `/shoes/red` both 200).
+
+## Senior / production notes
+
+Engineering implements the allowlist; SEO does not “set canonical in the plugin” after 8 million URLs exist. Log Googlebot: if 90% of hits are query strings, IA is the bug.
+
+Landing facets need **unique copy** (category optimization topic). A `?color=red` clone of the parent is a duplicate, not a hub.
+
+i18n: the same allowlist per locale. Do not index English facets on `/fa` URLs.
+
+Pagination × facets is a second explosion — paginate the clean category and the allowlisted landings only (category pagination topic).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Policy sheet vs live | Allowlist in sitemap; traps not linked | Every checkbox mints an indexable URL |
+| Zero results | 404 | 200 empty / 302 to `/404` |
+| `robots.txt` vs tags | Disallow **or** crawlable noindex/canonical | Both on the same URL |
+| Logs | Googlebot on PDPs + hubs | Mostly `?sort=` / stacked filters |

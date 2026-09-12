@@ -1,0 +1,98 @@
+---
+title: Content audits and pruning
+description: Inventory URLs by job and performance — keep, refresh, merge, or kill — instead of adding more to a rotting tree.
+module: 06-content-strategy
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **content audit** lists indexable URLs with: template, cluster, GSC clicks/impressions, conversions if you have them, last meaningful update, status code, intent. **Pruning** is what you do with losers: 301 to a better URL, `410`/`404` if nothing should replace them, `noindex` only when the URL must stay live (filters, thank-you).
+
+This is not “delete everything with low traffic.” Brand, legal, and support URLs can be quiet and still required. It is not “keep everything because it might rank someday.”
+
+Order: classify (keep / refresh / consolidate / kill) → fix internals and sitemaps in the **same** release as the status-code change (Module 03 404 vs 410, cannibalization).
+
+## Why it matters
+
+Index bloat (thin tags, old dated posts, doorways) competes with the URLs you care about. Audits are how large blogs stop growing worse.
+
+<CorrectExample>
+Sheet: 40 tag archives, zero unique copy, GSC “Crawled — currently not indexed” or tiny impressions. Decision: `noindex` tags + drop from sitemap, keep two tags that are real hubs with unique intros.
+
+Three “best espresso 2021/22/23” posts: 301 the old slugs to `/guides/espresso-machines`.
+</CorrectExample>
+
+<IncorrectExample why="Deleting winners, 301-everything-to-home, or noindex without removing sitemap locs creates soft-404s and mixed signals.">
+```txt
+# "cleanup"
+301 /guides/espresso-machines → /
+410 /about
+noindex every blog post "to focus PageRank"
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Search Appearance → taxonomies: `noindex` empty tags. After bulk noindex, fetch `sitemap_index.xml`.
+2. Redirects (Premium) or a redirect plugin for consolidations. Export the map.
+
+**Rank Math**
+
+1. Rank Math redirections + sitemap exclusions. 404 monitor is not an audit.
+2. Do not auto-redirect all 404s to `/`.
+
+**AIOSEO**
+
+1. Same: sitemap off for pruned types; 301 map in redirects addon.
+2. Bulk edit robots meta; then crawl a sample.
+
+**Feature gap:** Plugins do not join GSC with your IA. SEOPress / Rank Math / AIOSEO / Yoast will apply robots and sitemaps once you decide. The decision is a sheet + Search Console.
+
+## Code implementation
+
+```ts
+type AuditAction = "keep" | "refresh" | "redirect" | "gone";
+
+export function nextAction(row: {
+  clicks: number;
+  isLegal: boolean;
+  hasSuccessor: boolean;
+}): AuditAction {
+  if (row.isLegal) return "keep";
+  if (row.hasSuccessor) return "redirect";
+  if (row.clicks === 0) return "gone";
+  return "refresh";
+}
+```
+
+App Router: pruning is `redirects()` / `notFound()` / `410` handlers (Module 03), plus `getIndexableUrls()` for `sitemap.ts`. Pages Router: same. Never leave the old path `200` with a “we moved” paragraph and a self-canonical.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “PageRank is lost if you 404.” Gone URLs should be gone; successors get 301s.
+- **DEPRECATED:** Prune by bounce rate alone in GA4 (that metric is easy to misread).
+- Killing a URL that still has the only unique compliance copy.
+- Refreshing instead of merging when two URLs are cannibals.
+- Audits that never look at logs / coverage — only at a “content score” plugin.
+
+## Senior / production notes
+
+Cadence: quarterly for mid-size, monthly during migrations. Slice by template (`/blog/*`, `/docs/*`, `/product/*`).
+
+For Persian/English pairs: do not prune `/fa/` because GSC `en` looks stronger. Check each locale property.
+
+Legal hold: some URLs cannot 410 even if they have zero clicks. Mark them `keep` in the sheet.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Sample pruned URLs | 301 or 410 as planned | 200 thin leftovers |
+| Sitemap | Matches keep list | Dead locs |
+| GSC | Soft 404 / not found explained | Spike of mystery excludes |
+| Internals | No links to killed URLs | Nav still points at 404s |

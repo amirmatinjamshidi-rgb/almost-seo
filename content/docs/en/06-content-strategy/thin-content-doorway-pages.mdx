@@ -1,0 +1,93 @@
+---
+title: Thin content and doorway pages
+description: Pages that exist to funnel queries — city/keyword templates, spun intros — versus a real document that finishes a job.
+module: 06-content-strategy
+topic_order: 6
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Thin content** is a URL that does not satisfy the query: empty tag archives, three-sentence “guides,” affiliate pages with no added value, scraped or spun text.
+
+**Doorway pages** (Google spam policies) are scaled URLs built to send users onward — typically many near-duplicate landing pages targeting query variants (`/plumber-tehran`, `/plumber-karaj`, …) with little unique substance.
+
+Not every location URL is a doorway. A real branch with NAP, hours, and unique copy is local SEO (Module 05). A CSV of cities with one swapped H1 is a doorway.
+
+Fix: unique documents for real jobs; 301/410 the mill; do not `noindex` 10,000 doorways and keep linking them in the sitemap.
+
+## Why it matters
+
+Doorways can “work” until a classifier or a spam update. Cleanup is a migration. Prevention is a calendar that refuses volume-without-substance.
+
+<CorrectExample>
+One café has `/locations/example-st` with real NAP and photos. Nearby cities you do **not** serve are not pages. The guide `/guides/espresso-machines` covers the commercial job once.
+</CorrectExample>
+
+<IncorrectExample why="Programmatic city × service pages with a shared boilerplate and a search box are doorways. Thin tags duplicate the blog.">
+```html
+<h1>SEO in {city}</h1>
+<p>We are the leading SEO agency in {city}. Contact us.</p>
+<form action="/"><input name="q" /></form>
+```
+
+`{city}` × 400. Same paragraph. No office.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Noindex thin taxonomies (tags, empty authors, date archives) unless they are hubs.
+2. Do not install “mass landing page” plugins that create a post per city.
+
+**Rank Math**
+
+1. Rank Math will sitemap every CPT you tick. Do not register `city-landing` as indexable.
+2. Redirections: 301 the mill to a real hub, not to `/` as a junk drawer (soft 404).
+
+**AIOSEO**
+
+1. Same sitemap discipline.
+2. “SEO for each location” only when the location exists (Module 05).
+
+**Feature gap:** Rank Math/AIOSEO/SEOPress make CPTs easy. Yoast will still index them if WP publishes them. The doorway is an IA choice.
+
+## Code implementation
+
+```ts
+export function generateStaticParams() {
+  return getRealLocations().map((loc) => ({ slug: loc.slug }));
+  // not: cities.map((c) => ({ slug: c }))
+}
+```
+
+App Router: `generateStaticParams` from **real** inventory (products you sell, offices you staff, docs you wrote). Pages Router: `getStaticPaths` same. A `[city]/[service]/page.tsx` that only interpolates strings is the doorway implementation.
+
+`robots` / canonical will not save a mill you keep linking from the footer.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Doorways are fine if they have 300 words.”
+- **DEPRECATED:** Affiliate pages with no original evaluation as “content.”
+- noindex doorways but keep them in ads landing + sitemap.
+- Thin pagination of the same ten posts as “more content.”
+- Calling AI city pages “programmatic SEO” as a compliment (AI policy topic).
+
+## Senior / production notes
+
+Programmatic SEO *legitimate* = unique data (real inventory, real measurements, real availability) at scale. If the only unique token is the city name, it is a doorway.
+
+Audit: crawl title uniqueness, body simhash, inlink patterns. Thousands of URLs with the same first 80 tokens are the smell.
+
+If you inherit a mill: stop the generator first, then prune (audit topic), then request recrawl. Do not 301 every city to a money page that is irrelevant (soft-404-like).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Title crawl | Unique jobs | `{city}` templates |
+| Body | First-party or real NAP | Boilerplate + token |
+| Params | Real locations/products | City CSV |
+| GSC | — | Spam / thin / doorway patterns in coverage |

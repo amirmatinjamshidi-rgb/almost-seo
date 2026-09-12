@@ -1,0 +1,102 @@
+---
+title: AI content policy
+description: Google’s bar is helpful, original-for-people work — scaled unoriginal AI (or human) pages to manipulate Search are spam, not a workflow.
+module: 06-content-strategy
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google’s spam policies cover **scaled content abuse**: many pages whose purpose is to manipulate ranking, whether they were written by humans, templates, or generative models. Using AI as a *tool* (outline, translation draft, code comment) is not banned. Shipping 5,000 near-duplicate “guides” a week with no SME is the policy problem.
+
+Practical bar, same as human content:
+
+- Would you show it to a user if Search did not exist?
+- Does it add observation, method, or first-party detail a model cannot know (your screenshots, your `robots.ts`, your measurements)?
+- Is there an owner who will fix it when it is wrong?
+
+Disclosure of AI use is a trust/legal choice; it is not a ranking cheat code. Fake “human written” labels on slurry are worse.
+
+Do not invent citations, stats, or plugin UI that does not exist (this encyclopedia’s hard rule). Models hallucinate APIs — verify in the product.
+
+## Why it matters
+
+A calendar that is “ChatGPT × keyword CSV” is a doorway factory with extra steps. Manual actions and automated classifiers do not care that the invoice said “AI efficiency.”
+
+<CorrectExample>
+Editor briefs a cluster URL. Model drafts a section. Human rewrites with a real `curl` example, current Search Central claim, and a `why` on the incorrect example. `last_reviewed` is a person. FA is re-explained, not calqued.
+</CorrectExample>
+
+<IncorrectExample why="Unreviewed bulk generation is scaled content abuse even if each page has a unique city name.">
+```txt
+prompt: write 800 words SEO for {city} {service}
+publish: /seo/{city}
+schema: Article + fake author
+```
+
+Five hundred URLs, same outline, stock images, no business in those cities.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast traffic lights will go green on fluent slurry. They do not detect policy risk.
+2. Do not auto-publish from a GPT plugin into `publish`. Draft + human.
+
+**Rank Math**
+
+1. Rank Math Content AI is a drafting aid. Bulk “write 50 posts” is the abuse pattern if you ship them raw.
+2. Instant Indexing those URLs faster is not a defense.
+
+**AIOSEO**
+
+1. Same: analyzer scores ≠ helpfulness.
+2. Author schema on a bot user: do not.
+
+**Feature gap:** Rank Math’s generator is the most tempting footgun. Yoast/AIOSEO/SEOPress will all index whatever you publish. No plugin is a compliance officer.
+
+## Code implementation
+
+Do not build a route that publishes model output to the index unreviewed:
+
+```ts
+// private draft pipeline — not a public GET that 200s unique city pages
+export async function POST(req: Request) {
+  const brief = await req.json();
+  const draft = await generateDraft(brief); // internal
+  await saveDraft({ ...draft, status: "needs_review" });
+  return Response.json({ id: draft.id, index: false });
+}
+```
+
+App Router: drafts stay `noindex` until an editor flips `robots`. Pages Router: same. `generateStaticParams` from a city list for “AI landing pages” is the doorway implementation (next topic).
+
+Never put API keys in client bundles to “generate on the fly” for Googlebot.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Google bans all AI content.” It targets scaled unoriginal/spam, not the tool.
+- **DEPRECATED:** Spinning / spinning-via-LLM as “unique.”
+- Auto-translating `en` → `fa` without a native edit (this project’s FA rule).
+- Fake E-E-A-T bylines on generated posts (Module 04).
+- Citing the model as a source for Search Central facts.
+
+## Senior / production notes
+
+Policy in writing: what AI may draft, what it may not (YMYL claims, legal, medical, invented APIs), who signs `last_reviewed`. Log prompts only if you have a retention/privacy story.
+
+If you already shipped a mill: stop generation, audit, 301/410 the junk, keep the few URLs a human will own (pruning topic).
+
+This site’s MDX is human-owned. Models may assist; they do not get a `generateStaticParams` of keywords.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Sample new URLs | First-party detail | Template + city token |
+| Author | Real or omitted | Ghost SME |
+| GSC | No mill of thin hosts | Scaled “Crawled not indexed” / spam |
+| FA/EN | Re-explained | Calque |

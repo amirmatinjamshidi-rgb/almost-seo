@@ -1,0 +1,100 @@
+---
+title: Refreshing old content
+description: Update the document Google already has — same URL, real diff, new lastmod — instead of a ‘2026’ clone that cannibalizes the winner.
+module: 06-content-strategy
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **refresh** is a meaningful change to a live URL: facts, screenshots, examples, sections the SERP now demands, broken links, last-reviewed date. The slug stays. `lastmod` in the sitemap moves **only** if the content changed (Module 03 sitemaps).
+
+It is not: appending “2026” to the title, spinning paragraphs, or publishing `/guide-2026` beside `/guide`. That is cannibalization (Module 01) plus a fake freshness signal.
+
+When the job of the query changed (informational SERP became product grid), you may need a **new** URL or a template change — that is a brief, not a date stamp.
+
+Google does not publish a “freshness score” you can paint on. Some queries are time-sensitive (docs, prices, APIs); some are not (history of a file format). Refresh where staleness hurts the user.
+
+## Why it matters
+
+Winners rot: old plugin screenshots, dead `rel=next` advice, expired stats. A clone URL splits the history you already earned. Refreshing the canonical is almost always cheaper than a new post.
+
+<CorrectExample>
+`/docs/robots-txt` still the URL. Diff: Crawl-delay myth updated, `app/robots.ts` example matches Next 16, `last_reviewed: "2026-09"`. Sitemap `lastModified` for that loc only. Internals still point here.
+</CorrectExample>
+
+<IncorrectExample why="A new dated slug throws away the old URL’s links and competes with it. A title-only ‘Updated 2026’ trains nobody.">
+```txt
+/docs/robots-txt          (unchanged 2023 body)
+/docs/robots-txt-2026     (copy + year in H1)
+<title>robots.txt (Updated 2026)</title>  <!-- body still 2023 -->
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Edit the existing post. Yoast does not need a new “SEO title 2026” if the job is the same.
+2. After substantial updates, recrawl in GSC URL Inspection. Do not duplicate the post.
+
+**Rank Math**
+
+1. Rank Math “updated date” in snippets: only if `the_modified_date` is real. Fake modified dates are a trust issue.
+2. Do not use Rank Math redirect to send the old slug to a new `-2026` slug as a “refresh.”
+
+**AIOSEO**
+
+1. Same: modify in place. Open Graph dates should follow the real modified time.
+2. Disable plugins that randomize `modified` on every save of unrelated options.
+
+**Feature gap:** All four will let you stamp dates. None know if the body changed. SEOPress / Yoast / Rank Math / AIOSEO “freshness” features are display, not strategy.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "robots.txt",
+};
+
+// sitemap.ts — lastModified from git or CMS, not build clock
+export async function sitemapEntry(slug: string, updatedAt: Date) {
+  return {
+    url: `https://www.example.com/docs/${slug}`,
+    lastModified: updatedAt,
+  };
+}
+```
+
+App Router MDX: `last_reviewed` in frontmatter (this site). Pages Router: `updatedAt` from CMS. Do not set `lastModified: new Date()` for every URL on each build.
+
+`dateModified` in JSON-LD must match reality.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** New URL with the year as the default refresh tactic.
+- **DEPRECATED:** Changing `lastmod` sitewide to force recrawl.
+- Refreshing by adding 400 words of fluff (Module 02 depth).
+- Leaving old screenshots of Yoast 11 while the heading says 2026.
+- “Update all posts” weekends that touch `modified` without edits.
+
+## Senior / production notes
+
+Queue refreshes from GSC: falling CTR, queries you lost to a SERP-feature change, pages with outdated Search Central claims. Pair with the calendar’s maintain lane.
+
+For YMYL, a refresh includes a human reviewer, not only a writer.
+
+i18n: refresh `en` and `fa` together when the fact changes (hreflang pair). A 2026 English body and a 2023 Persian body is a cluster lie.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| URL | Same slug | `-2026` sibling 200 |
+| Diff | Substance changed | Title/date only |
+| Sitemap lastmod | That URL only | Entire file “now” |
+| JSON-LD dateModified | Matches | Stale or fake-now |

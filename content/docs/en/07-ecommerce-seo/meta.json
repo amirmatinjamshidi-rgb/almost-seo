@@ -1,0 +1,11 @@
+{
+  "title": "Ecommerce SEO",
+  "defaultOpen": true,
+  "pages": [
+    "product-category-optimization",
+    "faceted-navigation",
+    "product-schema",
+    "out-of-stock-handling",
+    "category-pagination"
+  ]
+}

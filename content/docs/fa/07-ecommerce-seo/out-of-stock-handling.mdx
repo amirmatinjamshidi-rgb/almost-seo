@@ -1,0 +1,137 @@
+---
+title: محصول ناموجود
+description: OOS موقت 200 می‌ماند با OutOfStock صادق. جانشین 301 می‌گیرد. رفته‌برای‌همیشه 410 (یا 404). هرگز InStock جعلی یا 404 روی restock.
+module: 07-ecommerce-seo
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+موجودی مسئلهٔ **چرخهٔ سند** است، نه ترفند schema.
+
+**موقتاً ناموجود** (دوباره می‌فروشی):
+
+- **همان URL**، HTTP **200**.
+- «ناموجود» / UX برگشت موجودی دیدنی. محصول موجود مشابه در HTML.
+- `Offer.availability` = `OutOfStock` (یا `BackOrder` / `PreOrder` اگر حقیقت همان است).
+- Merchant Center: `out_of_stock`، آیتم را **حذف نکن** تا relist سریع‌تر بماند. `out_of_stock` را فقط برای پنهان کردن SKU موجود از یک سطح استفاده نکن (`pause` / `excluded_destination`).
+
+**برای همیشه رفته، جایگزین هست:** **301** به SKU جانشین (یا همان سندی که همان محصول است). نه به صفحهٔ خانه.
+
+**برای همیشه رفته، جانشین نیست:** **410** (یا 404). `loc` sitemap را بردار، لینک داخلی را بردار. HTML سفارشی می‌تواند توضیح بدهد و به هاب دسته لینک بدهد — وضعیت باید 410/404 بماند (۴۰۴ در مقابل ۴۱۰، ماژول ۰۳).
+
+**Soft 404:** 200 با «این محصول وجود ندارد»، یا 302-همه-PDP-حذف‌شده-به-خانه. گوگل خطا می‌بیند و سند غلط را یاد دادی.
+
+هر URL ناموجود را به‌عنوان پاکسازی پیش‌فرض به دستهٔ والد 301 نکن — شغل دیگری است (اغلب خوشهٔ soft-404). دسته قفسه است، SKU نیست.
+
+## چرا مهم است
+
+404 روی PDP قابل‌restock رتبه و تاریخچهٔ Merchant Center را دور می‌ریزد. `InStock` جعلی وقتی گوگل صفحه یا checkout را چک کند listing را رد می‌کند. پوستهٔ خالی 200 ابدی URL نازک است.
+
+<CorrectExample title="درست">
+SKU فصلی، برگشت آبان: 200، «ناموجود»، JSON-LD `OutOfStock`، قیمت هنوز دیدنی، فید `out_of_stock`. لانچ جانشین: اسلاگ قدیم `301` به `/p/model-b`. discontinued بدون جایگزین: `410`، loc sitemap همان دیپلوی حذف.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="SKU قابل‌restock 404 می‌شود؛ SKU discontinued 200 InStock می‌ماند؛ حذف‌ها 302 به خانه. کاربر، Googlebot، و Merchant Center هر کدام دروغ جدا می‌گیرند.">
+```http
+GET /p/model-a
+HTTP/1.1 404
+```
+
+```json
+{ "availability": "https://schema.org/InStock" }
+```
+
+```http
+GET /p/deleted
+HTTP/1.1 302
+Location: /
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. یواست 200 در مقابل 410 را انتخاب نمی‌کند. **وضعیت موجودی** ووکامرس + «Hide out of stock items from the catalog» لیست را پنهان می‌کند؛ اگر محصول هنوز published است نباید PDP را 404 کند.
+2. زباله‌دان ≠ 410. قبل از حذف، وقتی جانشین هست در ریدایرکت Yoast Premium (یا پلاگین ریدایرکت) 301 بگذار.
+
+**Rank Math**
+
+1. ریدایرکت Rank Math: 301 به جانشین، 410 برای رفته. مانیتور 404 لاگ است، سیاست نیست.
+2. همهٔ 404 را خودکار به `/` نفرست.
+
+**AIOSEO**
+
+1. addon ریدایرکت: با `curl -I` برای 410 در مقابل 301 verify کن. قالبی که «pretty 404» را با **200** می‌دهد باگ soft-404 است.
+2. schema ووکامرس وقتی موجودی ۰ است باید به `OutOfStock` برگردد (موضوع schema محصول).
+
+**جا خالی واقعی:** مانیتور 404 Rank Math دیدنی‌ترین است. Yoast Premium / SEOPress / AIOSEO نقشهٔ ریدایرکت نگه می‌دارند؛ هیچ‌کدام «موقت در مقابل discontinued» را نمی‌دانند. آن فلگ در ووکامرس است (یا PIM تو). 410 در SEOPress راحت فراموش می‌شود اگر ویراستار فقط محصول را trash کند.
+
+## پیاده‌سازی کد
+
+```tsx
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  if (!product) return {};
+  return { title: product.name };
+}
+
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+  if (product.status === "discontinued" && product.successor) {
+    permanentRedirect(product.successor);
+  }
+  return <ProductView product={product} />;
+}
+```
+
+OOS موقت: `ProductView` با UI ناموجود؛ JSON-LD `OutOfStock` از همان فلگ `product.inStock`.
+
+410 واقعی: صفحهٔ App Router از `page.tsx` status دلخواه برنمی‌گرداند. Route Handler (الگوی ۴۰۴ در مقابل ۴۱۰، ماژول ۰۳) یا middleware که برای اسلاگ discontinued بدون جانشین 410 بگذارد.
+
+Pages Router: `res.statusCode = 410` در `getServerSideProps`. هرگز محصول خالی با 200 نفرست.
+
+موجودی را با فاصلهٔ کوتاه یا webhook انبار revalidate کن تا PDP استاتیک `InStock` فریز نکند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «همیشه OOS را 404 کن تا PageRank غلیظ شود.»
+- **DEPRECATED:** Soft 404 به‌عنوان UX دوستانه‌تر از 404/410 واقعی.
+- `InStock` جعلی تا آگهی Shopping بماند.
+- حذف آیتم Merchant Center در هر اتمام موجودی.
+- 301 هر SKU مرده به دسته یا خانه.
+- `noindex` 200 به‌جای 410 برای SKUای که هرگز نمی‌فروشی (URL آشغال می‌ماند).
+- پنهان کردن OOS از کاتالوگ **و** unpublish PDP در حالی که آگهی هنوز آنجا فرود می‌آید.
+
+## نکته‌های سطح بالا / پروداکشن
+
+یک enum: `in_stock` | `temporary_oos` | `discontinued`. به HTTP + schema + فید در یک جا نگاشت کن. تقویم تحریریه (ماژول ۰۶) باید «SKU فصلی DATE می‌رود 410» داشته باشد تا مهندسی غافلگیر نشود.
+
+لینک داخلی: گرید دسته نباید URL 410 را هنوز promote کند. ماژول similar-products روی PDP ناموجود باید به 200 زنده `href` بدهد.
+
+بین‌الملل: `en` discontinued / `fa` هنوز فروش دو سند است — هر دو لوکیل را در CDN با 410 نزن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| `curl -I` OOS موقت | 200 | 404 / 410 |
+| JSON-LD + HTML | `OutOfStock` + کپی ناموجود | `InStock` |
+| جانشین | 301 به PDP جدید | 302 خانه / پوستهٔ 200 |
+| discontinued، بدون جانشین | 410 یا 404؛ loc sitemap رفته | 200 نازک |
+| Merchant Center | `out_of_stock` با صفحه می‌خواند | رد به‌خاطر mismatch |

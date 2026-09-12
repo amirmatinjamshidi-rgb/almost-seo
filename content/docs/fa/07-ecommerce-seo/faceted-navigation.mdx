@@ -1,0 +1,131 @@
+---
+title: ناوبری facet
+description: فیلتر UX است — فقط ترکیب allowlist لندینگ می‌شود. بقیه canonical، noindex، hash، یا robots-disallow. ترکیب خالی 404.
+module: 07-ecommerce-seo
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Faceted navigation** می‌گذارد خریدار دسته را فیلتر کند (رنگ، سایز، برند، قیمت، sort). هر بُعد اضافه می‌تواند URL تازه بسازد. کاتالوگ ۲۰۰۰ SKU می‌تواند میلیون‌ها ترکیب بسازد.
+
+قبل از ship قالب **سیاست facet** بنویس (duplicate در مقیاس، ماژول ۰۳):
+
+| سطل | نمونه | ایندکس | خزش |
+| --- | --- | --- | --- |
+| لندینگ | یک facet با تقاضای واقعی + کپی یکتا (`red running shoes`) | بله، self-canonical، sitemap، لینک از هاب | بله |
+| مفید، نه Search | sort، view، session، اسلایدر قیمت، پشتهٔ multi-select | `noindex,follow` **یا** canonical به دستهٔ تمیز | بله تا گوگل تگ را بخواند |
+| تله | ترکیب بی‌نهایت، مجموعهٔ خالی، ترتیب تکراری فیلتر | هرگز | توقف: `robots.txt` Disallow، یا فیلتر **hash** (`#color=red`) تا URL crawlable نباشد |
+
+داک خزش گوگل (به‌روز ۲۰۲۵-۱۲): اگر facet را در Search **نمی‌خواهی**، **خزش را قطع کن**. `rel=canonical` و `rel=nofollow` روی لینک facet ضعیف‌ترند. `robots.txt` Disallow یعنی گوگل canonical یا `noindex` آن URL را **نمی‌بیند** — Disallow را با آن تگ‌ها روی هم نگذار و انتظار کار داشته باش.
+
+ترکیب خالی یا بی‌معنی: HTTP **404** روی همان URL، نه گرید خالی 200 و نه 302 به صفحهٔ خطای عمومی.
+
+ابزار قدیم **URL Parameters** در Search Console رفته. کنترل، معماری است.
+
+## چرا مهم است
+
+Googlebotی که هفته را روی `?sort=` می‌سوزاند PDP جدید را تمام نمی‌کند (crawl budget، ماژول ۰۳). self-canonical روی هر combo ایندکس را باد می‌کند. قفسهٔ long-tail واقعی (`/c/shoes/red`) می‌تواند رتبه بگیرد — فقط اگر **انتخابش کرده باشی**.
+
+<CorrectExample title="درست">
+Allowlist: `/c/espresso-machines` ایندکس‌پذیر. `/c/espresso-machines/plumbed-in` دستهٔ بچه با کپی یکتا، در sitemap. `?sort=price` به دستهٔ تمیز canonical می‌شود (یا `noindex`). `?color=red&size=58mm&sort=price` در HTML لینک نیست؛ `robots.txt` فیلتر query پشته‌ای را Disallow می‌کند. combo صفر-نتیجه 404 می‌دهد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="هر لینک ویجت ایندکس‌پذیر، self-canonical، و در sitemap است. فیلتر خالی 200. خزش هرگز به SKU جدید نمی‌رسد.">
+```txt
+/c/espresso-machines?color=red&size=58&sort=price&view=grid
+<link rel="canonical" href="https://www.example.com/c/espresso-machines?color=red&size=58&sort=price&view=grid" />
+```
+
+فوتر ۵۰ هزار URL فیلتر می‌ریزد. `Disallow: /*?*` **و** canonical روی همان URL — Googlebot canonical را نمی‌خواند.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. یواست سیاست facet پیاده نمی‌کند. canonical آرشیو از URL درخواست پیروی می‌کند مگر override کنی.
+2. اگر پلاگین فیلتر در فوتر لینک crawlable چاپ کند، یواست نمی‌تواند پس بگیرد. پلاگین فیلتر را عوض کن.
+
+**Rank Math**
+
+1. canonical / noindex روی آرشیو **term** سیاست per-query-string نیست. FacetWP / layered nav ووکامرس تنظیم SEO خودشان را می‌خواهند.
+2. «همهٔ URL را به خانهٔ فروشگاه canonical کن» نکن.
+
+**AIOSEO**
+
+1. همان: robots تاکسونومی ≠ پارامتر فیلتر.
+2. اگر پلاگین فیلتر loc فیلترشده به sitemap اضافه می‌کند، خاموشش کن.
+
+**جا خالی واقعی:** Rank Math / AIOSEO / SEOPress کلید آرشیو بیشتری نشان می‌دهند؛ هیچ‌کدام جایگزین allowlist نیستند. layered nav ووکامرس و FacetWP URL از نوع `?filtering=` / path می‌سازند — همان footgun. canonical ووکامرس SEOPress چک‌لیست جداست (variation در مقابل والد)، نه IAی facet.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+const LANDING_COLORS = new Set(["red", "black"]);
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ color?: string; sort?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { color, sort } = await searchParams;
+  const clean = `https://www.example.com/c/${slug}`;
+
+  if (sort) {
+    return { alternates: { canonical: clean }, robots: { index: false, follow: true } };
+  }
+
+  if (color && LANDING_COLORS.has(color)) {
+    return { alternates: { canonical: `${clean}/${color}` } };
+  }
+
+  if (color) {
+    return { alternates: { canonical: clean }, robots: { index: false, follow: true } };
+  }
+
+  return { alternates: { canonical: clean } };
+}
+```
+
+App Router: برای facet لندینگ مسیر allowlist (`/c/[slug]/[color]`) ترجیح؛ sort را در `searchParams` با `noindex` یا canonical نگه دار. Pages Router: همان تفکیک در `getServerSideProps`. فیلتر hash (`#sort=price`) اگر combo هرگز نباید خزش شود.
+
+`app/robots.ts`: پارامتر تله را Disallow کن. مسیر facet لندینگ را Disallow نکن.
+
+combo خالی: `notFound()` (404)، نه «۰ محصول» با 200.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** ابزار URL Parameters در Search Console به‌عنوان کنترل facet.
+- **DEPRECATED:** «canonical به‌تنهایی crawl budget را درست می‌کند.» canonical بعد از خزش hint است.
+- `robots.txt` Disallow **به‌علاوهٔ** `noindex` روی همان الگو.
+- ایندکس sort/view به‌عنوان لندینگ.
+- 200 روی فیلتر صفر-نتیجه (گوگل: 404).
+- جداکنندهٔ کاما/semicolon که crawler از دست می‌دهد (`&` جداکنندهٔ مستند است).
+- فیلتر path با ترتیب تصادفی (`/red/shoes` و `/shoes/red` هر دو 200).
+
+## نکته‌های سطح بالا / پروداکشن
+
+مهندسی allowlist را پیاده می‌کند؛ سئو بعد از هشت میلیون URL «canonical در پلاگین» نمی‌گذارد. لاگ Googlebot: اگر ۹۰٪ hitها query string است، باگ IA است.
+
+facet لندینگ **کپی یکتا** می‌خواهد (موضوع بهینه‌سازی دسته). کلون `?color=red` از والد duplicate است، نه هاب.
+
+i18n: همان allowlist per لوکیل. facet انگلیسی را روی URL `/fa` ایندکس نکن.
+
+pagination × facet انفجار دوم است — فقط دستهٔ تمیز و لندینگ allowlist را صفحه بزن (موضوع pagination دسته).
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| شیت سیاست در مقابل زنده | allowlist در sitemap؛ تله لینک نشده | هر چک‌باکس URL ایندکس‌پذیر می‌سازد |
+| صفر نتیجه | 404 | گرید خالی 200 / 302 به `/404` |
+| `robots.txt` در مقابل تگ | Disallow **یا** noindex/canonical crawlable | هر دو روی همان URL |
+| لاگ | Googlebot روی PDP + هاب | بیشتر `?sort=` / فیلتر پشته‌ای |

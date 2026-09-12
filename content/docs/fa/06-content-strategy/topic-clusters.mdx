@@ -1,0 +1,116 @@
+---
+title: خوشهٔ موضوع
+description: ستون به‌علاوهٔ URL پشتیبان به‌علاوهٔ لینک داخلی — الگوی انتشار که خوشهٔ کلمه را به IA قابل نگهداری تبدیل می‌کند.
+module: 06-content-strategy
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Topic cluster** یعنی *چطور* منتشر می‌کنی: یک **pillar** (hub) که شغل والد را پوشش می‌دهد، URL **پشتیبان** برای شغل بچهٔ جدا، و **لینک داخلی** دو طرفه. خوشه‌بندی ماژول ۰۱ می‌گوید *چند* URL. این صفحه ماشین تحریریه‌ای است که بدون cannibalization می‌فرستدشان.
+
+شکل:
+
+- Pillar = hub معماری (`/guides/espresso-machines`). مقدمهٔ یکتا، نقشهٔ بچه، نه paste دوبارهٔ هر مقالهٔ بچه.
+- Support = هر کدام یک نیت (`plumbed-in در مقابل tank`، `maintenance`). مترادف pillar نیست.
+- لینک: pillar بچه‌ها را با `<a href>` واقعی لیست می‌کند؛ بچه بالا و به پهلو لینک می‌دهد. یتیم شکست استراتژی است، نه راز کراولر.
+
+۴۰ پست بلاگ نامرتبط را چون تگ شریک‌اند خوشه صدا نکن. تگ IA نیست.
+
+## چرا مهم است
+
+تقویمی که خوشه را نادیده بگیرد URL cannibal و دم نازک می‌فرستد. خوشه می‌گذارد متخصص موضوع را در Search مال خود کند، نه پست یک‌باره بپاشد.
+
+<CorrectExample title="درست">
+Pillar `/guides/espresso-machines` به‌علاوهٔ دو بچه. HTML هاب هر دو را لیست می‌کند. هر بچه H1ای دارد که pillar کپی نمی‌کند.
+
+```html
+<h1>Espresso machines</h1>
+<ul>
+  <li><a href="/guides/espresso-machines/plumbed-in-vs-tank">Plumbed-in vs tank</a></li>
+  <li><a href="/guides/espresso-machines/maintenance">Maintenance</a></li>
+</ul>
+```
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="آرشیو تگ به‌علاوهٔ سه «ultimate guide» spun خوشه نیست. Googlebot duplicate می‌بیند؛ نویسنده چک‌لیست.">
+```txt
+/blog/espresso-guide
+/blog/espresso-guide-2026
+/blog/best-espresso-guide
+/tag/espresso
+```
+
+Hub نیست، H1 جدا نیست، ویجت related-posts تنها لینک است.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. pillar را cornerstone علامت بزن. پست پشتیبان در بدنه به آن لینک بدهد، نه فقط در ویجت.
+2. اگر آرشیو تگ لوپ نازک است، آن را pillar نکن.
+
+**Rank Math**
+
+1. pillar / focus keyword در Rank Math: یک URL ستون. برای «عضو خوشه» کلون نکن.
+2. related posts: اگر سه cannibal را به هم لینک می‌دهد خاموش کن.
+
+**AIOSEO**
+
+1. همان فلگ سبک cornerstone. دسته می‌تواند hub باشد **اگر** کپی یکتا دارد، نه ده پست و H1 فقط کلمه.
+2. لندینگ «خوشه» از فهرست کلمه خودکار نساز.
+
+**جا خالی واقعی:** پلاگین‌ها فلگ ذخیره می‌کنند. نقشه را طراحی نمی‌کنند. SEOPress سازندهٔ جادویی خوشه ندارد. نقشه در شیت یا git است.
+
+## پیاده‌سازی کد
+
+```ts
+export const espressoCluster = {
+  pillar: "/guides/espresso-machines",
+  children: [
+    "/guides/espresso-machines/plumbed-in-vs-tank",
+    "/guides/espresso-machines/maintenance",
+  ],
+};
+
+export function ClusterNav({ cluster }: { cluster: typeof espressoCluster }) {
+  return (
+    <nav>
+      <a href={cluster.pillar}>Hub</a>
+      {cluster.children.map((href) => (
+        <a key={href} href={href}>{href.split("/").pop()}</a>
+      ))}
+    </nav>
+  );
+}
+```
+
+App Router: `generateStaticParams` از نقشهٔ خوشه، نه از CSV خام کلمه (ماژول ۰۱). Pages Router: همان. پوشه‌های همین دانشنامه (`06-content-strategy/…`) همان الگو است.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «هر خوشه دقیقاً هشت پره می‌خواهد.» تعداد از نیت جدا می‌آید.
+- **DEPRECATED:** صفحهٔ تگ به‌عنوان pillar پیش‌فرض.
+- pillar را آخر «وقتی همهٔ پره‌ها آماده شد» منتشر کنی و ماه‌ها یتیم زنده بماند.
+- لینک فقط با پلاگین related-posts.
+- pillar انگلیسی + کپی نازک فارسی بدون hreflang (ماژول ۰۲ / ۰۳).
+
+## نکته‌های سطح بالا / پروداکشن
+
+مالک per خوشه (ادیتور، نه «وبلاگ»). ایدهٔ جدید: به pillar موجود می‌پیوندد یا یکی تازه شروع می‌کند؟ اگر مترادف است heading است، نه URL.
+
+بعد از ship: بچه را **همان رلیز** به فهرست pillar اضافه کن. کوئری GSC که به پرهٔ غلط می‌خورد باگ خوشه است.
+
+PDP تراکنشی را داخل pillar اطلاعاتی به‌عنوان «پره» قاطی نکن مگر SERP موافق باشد (نیت ماژول ۰۱).
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| crawl از pillar | همهٔ بچه از HTML | فقط ویجت / یتیم |
+| H1ها | شغل جدا | کلون مترادف |
+| GSC | کوئری روی URL درست جمع می‌شود | پخش روی کلون |
+| nav | با نقشه می‌خواند | سوپ تگ |

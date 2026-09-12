@@ -1,0 +1,128 @@
+---
+title: Product category optimization
+description: The category archive is the commercial hub — unique copy, crawlable child links, SKUs in HTML — not a thin grid or a blog clone of the same job.
+module: 07-ecommerce-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **product category** is the indexable listing that owns a head commercial query (`espresso machines`, `running shoes`). It is a hub: unique intro, H1 that matches the shelf, links to **child categories** and **PDPs** in HTML.
+
+It is not:
+
+- Ten manufacturer sentences pasted on every sibling category.
+- A blog post `/best-espresso-machines-2026` that cannibalizes the money URL (Module 01 / 06).
+- A category per city, per synonym, or per SKU (doorways — Module 06).
+- Facet soup pretending to be IA (next topic).
+
+WooCommerce `product_cat` and a Next `app/c/[slug]` route are the same job. Product **tags** are usually thin loops — treat them as filters, not hubs, unless a tag is a real editorial landing page.
+
+Collection markup (`ItemList` / `CollectionPage`) is optional. Do **not** mark the category as a `Product` with a fake `Offer` (Module 02 schema; product schema topic).
+
+## Why it matters
+
+Head commercial SERPs go to a shelf, not a 400-word “ultimate guide” with three affiliate cards. Thin categories waste crawl and lose the query to a competitor’s hub. Unique copy is how two sibling categories stay distinct documents.
+
+<CorrectExample>
+`/c/espresso-machines` has an H1, a short unique intro (who it is for, how you merchandize), HTML links to `/c/espresso-machines/plumbed-in` and to the first page of PDPs. Title is the category job, not a stuffed keyword list. Child categories are real archives with their own copy — not the parent pasted twice.
+</CorrectExample>
+
+<IncorrectExample why="Empty grid plus a blog clone splits the same commercial job. Googlebot sees two weak URLs; shoppers land on neither.">
+```txt
+/c/espresso-machines     ← H1 only, no copy, products via "load more" with no href
+/blog/best-espresso-2026 ← same SKUs, same intent
+/c/espresso-tehran       ← no warehouse there
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Search Appearance → Taxonomies: `product_cat` indexable. Write the category description in the term editor so it renders **on the archive**, not only in the SEO fields.
+2. Title template `%%term_title%%` is enough. Do not append the homepage slogan to every category.
+
+**Rank Math**
+
+1. Titles & Meta → Product Categories. Confirm you did not noindex `product_cat` while leaving product tags indexable.
+2. Rank Math “SEO description” is not a substitute for visible archive copy.
+
+**AIOSEO**
+
+1. Same taxonomy index/noindex. Category titles: one pattern, unique term name.
+2. Do not auto-generate a landing CPT that duplicates WooCommerce categories.
+
+**Feature gap:** Yoast / Rank Math / AIOSEO / SEOPress fill titles and robots. None write merchandizing copy. WooCommerce category description in the theme is the body. SEOPress WooCommerce tab does not invent a hub for you.
+
+## Code implementation
+
+```tsx
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const cat = await getCategory(slug);
+  return {
+    title: cat.name,
+    description: cat.excerpt,
+    alternates: { canonical: `https://www.example.com/c/${slug}` },
+  };
+}
+
+export default async function CategoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const cat = await getCategory(slug);
+  return (
+    <>
+      <h1>{cat.name}</h1>
+      <p>{cat.intro}</p>
+      <ul>
+        {cat.children.map((c) => (
+          <li key={c.slug}>
+            <Link href={`/c/${c.slug}`}>{c.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+App Router: `generateStaticParams` from real categories in inventory. Pages Router: `getStaticPaths` the same. Do not `generateStaticParams` from a city CSV.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Categories should be noindexed so PageRank flows to PDPs.” Hubs need to rank.
+- **DEPRECATED:** Keyword-stuffed category slugs as a ranking lever (URL structure, Module 02).
+- Product tags left indexable as a second sitemap of thin archives.
+- Identical intro on every child category.
+- Hiding the category description below a JS accordion Googlebot never opens (JS SEO, Module 03).
+
+## Senior / production notes
+
+Own one URL per commercial job. If the blog guide is the better document, 301 or canonical-with-intent the thin category — do not keep both 200. Facets that deserve a landing page become **child categories** with unique copy, not an infinite `?color=` tree.
+
+i18n: `/fa/c/…` is a real hub, not a calque of English merchandizing (hreflang, Module 02 / 03).
+
+After a category rename: 301 the old archive, rewrite internal links and breadcrumbs in the same release (breadcrumbs, Module 02).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source hub | Unique intro + `<a href>` to children/PDPs | Empty grid / button-only |
+| GSC | Head query on the category URL | Split with a blog clone |
+| Tags | Thin tags noindex or unused | Thousands of tag 200s |
+| Canonical | Self on the hub | Homepage canonical |

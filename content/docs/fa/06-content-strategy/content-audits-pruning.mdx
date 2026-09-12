@@ -1,0 +1,98 @@
+---
+title: ممیزی محتوا و هرس
+description: موجودی URL بر اساس شغل و عملکرد — نگه دار، تازه‌سازی، ادغام، یا بکش — به‌جای اضافه کردن به درخت پوسیده.
+module: 06-content-strategy
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**ممیزی محتوا** URL ایندکس‌پذیر را با این‌ها لیست می‌کند: قالب، خوشه، کلیک/impression در GSC، تبدیل اگر داری، آخرین به‌روزرسانی معنادار، کد وضعیت، نیت. **هرس** کار روی بازنده‌هاست: 301 به URL بهتر، `410`/`404` اگر چیزی نباید جایش را بگیرد، `noindex` فقط وقتی URL باید زنده بماند (فیلتر، تشکر).
+
+«هر چه ترافیک کم دارد حذف کن» نیست. URL برند، حقوقی، پشتیبانی می‌تواند ساکت باشد و باز لازم. «همه را نگه دار چون شاید روزی رتبه بگیرد» هم نیست.
+
+ترتیب: طبقه‌بندی (نگه دار / refresh / ادغام / بکش) ← داخلی و sitemap را **همان** رلیز با عوض شدن کد وضعیت درست کن (۴۰۴ در مقابل ۴۱۰ ماژول ۰۳، cannibalization).
+
+## چرا مهم است
+
+باد کردن ایندکس (تگ نازک، پست تاریخ‌دار قدیم، doorway) با URLهایی که برایت مهم‌اند رقابت می‌کند. ممیزی همان است که بلاگ بزرگ بدتر شدن را متوقف می‌کند.
+
+<CorrectExample title="درست">
+شیت: ۴۰ آرشیو تگ، صفر کپی یکتا، GSC «Crawled — currently not indexed» یا impression ریز. تصمیم: تگ‌ها `noindex` + حذف از sitemap، دو تگی که hub واقعی با مقدمهٔ یکتا هستند بمانند.
+
+سه پست «best espresso 2021/22/23»: اسلاگ قدیم را به `/guides/espresso-machines` 301 کن.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="حذف برنده، 301-همه-به-خانه، یا noindex بدون برداشتن loc از sitemap، soft-404 و سیگنال قاطی می‌سازد.">
+```txt
+# "cleanup"
+301 /guides/espresso-machines → /
+410 /about
+noindex every blog post "to focus PageRank"
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Search Appearance ← taxonomy: تگ خالی `noindex`. بعد از noindex گروهی، `sitemap_index.xml` را fetch کن.
+2. ریدایرکت (Premium) یا پلاگین ریدایرکت برای ادغام. نقشه را export کن.
+
+**Rank Math**
+
+1. ریدایرکت Rank Math + حذف از sitemap. مانیتور 404 ممیزی نیست.
+2. همهٔ 404 را خودکار به `/` نفرست.
+
+**AIOSEO**
+
+1. همان: sitemap برای نوع هرس‌شده خاموش؛ نقشهٔ 301 در addon ریدایرکت.
+2. robots meta را گروهی ویرایش کن؛ بعد نمونه crawl کن.
+
+**جا خالی واقعی:** پلاگین‌ها GSC را به IA تو وصل نمی‌کنند. SEOPress / Rank Math / AIOSEO / Yoast وقتی تصمیم بگیری robots و sitemap را اعمال می‌کنند. تصمیم شیت + Search Console است.
+
+## پیاده‌سازی کد
+
+```ts
+type AuditAction = "keep" | "refresh" | "redirect" | "gone";
+
+export function nextAction(row: {
+  clicks: number;
+  isLegal: boolean;
+  hasSuccessor: boolean;
+}): AuditAction {
+  if (row.isLegal) return "keep";
+  if (row.hasSuccessor) return "redirect";
+  if (row.clicks === 0) return "gone";
+  return "refresh";
+}
+```
+
+App Router: هرس یعنی `redirects()` / `notFound()` / handlerهای `410` (ماژول ۰۳)، به‌علاوهٔ `getIndexableUrls()` برای `sitemap.ts`. Pages Router: همان. مسیر قدیم را با پاراگراف «جابه‌جا شدیم» و self-canonical روی 200 نگذار.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «اگر 404 کنی PageRank می‌پرد.» URL رفته باید برود؛ جانشین 301 می‌گیرد.
+- **DEPRECATED:** هرس فقط با bounce rate در GA4 (آن متریک راحت غلط خوانده می‌شود).
+- کشتن URLی که هنوز تنها کپی یکتای compliance را دارد.
+- refresh به‌جای ادغام وقتی دو URL cannibalاند.
+- ممیزی که هیچ‌وقت لاگ / coverage را نمی‌بیند — فقط «نمرهٔ محتوا» پلاگین.
+
+## نکته‌های سطح بالا / پروداکشن
+
+ریتم: برای اندازهٔ متوسط فصلی، حین مهاجرت ماهانه. بر اساس قالب برش بده (`/blog/*`، `/docs/*`، `/product/*`).
+
+برای جفت فارسی/انگلیسی: `/fa/` را هرس نکن چون GSC `en` قوی‌تر به‌نظر می‌رسد. هر property لوکیل را ببین.
+
+نگهداری حقوقی: بعضی URL حتی با صفر کلیک 410 نمی‌شوند. در شیت `keep` علامت بزن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| نمونه URL هرس‌شده | 301 یا 410 طبق برنامه | 200 نازک جا مانده |
+| Sitemap | با فهرست keep می‌خواند | loc مرده |
+| GSC | soft 404 / not found توضیح دارد | جهش exclude مرموز |
+| داخلی | لینک به URL کشته نیست | nav هنوز به 404 می‌زند |

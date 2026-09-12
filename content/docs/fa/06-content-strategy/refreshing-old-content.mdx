@@ -1,0 +1,100 @@
+---
+title: تازه‌سازی محتوای قدیم
+description: سندی را که گوگل از قبل دارد به‌روز کن — همان URL، diff واقعی، lastmod جدید — نه کلون «۲۰۲۶» که برنده را cannibal کند.
+module: 06-content-strategy
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Refresh** تغییر معنادار روی URL زنده است: واقعیت، اسکرین‌شات، مثال، بخشی که SERP حالا می‌خواهد، لینک شکسته، تاریخ last-reviewed. اسلاگ می‌ماند. `lastmod` در sitemap **فقط** اگر محتوا عوض شد جابه‌جا می‌شود (sitemap ماژول ۰۳).
+
+نیست: چسباندن «۲۰۲۶» به title، چرخاندن پاراگراف، یا انتشار `/guide-2026` کنار `/guide`. آن cannibalization است (ماژول ۰۱) به‌علاوهٔ سیگنال تازگی جعلی.
+
+وقتی شغل کوئری عوض شده (SERP اطلاعاتی گرید محصول شده)، ممکن است URL **جدید** یا عوض قالب لازم باشد — آن بریف است، نه مهر تاریخ.
+
+گوگل «نمرهٔ freshness» قابل رنگ‌کردن منتشر نمی‌کند. بعضی کوئری زمان‌حساس‌اند (داک، قیمت، API)؛ بعضی نه (تاریخ یک فرمت فایل). جایی refresh کن که کهنگی به کاربر آسیب بزند.
+
+## چرا مهم است
+
+برنده می‌پوسد: اسکرین‌شات پلاگین قدیم، توصیهٔ مردهٔ `rel=next`، آمار منقضی. URL کلون تاریخی را که درآوردی دوپاره می‌کند. تازه‌سازی canonical تقریباً همیشه از پست جدید ارزان‌تر است.
+
+<CorrectExample title="درست">
+`/docs/robots-txt` همان URL. Diff: افسانهٔ Crawl-delay به‌روز، مثال `app/robots.ts` با Next 16 می‌خواند، `last_reviewed: "2026-09"`. `lastModified` در sitemap فقط برای همان loc. داخلی هنوز به اینجا می‌زند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="اسلاگ تاریخ‌دار جدید لینک URL قدیم را دور می‌ریزد و با آن رقابت می‌کند. «Updated 2026» فقط در title کسی را آموزش نمی‌دهد.">
+```txt
+/docs/robots-txt          (unchanged 2023 body)
+/docs/robots-txt-2026     (copy + year in H1)
+<title>robots.txt (Updated 2026)</title>  <!-- body still 2023 -->
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. همان پست را ویرایش کن. اگر شغل همان است یواست به «SEO title 2026» جدید نیاز ندارد.
+2. بعد از به‌روزرسانی اساسی، در URL Inspection جی‌اس‌سی recrawl بخواه. پست را duplicate نکن.
+
+**Rank Math**
+
+1. «تاریخ به‌روز» در اسنیپت Rank Math: فقط اگر `the_modified_date` واقعی است. تاریخ modified جعلی مسئلهٔ اعتماد است.
+2. ریدایرکت Rank Math را برای فرستادن اسلاگ قدیم به اسلاگ `-2026` جدید به‌عنوان «refresh» استفاده نکن.
+
+**AIOSEO**
+
+1. همان: در جا اصلاح کن. تاریخ Open Graph باید از زمان modified واقعی بیاید.
+2. پلاگینی که با هر save گزینهٔ نامرتبط `modified` را تصادفی می‌کند خاموش کن.
+
+**جا خالی واقعی:** هر چهار تا می‌گذارند تاریخ بزنی. هیچ‌کدام نمی‌دانند بدنه عوض شده. فیچر «تازگی» SEOPress / Yoast / Rank Math / AIOSEO نمایش است، استراتژی نه.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "robots.txt",
+};
+
+// sitemap.ts — lastModified from git or CMS, not build clock
+export async function sitemapEntry(slug: string, updatedAt: Date) {
+  return {
+    url: `https://www.example.com/docs/${slug}`,
+    lastModified: updatedAt,
+  };
+}
+```
+
+MDX در App Router: `last_reviewed` در frontmatter (همین سایت). Pages Router: `updatedAt` از CMS. برای هر URL در هر بیلد `lastModified: new Date()` نگذار.
+
+`dateModified` در JSON-LD باید با واقعیت بخواند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** URL جدید با سال به‌عنوان تاکتیک پیش‌فرض refresh.
+- **DEPRECATED:** عوض کردن `lastmod` سایت‌واید برای اجبار recrawl.
+- refresh با افزودن ۴۰۰ کلمه fluff (عمق ماژول ۰۲).
+- اسکرین‌شات یواست ۱۱ وقتی heading می‌گوید ۲۰۲۶.
+- آخر هفتهٔ «همه پست‌ها را آپدیت کن» که `modified` را بدون ویرایش لمس می‌کند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+صف refresh از GSC: CTR در حال افت، کوئری‌ای که به عوض فیچر SERP باختی، صفحه با ادعای کهنهٔ Search Central. با لاین نگهداری تقویم جفت کن.
+
+برای YMYL، refresh بازبین آدم دارد، نه فقط نویسنده.
+
+i18n: وقتی واقعیت عوض می‌شود `en` و `fa` را با هم refresh کن (جفت hreflang). بدنهٔ انگلیسی ۲۰۲۶ و فارسی ۲۰۲۳ دروغ خوشه است.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| URL | همان اسلاگ | خواهر `-2026` با 200 |
+| Diff | جوهر عوض شده | فقط title/تاریخ |
+| lastmod در sitemap | فقط همان URL | کل فایل «الان» |
+| dateModified در JSON-LD | می‌خواند | کهنه یا جعلی-الان |

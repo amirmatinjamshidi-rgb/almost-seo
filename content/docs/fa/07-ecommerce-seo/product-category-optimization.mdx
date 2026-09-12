@@ -1,0 +1,128 @@
+---
+title: بهینه‌سازی دستهٔ محصول
+description: آرشیو دسته هاب تجاری است — کپی یکتا، لینک بچهٔ crawlable، SKU در HTML — نه گرید نازک و نه کلون بلاگ همان شغل.
+module: 07-ecommerce-seo
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**دستهٔ محصول** لیست ایندکس‌پذیری است که کوئری تجاری سر (`espresso machines`، `running shoes`) را مالک می‌شود. هاب است: مقدمهٔ یکتا، H1 مطابق قفسه، لینک به **دستهٔ بچه** و **PDP** در HTML.
+
+نیست:
+
+- ده جملهٔ سازنده که روی هر دستهٔ خواهر paste شده.
+- پست بلاگ `/best-espresso-machines-2026` که URL پول‌ساز را cannibal کند (ماژول ۰۱ / ۰۶).
+- دسته per شهر، per مترادف، یا per SKU (doorway — ماژول ۰۶).
+- سوپ facet که خود را IA جا بزند (موضوع بعد).
+
+`product_cat` ووکامرس و مسیر Next `app/c/[slug]` همان شغل‌اند. **تگ** محصول معمولاً لوپ نازک است — فیلتر است نه هاب، مگر تگ واقعاً لندینگ تحریریه‌ای باشد.
+
+markup مجموعه (`ItemList` / `CollectionPage`) اختیاری است. دسته را `Product` با `Offer` جعلی نکن (schema ماژول ۰۲؛ موضوع schema محصول).
+
+## چرا مهم است
+
+SERP تجاری سر به قفسه می‌رود، نه «ultimate guide» چهارصد کلمه‌ای با سه کارت افیلیت. دستهٔ نازک crawl را تلف می‌کند و کوئری را به هاب رقیب می‌بازد. کپی یکتا همان است که دو دستهٔ خواهر سند جدا می‌مانند.
+
+<CorrectExample title="درست">
+`/c/espresso-machines` H1 دارد، مقدمهٔ کوتاه یکتا (برای کیست، چطور merchandize می‌کنی)، لینک HTML به `/c/espresso-machines/plumbed-in` و صفحهٔ اول PDP. Title شغل دسته است، نه لیست کلمهٔ stuffed. دستهٔ بچه آرشیو واقعی با کپی خودش است — نه والد دو بار paste شده.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="گرید خالی به‌علاوهٔ کلون بلاگ همان شغل تجاری را دوپاره می‌کند. Googlebot دو URL ضعیف می‌بیند؛ خریدار روی هیچ‌کدام فرود نمی‌آید.">
+```txt
+/c/espresso-machines     ← فقط H1، بدون کپی، محصول با "load more" بدون href
+/blog/best-espresso-2026 ← همان SKU، همان نیت
+/c/espresso-tehran       ← آنجا انبار نیست
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Search Appearance ← Taxonomies: `product_cat` ایندکس‌پذیر. توضیح دسته را در ویرایش term بنویس تا **روی آرشیو** رندر شود، نه فقط در فیلد SEO.
+2. قالب title `%%term_title%%` کافی است. شعار صفحهٔ خانه را به هر دسته نچسبان.
+
+**Rank Math**
+
+1. Titles & Meta ← Product Categories. مطمئن شو `product_cat` را noindex نکردی در حالی که تگ محصول ایندکس‌پذیر مانده.
+2. «SEO description» در Rank Math جایگزین کپی دیدنی آرشیو نیست.
+
+**AIOSEO**
+
+1. همان index/noindex تاکسونومی. title دسته: یک الگو، نام term یکتا.
+2. CPT لندینگ خودکار نساز که دستهٔ ووکامرس را duplicate کند.
+
+**جا خالی واقعی:** Yoast / Rank Math / AIOSEO / SEOPress title و robots را پر می‌کنند. هیچ‌کدام کپی merchandizing نمی‌نویسند. توضیح دستهٔ ووکامرس در قالب، بدنه است. تب ووکامرس SEOPress برایت هاب اختراع نمی‌کند.
+
+## پیاده‌سازی کد
+
+```tsx
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const cat = await getCategory(slug);
+  return {
+    title: cat.name,
+    description: cat.excerpt,
+    alternates: { canonical: `https://www.example.com/c/${slug}` },
+  };
+}
+
+export default async function CategoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const cat = await getCategory(slug);
+  return (
+    <>
+      <h1>{cat.name}</h1>
+      <p>{cat.intro}</p>
+      <ul>
+        {cat.children.map((c) => (
+          <li key={c.slug}>
+            <Link href={`/c/${c.slug}`}>{c.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+```
+
+App Router: `generateStaticParams` از دستهٔ واقعی موجودی. Pages Router: `getStaticPaths` همان. از CSV شهر `generateStaticParams` نساز.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «دسته را noindex کن تا PageRank به PDP برود.» هاب باید رتبه بگیرد.
+- **DEPRECATED:** slug دستهٔ stuffed به‌عنوان اهرم رتبه (ساختار URL، ماژول ۰۲).
+- تگ محصول ایندکس‌پذیر مانده به‌عنوان sitemap دوم آرشیو نازک.
+- مقدمهٔ یکسان روی هر دستهٔ بچه.
+- مخفی کردن توضیح دسته زیر accordion جاوااسکریپتی که Googlebot باز نمی‌کند (JS SEO، ماژول ۰۳).
+
+## نکته‌های سطح بالا / پروداکشن
+
+یک URL per شغل تجاری. اگر راهنمای بلاگ سند بهتری است، دستهٔ نازک را 301 کن یا با نیت canonical — هر دو را 200 نگذار. facetای که لندینگ می‌خواهد **دستهٔ بچه** با کپی یکتا می‌شود، نه درخت بی‌نهایت `?color=`.
+
+i18n: `/fa/c/…` هاب واقعی است، نه calque merchandizing انگلیسی (hreflang، ماژول ۰۲ / ۰۳).
+
+بعد از عوض نام دسته: آرشیو قدیم را 301 کن، لینک داخلی و breadcrumb را **همان** رلیز بازنویس (breadcrumb، ماژول ۰۲).
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source هاب | مقدمهٔ یکتا + `<a href>` به بچه/PDP | گرید خالی / فقط دکمه |
+| GSC | کوئری سر روی URL دسته | پخش با کلون بلاگ |
+| تگ | تگ نازک noindex یا بلااستفاده | هزاران تگ 200 |
+| Canonical | self روی هاب | canonical صفحهٔ خانه |

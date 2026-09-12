@@ -1,0 +1,137 @@
+---
+title: Out-of-stock handling
+description: Temporary OOS stays 200 with honest OutOfStock. Successor gets 301. Gone for good gets 410 (or 404). Never fake InStock or 404 a restock.
+module: 07-ecommerce-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Stock is a **document-lifecycle** problem, not a schema trick.
+
+**Temporarily unavailable** (you will sell it again):
+
+- Keep the **same URL**, HTTP **200**.
+- Visible “sold out” / back-in-stock UX. Similar in-stock products in HTML.
+- `Offer.availability` = `OutOfStock` (or `BackOrder` / `PreOrder` if that is the truth).
+- Merchant Center: `out_of_stock`, **do not delete** the item so you can relist faster. Do not use `out_of_stock` merely to hide an in-stock SKU from one surface (`pause` / `excluded_destination` instead).
+
+**Permanently gone, replacement exists:** **301** to the successor SKU (or the one product that is the same document). Not to the homepage.
+
+**Permanently gone, no successor:** **410** (or 404). Drop sitemap `loc`, drop internal links. Custom HTML can still explain and link the category hub — status must stay 410/404 (404 vs 410, Module 03).
+
+**Soft 404:** 200 with “this product does not exist,” or 302-all-deleted-PDPs-to-home. Google treats that as an error and you taught the wrong document.
+
+Do not 301 every OOS URL to the parent category as a cleanup default — that is a different job (often a soft-404 cluster). Category is a shelf, not the SKU.
+
+## Why it matters
+
+404 on a restockable PDP throws away rankings and Merchant Center history. Fake `InStock` gets the listing disapproved when Google checks the page or checkout. Endless 200 empty shells are thin URLs.
+
+<CorrectExample>
+Seasonal SKU, back in November: 200, “Sold out,” JSON-LD `OutOfStock`, price still visible, feed `out_of_stock`. Successor launch: old slug `301` to `/p/model-b`. Discontinued, no replacement: `410`, sitemap loc removed same deploy.
+</CorrectExample>
+
+<IncorrectExample why="Restockable SKU 404s; discontinued SKU stays 200 InStock; deletes 302 to home. Users, Googlebot, and Merchant Center all get a different lie.">
+```http
+GET /p/model-a
+HTTP/1.1 404
+```
+
+```json
+{ "availability": "https://schema.org/InStock" }
+```
+
+```http
+GET /p/deleted
+HTTP/1.1 302
+Location: /
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not choose 200 vs 410. WooCommerce **stock status** + “Hide out of stock items from the catalog” hides listings; it must not 404 the PDP if the product is still published.
+2. Trash ≠ 410. Before delete, add a 301 in Yoast Premium redirects (or a redirect plugin) when a successor exists.
+
+**Rank Math**
+
+1. Rank Math redirects: 301 to successor, 410 for gone. 404 monitor is a log, not a policy.
+2. Do not auto-redirect all 404s to `/`.
+
+**AIOSEO**
+
+1. Redirects addon: verify `curl -I` for 410 vs 301. Themes that “pretty 404” at **200** are the soft-404 bug.
+2. WooCommerce schema must flip to `OutOfStock` when stock is 0 (product schema topic).
+
+**Feature gap:** Rank Math’s 404 monitor is the most visible. Yoast Premium / SEOPress / AIOSEO store redirect maps; none know “temporary vs discontinued.” That flag lives in WooCommerce (or your PIM). SEOPress 410 is easy to forget if editors only trash products.
+
+## Code implementation
+
+```tsx
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  if (!product) return {};
+  return { title: product.name };
+}
+
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+  if (product.status === "discontinued" && product.successor) {
+    permanentRedirect(product.successor);
+  }
+  return <ProductView product={product} />;
+}
+```
+
+Temporary OOS: render `ProductView` with sold-out UI; JSON-LD `OutOfStock` from the same `product.inStock` flag.
+
+True 410: App Router pages cannot return an arbitrary status from `page.tsx`. Use a Route Handler (pattern in 404 vs 410, Module 03) or middleware that sets 410 for discontinued slugs with no successor.
+
+Pages Router: `res.statusCode = 410` in `getServerSideProps`. Never send 200 with an empty product.
+
+Revalidate stock on a short interval or on inventory webhooks so static PDPs do not freeze `InStock`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Always 404 OOS to concentrate PageRank.”
+- **DEPRECATED:** Soft 404 as a friendlier UX than a real 404/410.
+- Fake `InStock` so Shopping ads keep serving.
+- Deleting the Merchant Center item on every stock-out.
+- 301 every dead SKU to the category or home.
+- `noindex` 200 instead of 410 for a SKU you will never sell (URL stays junk).
+- Hiding OOS from the catalog **and** unpublishing the PDP while ads still land there.
+
+## Senior / production notes
+
+One enum: `in_stock` | `temporary_oos` | `discontinued`. Map to HTTP + schema + feed in one place. Editorial calendar (Module 06) should include “seasonal SKU goes 410 on DATE” so engineering is not surprised.
+
+Internal links: category grids should not keep promoting a 410 URL. Similar-products modules on OOS PDPs must `href` live 200s.
+
+International: `en` discontinued / `fa` still selling is two documents — do not CDN-410 both locales.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| `curl -I` temporary OOS | 200 | 404 / 410 |
+| JSON-LD + HTML | `OutOfStock` + sold-out copy | `InStock` |
+| Successor | 301 to the new PDP | 302 home / 200 shell |
+| Discontinued, no successor | 410 or 404; sitemap loc gone | 200 thin |
+| Merchant Center | `out_of_stock` matches page | Disapproval for mismatch |

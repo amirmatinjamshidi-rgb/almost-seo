@@ -1,0 +1,157 @@
+---
+title: schema محصول
+description: Product به‌علاوهٔ Offer روی PDP — قیمت، ارز، موجودی، شناسه با صفحهٔ دیدنی، checkout، و Merchant Center می‌خواند. InStock جعلی نه.
+module: 07-ecommerce-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+دادهٔ ساخت‌یافتهٔ **Product** (JSON-LD) روی صفحهٔ **تک‌محصول** (PDP)، با **Offer** تو در تو، می‌تواند URL را برای **merchant listings** واجد کند (اسنیپت محصول، shopping knowledge panel، popular products — داک merchant-listing گوگل Search Central). markup یک hint است. PDP نازک را رتبه نمی‌دهد.
+
+قانون صداقت (موضوع schema ماژول ۰۲، به‌علاوهٔ شرط merchant-listing):
+
+- `@type` روی PDP برابر `Product` است. گرید دسته **Product** با یک Offer نیست.
+- `name`، `image`، `description` با محتوای دیدنی می‌خوانند.
+- `offers.price` + `priceCurrency` با قیمتی که خریدار می‌بیند (و checkout) می‌خوانند.
+- `offers.availability` یک مقدار `ItemAvailability` است (`InStock`، `OutOfStock`، `BackOrder`، `PreOrder`، `Discontinued`، …). نام کوتاه بدون پیشوند URL هم قبول است. وقتی صفحه یا checkout نمی‌فروشد **InStock** نگذار.
+- شناسه: `gtin` **یا** `mpn` + `brand` **یا** `sku`. GTIN اختراعی markup گمراه‌کننده است.
+- `aggregateRating` / `review` فقط با نظر دیدنی واقعی.
+- variant: داک product-variant گوگل (`ProductGroup`، `isVariantOf`، `inProductGroupWithID`). والد نباید `InStock` بگوید اگر هر variant قابل‌خرید ناموجود است.
+- ارسال و مرجوعی: گوگل **Organization**-level `MerchantReturnPolicy` / سیاست ارسال را ترجیح می‌دهد؛ روی `Offer` فقط وقتی آن SKU فرق دارد override کن. markup مرجوعی رایگان اختراع نکن که checkout خلافش باشد.
+
+موجودی **فید** Merchant Center باید با لندینگ بخواند. mismatch رد شدن است، نه «ترفند سئو.»
+
+## چرا مهم است
+
+markup معتبر مطابق می‌تواند سطح listing را باز کند. `InStock` جعلی، ستارهٔ جعلی، یا Product-روی-دسته نادیده گرفته می‌شود یا به سیاست structured data گمراه‌کننده گره می‌خورد. mismatch فید و صفحه Shopping / free listings را می‌سوزاند.
+
+<CorrectExample title="درست">
+HTMLی PDP نام، قیمت `129.00 EUR`، «موجود» را نشان می‌دهد. JSON-LD:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Espresso machine Model A",
+  "image": "https://www.example.com/media/model-a.jpg",
+  "sku": "EMA-1",
+  "brand": { "@type": "Brand", "name": "Example" },
+  "offers": {
+    "@type": "Offer",
+    "url": "https://www.example.com/p/model-a",
+    "price": 129.00,
+    "priceCurrency": "EUR",
+    "availability": "https://schema.org/InStock",
+    "itemCondition": "https://schema.org/NewCondition"
+  }
+}
+```
+
+یک گراف. همان عدد در Merchant Center.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="دسته به‌عنوان Product، InStock جعلی، امتیاز جعلی، و گراف پلاگین دوم. هم merchant listings هم سیاست اسپم rich result اعمال می‌شود.">
+```json
+{
+  "@type": ["Product", "CollectionPage"],
+  "name": "Espresso machines",
+  "offers": { "price": "0", "availability": "InStock" },
+  "aggregateRating": { "ratingValue": "5", "reviewCount": "9999" }
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. JSON-LD محصول برای ووکامرس **Yoast WooCommerce SEO** است (add-on)، نه یواست هسته روی پست بلاگ. پلاگین schema دوم را روی PDP خاموش کن.
+2. مطمئن شو add-on قیمت و موجودی ووکامرس را می‌خواند، نه فیلد سفارشی کهنه.
+
+**Rank Math**
+
+1. Rank Math WooCommerce / Schema: type `Product` فقط روی PDP. schema محصول را روی پست و دسته خاموش کن.
+2. اسنیپت نظر: فقط اگر نظر ووکامرس دیدنی است. Instant Indexing دادهٔ Offer خراب را درست نمی‌کند.
+
+**AIOSEO**
+
+1. schema ووکامرس AIOSEO. همان قانون یک‌emitter.
+2. markup مرجوعی/ارسال Organization سراسری: از صفحهٔ سیاست واقعی پر کن، نه lorem.
+
+**جا خالی واقعی:** picker نوع Rank Math راحت‌ترین mis-set روی قالب غلط است. Yoast WooCommerce SEO اگر add-on واقعاً نصب باشد محافظه‌کارتر است. گراف ووکامرس AIOSEO / SEOPress اگر Rank Math هم روشن باشد روی هم می‌نشینند — دو بلوک `Product`. Rich Results Test / گزارش Merchant listings داورند.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  return { title: product.name };
+}
+
+export function productJsonLd(product: {
+  name: string;
+  slug: string;
+  image: string;
+  sku: string;
+  price: number;
+  currency: string;
+  inStock: boolean;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: product.image,
+    sku: product.sku,
+    offers: {
+      "@type": "Offer",
+      url: `https://www.example.com/p/${product.slug}`,
+      price: product.price,
+      priceCurrency: product.currency,
+      availability: product.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+    },
+  };
+}
+```
+
+App Router: JSON-LD را از **همان** ردیف کاتالوگ که PDP را رندر می‌کند بفرست (`JsonLd`). وقتی موجودی/قیمت عوض شد revalidate (`revalidate` / tag). Pages Router: `getServerSideProps` یا ISR — `InStock` را روی صفحهٔ استاتیک فریز نکن در حالی که checkout خالی است.
+
+`generateMetadata` جایگزین JSON-LD نیست.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «type schema بیشتر = رتبه بیشتر.»
+- **DEPRECATED:** Microdata اجباری (JSON-LD پیش‌فرض مستند است).
+- `Product` روی URL دسته / سرچ / «roundup» بلاگ.
+- `InStock` در حالی که دکمه sold out است (موضوع ناموجود).
+- `price: 0` به‌عنوان placeholder.
+- گراف تکراری از قالب + پلاگین SEO + tag manager.
+- کپی `@id` JSON-LD رقیب.
+
+## نکته‌های سطح بالا / پروداکشن
+
+یک emitter. enum موجودی CMS را در یک تابع به `ItemAvailability` نگاشت کن تا PDP، schema، و فید منحرف نشوند. variant: یک URL per variant قابل‌خرید **یا** والد با markup variant — مدل داک variant گوگل را بردار؛ هر دو را به‌عنوان دو near-duplicate ایندکس‌پذیر قاطی نکن (cannibalization، ماژول ۰۱).
+
+مرجوعی/ارسال Organization-level در `lib/schema.ts` کنار NAP تا URL سیاست فوتر و JSON-LD خلاف هم نگویند.
+
+وقتی گوگل propertyی merchant-listing را حذف کرد، همان رلیز بردار.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| Rich Results Test | Merchant listings / Product، بدون extras اسپم | خطا، Product روی دسته |
+| دیدنی در مقابل JSON-LD | قیمت، موجودی، نام می‌خوانند | InStock در مقابل HTML sold-out |
+| فید | همان موجودی/قیمت | رد Shopping به‌خاطر mismatch |
+| view-source | یک گراف Product | سه پلاگین × سه type |

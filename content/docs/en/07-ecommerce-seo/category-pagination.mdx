@@ -1,0 +1,141 @@
+---
+title: Category pagination
+description: Page 2+ on a product shelf is how Googlebot finds SKUs — crawlable hrefs, self-canonical when unique, 404 past the last page. Not blog pagination folklore.
+module: 07-ecommerce-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Category pagination** splits a product shelf across `/c/espresso-machines`, `/c/espresso-machines/page/2`, (or `?page=2`). Module 02 pagination is the general rule. This page is the **catalog** case: SKUs that exist only on page 3 are invisible if the pager is a button.
+
+Rules that stay true:
+
+- Google **does not** use `rel=next/prev` as an indexing system. Optional UX; not a ranking feature.
+- Page 2 with **different products** is its own document. **Self-canonical.** Canonical-to-page-1 on a unique list hides those SKUs or duplicates the hub.
+- **View-all** vs paginated: index **one** list. Not both.
+- Infinite scroll / Load more still needs a crawlable `<a href>` to page 2+ **or** every SKU linked from an indexable hub / sitemap. JS-only load-more hides the tail (JS SEO, Module 03).
+- Page numbers that do not exist: **404** (same as empty facets — Google faceted-nav crawling doc). Not a 200 clone of page 1.
+
+`noindex,follow` on page 2+ is a choice when every SKU is already reachable from page 1, sitemaps, or other hubs. If the only HTML link to a PDP is on page 4, **do not** noindex page 4 unless the sitemap lists that PDP.
+
+Sitemap: list **PDPs** (and the category hub). Listing `/page/2` is optional; it is usually not a landing URL you want in Search.
+
+Facets × page is a second explosion — paginate allowlisted landings only (faceted navigation topic).
+
+## Why it matters
+
+Crawl that never follows page 2 never discovers tail SKUs. Canonical-to-first is the usual WooCommerce + SEO-plugin footgun. Infinite-scroll-only shops look complete to users and empty to Googlebot.
+
+<CorrectExample>
+```html
+<nav aria-label="Pagination">
+  <a href="/c/espresso-machines">1</a>
+  <a href="/c/espresso-machines/page/2">2</a>
+</nav>
+```
+
+Page 2 HTML has different PDPs, self-canonical, title includes a page hint if indexed. `/page/99` with no products is 404. Each PDP is also in `sitemap.ts`.
+</CorrectExample>
+
+<IncorrectExample why="Button-only load more plus canonical-to-page-1 hides the catalog. A 200 on page 99 clones the hub.">
+```html
+<button onclick="loadMore()">Load more</button>
+<link rel="canonical" href="https://www.example.com/c/espresso-machines" />
+<!-- this is page 2 with different SKUs -->
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not restore `rel=next/prev` as a ranking system. Check archive titles: indexed page 2 should not clone page 1’s exact title.
+2. If you noindex product-category pagination, confirm PDPs are in the sitemap and linked from page 1 or hubs.
+
+**Rank Math**
+
+1. Pagination canonical toggle: **“canonical to first page”** on unique product lists is the footgun. View-source `/product-category/foo/page/2/`.
+2. `%%page%%` in archive title templates when page 2+ may be indexed.
+
+**AIOSEO**
+
+1. Same first-page canonical option in some versions — verify with view-source, not the admin label.
+2. Disable a second “view all” plugin that indexes `/all/` beside `/page/2`.
+
+**Feature gap:** Rank Math / AIOSEO pagination canonicals are easier to mis-set than Yoast. SEOPress similar. WooCommerce `/page/2/` must stay crawlable if that is how SKUs are linked. Filter plugins that paginate facets need the facet policy first.
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; n?: string }>;
+}): Promise<Metadata> {
+  const { slug, n } = await params;
+  const page = n ?? "1";
+  const path =
+    page === "1" ? `/c/${slug}` : `/c/${slug}/page/${page}`;
+  return { alternates: { canonical: `https://www.example.com${path}` } };
+}
+
+export default async function CategoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string; n?: string }>;
+}) {
+  const { slug, n } = await params;
+  const page = Number(n ?? "1");
+  const result = await listProducts(slug, page);
+  if (page > 1 && result.items.length === 0) notFound();
+  return (
+    <nav>
+      {page > 1 && (
+        <Link href={page === 2 ? `/c/${slug}` : `/c/${slug}/page/${page - 1}`}>
+          Previous
+        </Link>
+      )}
+      {result.hasNext && (
+        <Link href={`/c/${slug}/page/${page + 1}`}>Next</Link>
+      )}
+    </nav>
+  );
+}
+```
+
+App Router: `generateStaticParams` for page 1..last, or render on demand. Pages Router: pick **path** `/page/2` **or** `?page=` — not both indexable. Do not infinite-scroll without those `Link` hrefs in the first HTML.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** `rel=next/prev` as Google’s pagination system.
+- **DEPRECATED:** Always canonical paginated URLs to page 1.
+- `noindex` page 2+ while PDPs exist only in that HTML.
+- Indexed `/search?q=&page=2` as a category substitute.
+- Page 2 title identical to page 1 when both are indexed.
+- 200 on `/page/99`.
+- `nofollow` on internal pager links “to concentrate juice” (link attributes, Module 04).
+
+## Senior / production notes
+
+Decide per template: blog index page 2+ is often low value. Ecommerce category page 2+ is often **required crawl** so tail SKUs are found — then those SKUs belong in the sitemap anyway, so pagination is discovery, not the only URL.
+
+Log Googlebot on `/page/2`. Zero hits + missing products in GSC = uncrawlable pager or canonical-to-first.
+
+Do not combine Load more with a second indexable view-all.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source page 2 | Unique SKUs, real `a href` pager | Empty, button-only |
+| Canonical | Self if unique | Forced to page 1 |
+| `/page/99` | 404 | 200 clone |
+| Crawl / sitemap | PDPs found | Only page-1 SKUs |
+| Title | Distinct if indexed | Clone of page 1 |

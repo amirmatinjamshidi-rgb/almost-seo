@@ -1,0 +1,102 @@
+---
+title: تقویم محتوا
+description: برنامهٔ خوشه و تازه‌سازی — نه سهمیهٔ حجم پست جدید، نه CSV کلمه با تاریخ.
+module: 06-content-strategy
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**تقویم محتوا** نمای عملیاتی نقشهٔ خوشه است: چه وقت چه چیز می‌آید، مال کیست، چه شغلی دارد (pillar جدید، URL پشتیبان جدید، refresh، prune). «ماهانه ۲۰ پست» به‌عنوان KPI نیست.
+
+ستون مفید: تاریخ ship، URL/slug، خوشه، نیت، مالک، وضعیت (بریف / پیش‌نویس / زنده)، تاریخ refresh. اختیاری: خانوادهٔ کوئری هدف، نه ۴۰ کلمه.
+
+ورودی: شکاف GSC، زبان فروش/پشتیبانی، عوض شدن SERP، تقاضای فصلی که واقعاً برآورده می‌کنی. ابزار (ماژول ۰۱) پیشنهاد می‌دهد؛ تقویم را بی‌سرپرست پر نمی‌کند.
+
+ظرفیت گلوگاه است. تقویمی که SME بی‌نهایت فرض کند دوغاب AI یا بازنویسی نازک می‌سازد (موضوع بعد).
+
+## چرا مهم است
+
+تقویم حجم doorway و cannibal می‌سازد. تقویم خوشه مرکب می‌شود. refresh جاافتاده می‌گذارد title کهنه بپوسد در حالی که دوازدهمین مقدمه را منتشر می‌کنی.
+
+<CorrectExample title="درست">
+```txt
+2026-09-15  /guides/espresso-machines/maintenance   support   Leila   new
+2026-09-22  /docs/robots-txt                        pillar    Leila   refresh
+2026-09-29  —                                       —         —       prune 3 tag URLs
+```
+
+یک URL جدید، یک refresh، یک پاکسازی. بریف قبل از تاریخ ship هست.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="سهمیهٔ حجم بدون ستون خوشه همان ۱۶ پست «best X 2026» است و صفر نگهداری برنده.">
+```txt
+Mon: best espresso
+Tue: best espresso machine
+Wed: espresso machine review
+…every weekday, new URL, no refresh, no prune
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast استراتژی زمان‌بندی نمی‌کند. از تقویم تحریریه‌ای که داری (یا scheduled post هسته) **بعد از** تصمیم slug استفاده کن.
+2. ۳۰ پیش‌نویس از ایمپورت «فایل محتوا» پلاگین زمان‌بندی نکن.
+
+**Rank Math**
+
+1. Content AI / ابزار title گروهی Rank Math تقویم نیست.
+2. Instant Indexing روز ship جایگزین بریف نیست.
+
+**AIOSEO**
+
+1. همان. انتشار از نمرهٔ «SEO analyzer» برنامه‌ریزی نیست.
+2. پست زمان‌بندی‌شده هنوز canonical یکتا و title غیرتکراری می‌خواهد (ماژول ۰۲).
+
+**جا خالی واقعی:** هیچ‌کدام از Yoast / Rank Math / AIOSEO / SEOPress تقویم تحریریه نیستند. scheduled post وردپرس ساعت CMS است. استراتژی بیرون پلاگین SEO است.
+
+## پیاده‌سازی کد
+
+تقویم ops است. اپ نباید از تاریخ slug بسازد:
+
+```ts
+// bad: /blog/2026/09/12/post as the only identifier
+// good: stable slug; date is metadata
+
+export const metadata = {
+  title: "Espresso machine maintenance",
+};
+```
+
+App Router: `last_reviewed` / `dateModified` در frontmatter یا CMS، نه در مسیر (URL ماژول ۰۲). Pages Router: همان. اختیاری: تقویم خصوصی `/admin` خارج از scope این سایت داک استاتیک است.
+
+از `new Date()` برای ۳۶۵ URL «امروز در سئو» `generateStaticParams` نساز.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «تازگی» به‌عنوان دلیل فرستادن URL جدید هر هفته برای همان کوئری.
+- **DEPRECATED:** تعداد کلمه یا تعداد پست به‌عنوان تنها KPI محتوا.
+- تقویمی که وقت بازبینی حقوقی/YMYL را نادیده می‌گیرد.
+- صفحهٔ فصلی که یازده ماه سال خالی 200 می‌دهد (وقتی خواب است 404/410 یا noindex — ماژول ۰۳).
+- ترجمهٔ واژه‌به‌واژهٔ تقویم انگلیسی به فارسی بدون چک SERP.
+
+## نکته‌های سطح بالا / پروداکشن
+
+دو لاین: **ساخت** (URL خوشهٔ جدید) و **نگهداری** (refresh/prune). اگر نگهداری همیشه لغو شود، پونزی محتوا راه انداختی.
+
+خبر به لاین سوم نیاز دارد (breaking). اسلاگ خبر را بدون برنامهٔ 301 وقتی خبر می‌میرد داخل pillar evergreen قاطی نکن.
+
+وقتی ship شامل ریدایرکت یا عوض قالب است، تقویم را با SEO + محتوا + مهندسی شریک شو.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| تقویم در مقابل زنده | slug هست یا prune علامت خورده | تاریخ روح، بدون URL |
+| ترکیب | جدید + refresh + prune | فقط جدید |
+| بریف قبل از ship | نیت + یادداشت SERP | فقط ردیف title |
+| GSC بعد از یک ماه | URL جدید در خوشه | cannibal با pillar |

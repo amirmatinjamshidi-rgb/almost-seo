@@ -1,0 +1,141 @@
+---
+title: pagination دسته
+description: صفحهٔ ۲+ قفسهٔ محصول همان است که Googlebot SKU را پیدا می‌کند — href crawlable، self-canonical وقتی یکتاست، 404 بعد از آخرین صفحه. نه فولکلور pagination بلاگ.
+module: 07-ecommerce-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**pagination دسته** قفسهٔ محصول را روی `/c/espresso-machines`، `/c/espresso-machines/page/2` (یا `?page=2`) تکه می‌کند. pagination ماژول ۰۲ قاعدهٔ عمومی است. این صفحه مورد **کاتالوگ** است: SKUای که فقط روی صفحهٔ ۳ است اگر pager دکمه باشد نامرئی است.
+
+قاعده‌ای که می‌ماند:
+
+- گوگل `rel=next/prev` را به‌عنوان سیستم ایندکس **استفاده نمی‌کند**. UX اختیاری؛ فیچر رتبه نیست.
+- صفحهٔ ۲ با **محصول متفاوت** سند خودش است. **self-canonical.** canonical-به-صفحه-۱ روی لیست یکتا آن SKU را پنهان می‌کند یا هاب را duplicate می‌کند.
+- **View-all** در مقابل paginated: **یک** لیست را ایندکس کن. نه هر دو.
+- Infinite scroll / Load more هنوز `<a href>` crawlable به صفحهٔ ۲+ می‌خواهد **یا** هر SKU از هاب ایندکس‌پذیر / sitemap لینک شده. load-more فقط JS دم را پنهان می‌کند (JS SEO، ماژول ۰۳).
+- شماره صفحه‌ای که وجود ندارد: **404** (مثل facet خالی — داک خزش faceted-nav گوگل). نه کلون 200 صفحهٔ ۱.
+
+`noindex,follow` روی صفحهٔ ۲+ انتخاب است وقتی هر SKU از صفحهٔ ۱، sitemap، یا هاب دیگر قابل‌رسیدن است. اگر تنها لینک HTML به PDP روی صفحهٔ ۴ است، صفحهٔ ۴ را **noindex نکن** مگر sitemap آن PDP را لیست کند.
+
+Sitemap: **PDP** را لیست کن (و هاب دسته). لیست `/page/2` اختیاری است؛ معمولاً لندینگ Search نیست.
+
+facet × صفحه انفجار دوم است — فقط لندینگ allowlist را صفحه بزن (موضوع ناوبری facet).
+
+## چرا مهم است
+
+خزشی که هرگز صفحهٔ ۲ را دنبال نکند SKU دم را کشف نمی‌کند. canonical-به-اول footgun معمولی ووکامرس + پلاگین SEO است. فروشگاه فقط-infinite-scroll برای کاربر کامل و برای Googlebot خالی به‌نظر می‌رسد.
+
+<CorrectExample title="درست">
+```html
+<nav aria-label="Pagination">
+  <a href="/c/espresso-machines">1</a>
+  <a href="/c/espresso-machines/page/2">2</a>
+</nav>
+```
+
+HTML صفحهٔ ۲ PDP متفاوت دارد، self-canonical، title اگر ایندکس شود اشارهٔ صفحه دارد. `/page/99` بدون محصول 404 است. هر PDP هم در `sitemap.ts` است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Load more فقط-دکمه به‌علاوهٔ canonical-به-صفحه-۱ کاتالوگ را پنهان می‌کند. 200 روی صفحهٔ ۹۹ هاب را کلون می‌کند.">
+```html
+<button onclick="loadMore()">Load more</button>
+<link rel="canonical" href="https://www.example.com/c/espresso-machines" />
+<!-- this is page 2 with different SKUs -->
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. یواست `rel=next/prev` را به‌عنوان سیستم رتبه برنمی‌گرداند. title آرشیو را چک کن: صفحهٔ ۲ ایندکس‌شده نباید title دقیق صفحهٔ ۱ را کلون کند.
+2. اگر pagination دستهٔ محصول را noindex می‌کنی، تأیید کن PDP در sitemap است و از صفحهٔ ۱ یا هاب لینک شده.
+
+**Rank Math**
+
+1. کلید canonical pagination: **«canonical به صفحهٔ اول»** روی لیست محصول یکتا همان footgun است. view-source `/product-category/foo/page/2/`.
+2. `%%page%%` در قالب title آرشیو وقتی صفحهٔ ۲+ ممکن است ایندکس شود.
+
+**AIOSEO**
+
+1. همان گزینهٔ canonical صفحهٔ اول در بعضی نسخه‌ها — با view-source verify کن، نه برچسب ادمین.
+2. پلاگین دوم «view all» که `/all/` را کنار `/page/2` ایندکس می‌کند خاموش کن.
+
+**جا خالی واقعی:** canonical pagination در Rank Math / AIOSEO راحت‌تر از یواست غلط تنظیم می‌شود. SEOPress مشابه. `/page/2/` ووکامرس اگر همان مسیر لینک SKU است باید crawlable بماند. پلاگین فیلتری که facet را صفحه می‌زند اول سیاست facet می‌خواهد.
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; n?: string }>;
+}): Promise<Metadata> {
+  const { slug, n } = await params;
+  const page = n ?? "1";
+  const path =
+    page === "1" ? `/c/${slug}` : `/c/${slug}/page/${page}`;
+  return { alternates: { canonical: `https://www.example.com${path}` } };
+}
+
+export default async function CategoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string; n?: string }>;
+}) {
+  const { slug, n } = await params;
+  const page = Number(n ?? "1");
+  const result = await listProducts(slug, page);
+  if (page > 1 && result.items.length === 0) notFound();
+  return (
+    <nav>
+      {page > 1 && (
+        <Link href={page === 2 ? `/c/${slug}` : `/c/${slug}/page/${page - 1}`}>
+          Previous
+        </Link>
+      )}
+      {result.hasNext && (
+        <Link href={`/c/${slug}/page/${page + 1}`}>Next</Link>
+      )}
+    </nav>
+  );
+}
+```
+
+App Router: `generateStaticParams` برای صفحهٔ ۱..آخر، یا on demand. Pages Router: **مسیر** `/page/2` **یا** `?page=` را بردار — هر دو ایندکس‌پذیر نه. بدون آن `Link` href در HTML اول infinite-scroll نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** `rel=next/prev` به‌عنوان سیستم pagination گوگل.
+- **DEPRECATED:** همیشه URL صفحه‌بندی‌شده را به صفحهٔ ۱ canonical کن.
+- `noindex` صفحهٔ ۲+ در حالی که PDP فقط در آن HTML است.
+- `/search?q=&page=2` ایندکس‌شده به‌جای دسته.
+- title صفحهٔ ۲ عین صفحهٔ ۱ وقتی هر دو ایندکس‌اند.
+- 200 روی `/page/99`.
+- `nofollow` روی لینک pager داخلی «برای غلیظ کردن juice» (ویژگی لینک، ماژول ۰۴).
+
+## نکته‌های سطح بالا / پروداکشن
+
+per قالب تصمیم بگیر: صفحهٔ ۲+ ایندکس بلاگ اغلب کم‌ارزش است. صفحهٔ ۲+ دستهٔ فروشگاه اغلب **خزش لازم** است تا SKU دم پیدا شود — بعد آن SKU به هر حال در sitemap است، پس pagination کشف است نه تنها URL.
+
+لاگ Googlebot روی `/page/2`. صفر hit + محصول گم در GSC = pager غیرقابل‌خزش یا canonical-به-اول.
+
+Load more را با view-all ایندکس‌پذیر دوم ترکیب نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source صفحهٔ ۲ | SKU یکتا، pager `a href` واقعی | خالی، فقط دکمه |
+| Canonical | self اگر یکتا | اجباری به صفحهٔ ۱ |
+| `/page/99` | 404 | کلون 200 |
+| خزش / sitemap | PDP پیدا شد | فقط SKU صفحهٔ ۱ |
+| Title | جدا اگر ایندکس | کلون صفحهٔ ۱ |

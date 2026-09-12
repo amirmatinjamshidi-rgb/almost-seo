@@ -1,0 +1,157 @@
+---
+title: Product schema
+description: Product plus Offer on the PDP — price, currency, availability, identifiers match the visible page, checkout, and Merchant Center. No fake InStock.
+module: 07-ecommerce-seo
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Product** structured data (JSON-LD) on a **single-product** page (PDP), with a nested **Offer**, can make the URL eligible for **merchant listings** (product snippets, shopping knowledge panel, popular products — Google Search Central merchant-listing docs). Markup is a hint. It does not rank a thin PDP.
+
+Honesty rules (schema topic, Module 02, plus merchant-listing requirements):
+
+- `@type` is `Product` on the PDP. A category grid is **not** a Product with one Offer.
+- `name`, `image`, `description` match visible content.
+- `offers.price` + `priceCurrency` match the price the shopper sees (and checkout).
+- `offers.availability` is one `ItemAvailability` value (`InStock`, `OutOfStock`, `BackOrder`, `PreOrder`, `Discontinued`, …). Short names without the URL prefix are accepted. **Do not** mark `InStock` when the page or checkout cannot sell it.
+- Identifiers: `gtin` **or** `mpn` + `brand` **or** `sku`. Invented GTINs are misleading markup.
+- `aggregateRating` / `review` only with real visible reviews.
+- Variants: follow Google’s product-variant docs (`ProductGroup`, `isVariantOf`, `inProductGroupWithID`). Parent must not claim `InStock` if every buyable variant is out.
+- Shipping and returns: Google prefers **Organization**-level `MerchantReturnPolicy` / shipping policy; override on `Offer` only when that SKU differs. Do not invent free-return markup the checkout contradicts.
+
+Merchant Center **feed** availability must match the landing page. Mismatch is a disapproval, not a “SEO trick.”
+
+## Why it matters
+
+Valid matching markup can unlock listing surfaces. Fake `InStock`, fake stars, or Product-on-category spam gets ignored or tied to misleading-structured-data policy. Feed vs page mismatch burns Shopping / free listings.
+
+<CorrectExample>
+PDP HTML shows name, price `129.00 EUR`, “In stock.” JSON-LD:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Espresso machine Model A",
+  "image": "https://www.example.com/media/model-a.jpg",
+  "sku": "EMA-1",
+  "brand": { "@type": "Brand", "name": "Example" },
+  "offers": {
+    "@type": "Offer",
+    "url": "https://www.example.com/p/model-a",
+    "price": 129.00,
+    "priceCurrency": "EUR",
+    "availability": "https://schema.org/InStock",
+    "itemCondition": "https://schema.org/NewCondition"
+  }
+}
+```
+
+One graph. Same numbers in Merchant Center.
+</CorrectExample>
+
+<IncorrectExample why="Category marked as Product, fake InStock, fake rating, and a second plugin graph. Merchant listings and rich-result spam policies both apply.">
+```json
+{
+  "@type": ["Product", "CollectionPage"],
+  "name": "Espresso machines",
+  "offers": { "price": "0", "availability": "InStock" },
+  "aggregateRating": { "ratingValue": "5", "reviewCount": "9999" }
+}
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Product JSON-LD for WooCommerce is **Yoast WooCommerce SEO** (add-on), not core Yoast on a blog post. Disable a second schema plugin on PDPs.
+2. Confirm the add-on reads WooCommerce price and stock, not a stale custom field.
+
+**Rank Math**
+
+1. Rank Math WooCommerce / Schema: type `Product` on PDPs only. Turn off Product schema on posts and categories.
+2. Review snippets: only if WooCommerce reviews are visible. Instant Indexing does not fix bad Offer data.
+
+**AIOSEO**
+
+1. AIOSEO WooCommerce schema. Same one-emitter rule.
+2. Global Organization return/shipping markup: fill from real policy pages, not lorem.
+
+**Feature gap:** Rank Math’s type picker is the easiest to mis-set on the wrong template. Yoast WooCommerce SEO is conservative if the add-on is actually installed. AIOSEO / SEOPress WooCommerce graphs stack with Rank Math if both are on — two `Product` blocks. Google Rich Results Test / Merchant listings report are the judges.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  return { title: product.name };
+}
+
+export function productJsonLd(product: {
+  name: string;
+  slug: string;
+  image: string;
+  sku: string;
+  price: number;
+  currency: string;
+  inStock: boolean;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: product.image,
+    sku: product.sku,
+    offers: {
+      "@type": "Offer",
+      url: `https://www.example.com/p/${product.slug}`,
+      price: product.price,
+      priceCurrency: product.currency,
+      availability: product.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+    },
+  };
+}
+```
+
+App Router: emit JSON-LD from the **same** catalog row that renders the PDP (`JsonLd`). Revalidate when stock/price changes (`revalidate` / tag). Pages Router: `getServerSideProps` or ISR — do not freeze `InStock` in a static page while checkout is empty.
+
+`generateMetadata` does not replace JSON-LD.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “More schema types = more rank.”
+- **DEPRECATED:** Microdata required (JSON-LD is the documented default).
+- `Product` on category / search / blog “roundup” URLs.
+- `InStock` while the button says sold out (out-of-stock topic).
+- `price: 0` as a placeholder.
+- Duplicate graphs from theme + SEO plugin + tag manager.
+- Copying a competitor’s JSON-LD `@id`.
+
+## Senior / production notes
+
+One emitter. Map CMS stock enums onto `ItemAvailability` in one function so PDP, schema, and feed cannot drift. Variants: one URL per purchasable variant **or** a parent with variant markup — pick the model Google’s variant docs describe; do not mix both as two indexable near-duplicates (cannibalization, Module 01).
+
+Organization-level return/shipping in `lib/schema.ts` next to NAP so footer policy URLs and JSON-LD cannot disagree.
+
+When Google drops a merchant-listing property, remove it in the same release.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Rich Results Test | Merchant listings / Product, no spam extras | Errors, Product on a category |
+| Visible vs JSON-LD | Price, availability, name match | InStock vs sold-out HTML |
+| Feed | Same availability/price | Shopping disapproval for mismatch |
+| View-source | One Product graph | Three plugins × three types |

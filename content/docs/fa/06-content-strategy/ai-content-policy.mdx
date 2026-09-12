@@ -1,0 +1,102 @@
+---
+title: سیاست محتوای AI
+description: سقف گوگل کار مفید و برای-آدم یکتاست — صفحهٔ AI (یا انسانی) مقیاس‌شدهٔ غیر اصل برای دستکاری Search اسپم است، workflow نه.
+module: 06-content-strategy
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+سیاست اسپم گوگل **scaled content abuse** را پوشش می‌دهد: صفحه‌های زیادی که هدفشان دستکاری رتبه است، چه انسان نوشته باشد، چه قالب، چه مدل مولد. استفاده از AI به‌عنوان *ابزار* (outline، پیش‌نویس ترجمه، کامنت کد) ممنوع نیست. فرستادن ۵۰۰۰ راهنمای نزدیک-تکراری در هفته بدون متخصص همان مسئلهٔ سیاست است.
+
+سقف عملی، همان محتوای انسانی:
+
+- اگر Search نبود به کاربر نشانش می‌دادی؟
+- مشاهده، روش، یا جزئیات first-party دارد که مدل نمی‌داند (اسکرین‌شات تو، `robots.ts` تو، اندازه‌گیری تو)؟
+- مالکی هست که وقتی غلط است درستش کند؟
+
+افشای استفاده از AI انتخاب اعتماد/حقوقی است؛ cheat code رتبه نیست. برچسب جعلی «human written» روی دوغاب بدتر است.
+
+citation، آمار، یا UI پلاگینی که وجود ندارد اختراع نکن (قانون سخت همین دانشنامه). مدل API را hallucination می‌کند — در محصول verify کن.
+
+## چرا مهم است
+
+تقویمی که «ChatGPT × CSV کلمه» است کارخانهٔ doorway با قدم اضافه است. اقدام دستی و classifier خودکار اهمیت نمی‌دهند فاکتور گفته «کارایی AI.»
+
+<CorrectExample title="درست">
+ادیتور URL خوشه را بریف می‌کند. مدل یک بخش پیش‌نویس می‌کند. آدم با مثال `curl` واقعی، ادعای Search Central فعلی، و `why` روی مثال غلط بازنویسی می‌کند. `last_reviewed` یک نفر است. FA دوباره توضیح داده شده، calque نه.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="تولید انبوه بدون بازبینی حتی اگر هر صفحه اسم شهر یکتا داشته باشد scaled content abuse است.">
+```txt
+prompt: write 800 words SEO for {city} {service}
+publish: /seo/{city}
+schema: Article + fake author
+```
+
+پانصد URL، همان outline، عکس استوک، بدون کسب‌وکار در آن شهرها.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. چراغ یواست روی دوغاب روان سبز می‌شود. ریسک سیاست را تشخیص نمی‌دهد.
+2. از پلاگین GPT مستقیم به `publish` خودکار نکن. پیش‌نویس + آدم.
+
+**Rank Math**
+
+1. Content AI در Rank Math کمک پیش‌نویس است. «۵۰ پست بنویس» گروهی اگر خام بفرستی الگوی abuse است.
+2. Instant Indexing سریع‌تر آن URLها دفاع نیست.
+
+**AIOSEO**
+
+1. همان: نمرهٔ analyzer ≠ مفید بودن.
+2. schema نویسنده روی کاربر بات: نکن.
+
+**جا خالی واقعی:** ژنراتور Rank Math وسوسه‌انگیزترین footgun است. Yoast/AIOSEO/SEOPress هرچه منتشر کنی ایندکس می‌کنند. هیچ پلاگین مسئول compliance نیست.
+
+## پیاده‌سازی کد
+
+مسیری نساز که خروجی مدل را بدون بازبینی به ایندکس بفرستد:
+
+```ts
+// private draft pipeline — not a public GET that 200s unique city pages
+export async function POST(req: Request) {
+  const brief = await req.json();
+  const draft = await generateDraft(brief); // internal
+  await saveDraft({ ...draft, status: "needs_review" });
+  return Response.json({ id: draft.id, index: false });
+}
+```
+
+App Router: پیش‌نویس تا ادیتور `robots` را عوض کند `noindex` می‌ماند. Pages Router: همان. `generateStaticParams` از فهرست شهر برای «لندینگ AI» پیاده‌سازی doorway است (موضوع بعد).
+
+هرگز کلید API را در باندل کلاینت نگذار تا «برای Googlebot همان لحظه generate» شود.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «گوگل همهٔ محتوای AI را ممنوع کرده.» هدف scaled غیر اصل/اسپم است، ابزار نه.
+- **DEPRECATED:** spinning / spinning با LLM به‌عنوان «یکتا.»
+- ترجمهٔ خودکار `en` به `fa` بدون ویرایش native (قانون FA همین پروژه).
+- بایلاین E-E-A-T جعلی روی پست تولیدشده (ماژول ۰۴).
+- استناد به مدل به‌عنوان منبع واقعیت Search Central.
+
+## نکته‌های سطح بالا / پروداکشن
+
+سیاست مکتوب: AI چه را پیش‌نویس کند، چه را نه (ادعای YMYL، حقوقی، پزشکی، API اختراعی)، کی `last_reviewed` را امضا می‌کند. prompt را فقط اگر داستان نگهداری/حریم داری لاگ کن.
+
+اگر از قبل کارخانه فرستادی: تولید را قطع کن، ممیزی، آشغال را 301/410، چند URL که آدم مالک می‌شود نگه دار (موضوع هرس).
+
+MDX این سایت مال آدم است. مدل کمک می‌کند؛ `generateStaticParams` از کلمه نمی‌گیرد.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| نمونه URL جدید | جزئیات first-party | قالب + توکن شهر |
+| نویسنده | واقعی یا حذف‌شده | SME روح |
+| GSC | کارخانهٔ هاست نازک نیست | «Crawled not indexed» / اسپم مقیاس‌شده |
+| FA/EN | دوباره توضیح | calque |

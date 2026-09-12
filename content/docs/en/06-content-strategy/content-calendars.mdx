@@ -1,0 +1,102 @@
+---
+title: Content calendars
+description: A schedule of clusters and refreshes — not a volume quota of new posts, and not a keyword CSV with dates.
+module: 06-content-strategy
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **content calendar** is the operations view of the cluster map: what ships when, who owns it, what job it does (new pillar, new support URL, refresh, prune). It is not “20 posts per month” as a KPI.
+
+Useful columns: ship date, URL/slug, cluster, intent, owner, status (brief / draft / live), refresh-by date. Optional: target query *family*, not 40 keywords.
+
+Inputs: GSC gaps, sales/support language, SERP changes, seasonal demand you actually fulfill. Tools (Module 01) suggest; they do not fill the calendar unsupervised.
+
+Capacity is the constraint. A calendar that assumes infinite SMEs produces AI slurry or thin rewrites (later topics).
+
+## Why it matters
+
+Volume calendars create doorways and cannibals. Cluster calendars compound. Missed refreshes let dated titles rot while you publish a twelfth intro.
+
+<CorrectExample>
+```txt
+2026-09-15  /guides/espresso-machines/maintenance   support   Leila   new
+2026-09-22  /docs/robots-txt                        pillar    Leila   refresh
+2026-09-29  —                                       —         —       prune 3 tag URLs
+```
+
+One new URL, one refresh, one cleanup. Briefs exist before the ship date.
+</CorrectExample>
+
+<IncorrectExample why="A volume quota with no cluster column is how you get 16 ‘best X 2026’ posts and zero maintenance of winners.">
+```txt
+Mon: best espresso
+Tue: best espresso machine
+Wed: espresso machine review
+…every weekday, new URL, no refresh, no prune
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not schedule strategy. Use the editorial calendar you already have (or core scheduled posts) **after** the slug is decided.
+2. Do not schedule 30 drafts from a plugin “content file” import.
+
+**Rank Math**
+
+1. Rank Math content AI / bulk title tools are not a calendar.
+2. Instant Indexing on ship day does not replace the brief.
+
+**AIOSEO**
+
+1. Same. Publishing from AIOSEO “SEO analyzer” scores is not planning.
+2. Scheduled posts still need unique canonicals and no duplicate titles (Module 02).
+
+**Feature gap:** None of Yoast / Rank Math / AIOSEO / SEOPress is an editorial calendar. WordPress scheduled posts are a CMS clock. The strategy lives outside the SEO plugin.
+
+## Code implementation
+
+Calendars are ops. The app should not invent slugs from dates:
+
+```ts
+// bad: /blog/2026/09/12/post as the only identifier
+// good: stable slug; date is metadata
+
+export const metadata = {
+  title: "Espresso machine maintenance",
+};
+```
+
+App Router: `last_reviewed` / `dateModified` in frontmatter or CMS, not in the path (Module 02 URLs). Pages Router: same. Optional: a private `/admin` calendar is out of scope for this static docs site.
+
+Do not `generateStaticParams` from `new Date()` for 365 “today in SEO” URLs.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Freshness” as a reason to ship a new URL every week for the same query.
+- **DEPRECATED:** Word-count or post-count as the only content KPI.
+- Calendars that ignore legal/YMYL review time.
+- Seasonal pages that 200 empty eleven months a year (use 404/410 or noindex when dormant — Module 03).
+- Translating the English calendar word-for-word into Persian without a SERP check.
+
+## Senior / production notes
+
+Two lanes: **build** (new cluster URLs) and **maintain** (refresh/prune). If maintain is always slipped, you are running a content Ponzi.
+
+Newsrooms need a third lane (breaking). Do not mix news slugs into evergreen pillars without a 301 plan when the news dies.
+
+Share the calendar with SEO + content + eng when a ship includes redirects or template changes.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Calendar vs live | Slugs exist or are marked prune | Ghost dates, no URLs |
+| Mix | New + refresh + prune | Only new |
+| Brief before ship | Intent + SERP note | Title-only row |
+| GSC after a month | New URL in the cluster | Cannibal with the pillar |
