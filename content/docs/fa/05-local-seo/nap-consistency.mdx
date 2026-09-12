@@ -1,0 +1,118 @@
+---
+title: یکدستی NAP
+description: اسم، آدرس و تلفن باید روی سایت، GBP و citation یکی باشند — نویز فرمت در مقابل entity دیگر.
+module: 05-local-seo
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**NAP** یعنی Name، Address، Phone. سیستم لوکال citationها را وقتی این رشته‌ها شبیه یک entity باشند وصل می‌کند. وقتی سایت می‌گوید `Example Labs`، GBP می‌گوید `Example Lab SEO`، و دایرکتوری شمارهٔ مستأجر قبلی را دارد، دوپاره (یا بی‌اعتماد) می‌شود.
+
+یکدستی **معنایی** است، نه ASCII یکسان در هر ویرگول:
+
+- همان اسم حقوقی / عمومی (GBP: بدون keyword stuffing).
+- همان خیابان و محل. شمارهٔ واحد را همه‌جا که کنترل می‌کنی **یک‌جور** بیاور یا نیاور.
+- همان تلفن اصلی در E.164 یا یک فرمت ملی که برمی‌داری و تکرار می‌کنی (`+98 21 …` در مقابل `021-…` — یک فرم عمومی).
+- شمارهٔ tracking: اگر مارکتینگ DNI یکتا می‌خواهد، NAP **منتشرشدهٔ اصلی** را روی صفحهٔ لوکیشن، schema و GBP نگه دار. نگذار هر لندینگ «خط اصلی» جدید اختراع کند.
+
+آدرس قدیم بعد از نقل مکان باید URL لوکیشن قدیم را 301 کند و در GBP و citationهای مهم به‌روز شود. NAP جا مانده کسب‌وکار دوم است.
+
+## چرا مهم است
+
+NAP ناسازگار یعنی دو entity «تقریباً.» pack ممکن است پین غلط، تلفن غلط، یا رقیبی که شمارهٔ قدیم را نگه داشته نشان بدهد. بهداشت داده است، نه hack رتبه.
+
+<CorrectExample title="درست">
+یک منبع حقیقت (CMS)، دوباره در فوتر، صفحهٔ لوکیشن، schema، و فیلد GBP که دستی می‌زنی:
+
+```txt
+Example Labs Café
+12 Example St, District 3
++98 21 5555 0101
+```
+
+فوتر، JSON-LD `LocalBusiness`، و GBP همان سه‌تایی را استفاده می‌کنند. صفحهٔ کمپین ممکن است UTM بچسباند؛ آدرس دیدنی را عوض نمی‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="سه اسم و دو تلفن به سیستم یاد می‌دهد یک کسب‌وکار نیستی. call tracking به‌عنوان تنها شماره روی هوم‌پیج citation را جدا می‌کند.">
+```txt
+Header: Example Labs SEO Agency Tehran
+Footer: Exmpl Lab, 12 Exampl Street
+GBP: Best Café SEO | 0912-000-0000
+Schema: a PO Box in another city
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast Local / Organization: اسم، آدرس، تلفن را یک‌بار پر کن. ویجت یا shortcode را در فوتر بگذار تا قالب NAP دوم سخت‌کد نکند.
+2. بعد از نقل مکان، Yoast را **و** هر صفحهٔ ادیتور کلاسیک که بلوک قدیم را پیست کرده به‌روز کن.
+
+**Rank Math**
+
+1. Rank Math Local SEO: آدرس و تلفن کسب‌وکار. چند لوکیشن = چند رکورد NAP، نه یک رشتهٔ قاطی.
+2. تلفن knowledge graph در Rank Math باید با GBP بخواند.
+
+**AIOSEO**
+
+1. لوکیشن‌های Local SEO در AIOSEO. «default location» جا مانده را اگر هنوز دفتر قدیم را دارد خاموش کن.
+2. قالب با فیلد تلفن Customizer با پلاگین می‌جنگد — یک برنده.
+
+**جا خالی واقعی:** Rank Math و AIOSEO NAP چندلوکیشن را داخل پلاگین آسان‌تر می‌کنند. Yoast ادآن Local SEO می‌خواهد. Local Business در SEOPress یک فرم است مگر پست را duplicate کنی. هیچ‌کدام Yelp، Apple Maps، یا دایرکتوری ایرانی را برایت به‌روز نمی‌کنند. اسپردشیت + مالک هنوز می‌برد.
+
+## پیاده‌سازی کد
+
+```ts
+export const nap = {
+  name: "Example Labs Café",
+  street: "12 Example St",
+  locality: "Tehran",
+  postalCode: "12345",
+  telephone: "+982155550101",
+} as const;
+
+export function NapBlock() {
+  return (
+    <address>
+      <strong>{nap.name}</strong>
+      <br />
+      {nap.street}, {nap.locality} {nap.postalCode}
+      <br />
+      <a href={`tel:${nap.telephone}`}>{nap.telephone}</a>
+    </address>
+  );
+}
+```
+
+App Router: `nap` را در صفحهٔ لوکیشن، فوتر، و JSON-LD (موضوع بعد) import کن. Pages Router: همان ماژول، بدون کپی-پیست. NAP را فقط در کلاینت از `process.env` نخوان — HTML اول باید داشته باشد.
+
+بین‌المللی: `/fa/` و `/en/` ممکن است برچسب را ترجمه کنند؛ شمارهٔ خیابان را به ساختمان دیگر ترجمه نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «citation باید کاراکتر به کاراکتر یکی باشد از جمله `St.` در مقابل `Street` وگرنه جریمه می‌شوی.» چیزی که کنترل می‌کنی normalize کن؛ از فرمت‌کنندهٔ دایرکتوری وحشت نکن.
+- **DEPRECATED:** صدها submit دایرکتوری بی‌کیفیت به‌عنوان تاکتیک اصلی لوکال.
+- embed iframe نقشه با query **متفاوت** از NAP.
+- GBP بدون واحد + schema فقط با واحد.
+- فقط واتساپ به‌عنوان تلفن در schema وقتی GBP خط ثابت دارد (یا برعکس) بدون توضیح.
+
+## نکته‌های سطح بالا / پروداکشن
+
+ops: NAP در git یا CMS زندگی می‌کند، نه در فایل Figma طراح. نقل مکان چک‌لیست دارد: GBP، سایت، schema، location extension گوگل ادز، Apple Business Connect اگر داری، citationهای بالا.
+
+call tracking: شماره را فقط به‌عنوان `additional` در schema بگذار اگر هنوز `telephone` خط پایدار است. حریم: موبایل شخصی را در JSON-LD نگذار اگر خط عمومی میز است.
+
+چندلوکیشن: هر شعبه یک رکورد. هیچ‌وقت «تهران / اصفهان / شیراز» را در یک فیلد `address` نچسبان.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| سایت در مقابل GBP در مقابل schema | همان اسم، خیابان، تلفن اصلی | اسم شعار / دفتر قدیم |
+| href با `tel:` | با شمارهٔ دیدنی می‌خواند | `tel:` به خط کمپین مرده |
+| crawl قالب‌ها | یک ماژول NAP | رشتهٔ سخت‌کد در پست قدیم |
+| نقل مکان | URL قدیم 301؛ GBP به‌روز | دو پین، دو تلفن |

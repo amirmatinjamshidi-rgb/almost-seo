@@ -1,0 +1,152 @@
+---
+title: schema لوکال
+description: JSON-LD از نوع LocalBusiness که با NAP و GBP واقعی می‌خواند — type، geo، ساعت، و markupی که نادیده گرفته می‌شود یا اسپم حساب می‌شود.
+module: 05-local-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**LocalBusiness** (یا زیرنوع: `CafeOrCoffeeShop`، `Dentist`، `HardwareStore`، …) در JSON-LD entity روی صفحه را توصیف می‌کند. گوگل این را زیر structured data کسب‌وکار محلی مستند کرده. markup یک **hint** است. به‌تنهایی listing GBP یا map pack نمی‌سازد.
+
+صداقت لازم:
+
+- `@type` با آنچه هستی بخواند، نه نوعی که شایعهٔ «بهترین rich result» دارد.
+- `name`، `address`، `telephone` با NAP و GBP بخوانند (موضوع‌های قبل).
+- `geo` (`GeoCoordinates`) پین واقعی است، نه درِ رقیب.
+- `openingHoursSpecification` با در و GBP بخواند. ساعت کهنه را در JSON-LD نگذار.
+- `url` همان location canonical است (یا خانه برای سایت تک‌لوکیشن).
+- `sameAs` می‌تواند URL نقشه / پروفایلی که کنترل می‌کنی باشد، به‌علاوهٔ پروفایل سوشال واقعی.
+
+چند لوکیشن: **یک LocalBusiness per صفحهٔ لوکیشن**، نه یک توده با سه آدرس. `Organization` والد ممکن است `department` باشد یا ساده به شعب لینک بدهد.
+
+`AggregateRating` فقط با نظر دیدنی (موضوع مدیریت نظر).
+
+## چرا مهم است
+
+type غلط و ساعت جا مانده یعنی rich result می‌شکند یا Googlebot فروشگاهی غیر از Maps می‌بیند. markup یکدست وصل کردن entity را آسان می‌کند. cheat code رتبهٔ لوکال نیست.
+
+<CorrectExample title="درست">
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  "name": "Example Labs Café",
+  "url": "https://www.example.com/locations/example-st",
+  "telephone": "+982155550101",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "12 Example St",
+    "addressLocality": "Tehran",
+    "postalCode": "12345",
+    "addressCountry": "IR"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 35.7219,
+    "longitude": 51.3347
+  },
+  "openingHoursSpecification": [{
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Saturday","Sunday","Monday","Tuesday","Wednesday"],
+    "opens": "08:00",
+    "closes": "18:00"
+  }]
+}
+</script>
+```
+
+مختصات مال *همین* کافه است. ساعت با GBP می‌خواند. امتیاز جعلی نیست.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="type بیمارستان روی آژانس سئو، geo دفتر مرکزی روی هر صفحهٔ شهر، و ستارهٔ اختراعی: markupی که سیاست اسپم از قبل به‌عنوان گمراه‌کننده پوشش می‌دهد.">
+```json
+{
+  "@type": "Hospital",
+  "name": "Best SEO Tehran",
+  "geo": { "latitude": 0, "longitude": 0 },
+  "aggregateRating": { "ratingValue": "5", "reviewCount": "9999" }
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast Local SEO / Organization: نوع Schema.org مطابق را بردار. خروجی در سورس صفحه — یک LocalBusiness تأیید کن، نه Yoast + قالب + پلاگین دیگر.
+2. schema تکراری صفحه‌ساز را خاموش کن.
+
+**Rank Math**
+
+1. Rank Math ← Schema ← Local Business / post type لوکیشن. geo را از کلیک واقعی روی نقشه بگذار، نه پیش‌فرض 0,0.
+2. Rank Math + AIOSEO با هم = گراف تکراری. یک emitter.
+
+**AIOSEO**
+
+1. schema Local در AIOSEO. embed نقشه باید همان مختصات JSON-LD را استفاده کند.
+2. schema لوکیشن «enhanced» که امتیاز اضافه می‌کند: فقط اگر نظر روی صفحه است.
+
+**جا خالی واقعی:** Rank Math و AIOSEO فیلد لوکال بیشتری در UI تقریباً رایگان نشان می‌دهند. Yoast Local را ادآن می‌کند. Local Business در SEOPress تواناست؛ باز یک گراف. تست Rich Results / URL Inspection گوگل از preview هر پلاگین بهتر است.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+import { nap } from "@/lib/nap";
+
+export const metadata: Metadata = {
+  title: "Example Labs Café — Example St",
+};
+
+export const localBusiness = {
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  name: nap.name,
+  url: "https://www.example.com/locations/example-st",
+  telephone: nap.telephone,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: nap.street,
+    addressLocality: nap.locality,
+    postalCode: nap.postalCode,
+    addressCountry: "IR",
+  },
+  geo: { "@type": "GeoCoordinates", latitude: 35.7219, longitude: 51.3347 },
+};
+```
+
+App Router: `localBusiness` را فقط روی همان مسیر به کامپوننت `JsonLd` سایت بده. Pages Router: همان، یا `next/head`. روی `/blog/how-to-make-espresso`، LocalBusiness نده.
+
+همان ماژول `nap` موضوع یکدستی NAP. ثابت geo در git با کامنت «با پین GBP می‌خواند.»
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «LocalBusiness بگذار وارد پک می‌شوی.»
+- **DEPRECATED:** کلمه در `name` چون schema «همان خواندن title گوگل است.»
+- چند پلاگین چهار گراف `LocalBusiness` روی یک URL.
+- `addressCountry` غلط (`IR` در مقابل `Iran` در مقابل خالی) وقتی GBP درست است — ISO 3166-1 alpha-2 بردار و بچسب.
+- کپی Place ID / مختصات رقیب.
+- Organization سایت‌واید + LocalBusiness با تلفن متناقض.
+
+## نکته‌های سطح بالا / پروداکشن
+
+طراحی گراف: `Organization` روی هوم‌پیج، زیرنوع `LocalBusiness` روی URL لوکیشن، `WebSite` همان کار این دانشنامه. همه‌چیز را در یک type پهن نکن.
+
+ساعت: از همان فیلد CMS که جدول را برای آدم چاپ می‌کند بساز. ساعت مغز دوتکه باگ markup لوکال شمارهٔ یک بعد از drift NAP است.
+
+اگر شعبه می‌بندی: GBP را پایین بکش، صفحه را `404`/`410` یا 301 کن، JSON-LD را **همان رلیز** حذف کن.
+
+صلاحیت rich result عوض می‌شود؛ با ابزار گوگل validate کن، نه اسکرین‌شات پک ۲۰۱۹.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source / Rich Results Test | یک LocalBusiness؛ معتبر | خطا؛ geo 0,0؛ type جعلی |
+| NAP در مقابل GBP | می‌خواند | schema هنوز دفتر قدیم |
+| ساعت در مقابل در | می‌خواند | JSON-LD ۲۴/۷، در بسته |
+| URL Inspection | markup روی URL لوکیشن | برای زنجیره markup فقط روی `/` |

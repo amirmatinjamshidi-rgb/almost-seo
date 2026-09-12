@@ -1,0 +1,125 @@
+---
+title: Google Business Profile
+description: Maps و local pack از پروفایل verifyشده شروع می‌شود — دسته، service area در مقابل فروشگاه، و اسپمی که listing را suspend می‌کند.
+module: 05-local-seo
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Google Business Profile** (GBP؛ قبلاً Google My Business) listingای است که گوگل برای Maps و local pack استفاده می‌کند. لینک آبی ارگانیک سیستم جداست. نتیجهٔ لوکال **relevance**، **distance** و **prominence** را وزن می‌کند (سه‌تایی مستند گوگل). GBP همان جا است که entity را اعلام می‌کنی: اسم، دستهٔ اصلی، آدرس یا service area، ساعت، attribute، عکس، محصول/خدمت.
+
+قانونی که listing را زنده نگه می‌دارد:
+
+- **یک پروفایل per مکان واقعی** (یا کسب‌وکار service-area صادق بدون فروشگاه عمومی). پین در شهری که سرویس نمی‌دهی نگذار.
+- **اسم = اسم واقعی کسب‌وکار**، نه `Best Plumber Tehran | Emergency 24h`. keyword stuffing در عنوان خلاف سیاست GBP است.
+- **دستهٔ اصلی** شغل است؛ دستهٔ اضافه مکمل است، فهرست stuffing نیست.
+- **Verification** (کارت، ایمیل، ویدیو، هرچه گوگل برای آن listing بدهد) باید موفق شود و مال تو بماند. پروفایل دزدیده‌شده حادثهٔ ops است.
+
+پوشش Maps و GBP per کشور فرق دارد. هرجا listing هست، قانون محصول همان است. schema و NAP (موضوع‌های بعد) همان entity را پشتیبانی می‌کنند؛ جایگزین پروفایل نیستند.
+
+## چرا مهم است
+
+برای کوئری «نزدیک من» و شهر+خدمت، pack اغلب قبل از ارگانیک کلیک را می‌گیرد. سایت داک عالی با GBP معلق، نقشه را می‌بازد. اسم stuffed ممکن است یک هفته ببرد و بعد محو شود.
+
+<CorrectExample title="درست">
+کافهٔ فروشگاهی، یک پین، ساعت واقعی، دستهٔ اصلی `Cafe`:
+
+```txt
+Name: Example Labs Café
+Primary category: Cafe
+Address: 12 Example St, matching the lease and the site footer
+Hours: the hours on the door
+Website: https://www.example.com/locations/example-st
+```
+
+عکس مال *همین* فضاست. محصول/خدمت همان است که می‌فروشی. پست اختیاری است؛ فیلد اصلی نه.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="اسم پر از کلمه، دفتر جعلی، و پین تکراری نقض سیاست GBP است. Suspension پک را پاک می‌کند، نه فقط یک افت رتبه.">
+```txt
+Name: Best SEO Agency Tehran | Google First Page | ارزان
+Address: a virtual office you never staff
+Categories: SEO, Restaurant, Hospital, Lawyer
+```
+
+به‌علاوهٔ «لوکیشن» دوم در هر محله با همان تلفن.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast Local SEO (افزونهٔ پولی) می‌تواند همان NAP را که در GBP می‌گذاری ذخیره کند. listing گوگل را نمی‌سازد. در مدیر Business Profile / Maps بساز و verify کن.
+2. Knowledge Graph سازمان در یواست هسته باید با اسم GBP بخواند، نه شعار کلمه.
+
+**Rank Math**
+
+1. Rank Math ← Local SEO / Knowledge Graph: نوع کسب‌وکار، آدرس، چند لوکیشن اگر واقعی‌اند.
+2. Rank Math نمی‌تواند GBP را verify کند. «نمرهٔ Local SEO» را رتبهٔ Maps ندان.
+
+**AIOSEO**
+
+1. ماژول Local SEO در AIOSEO: لوکیشن، embed نقشه، NAP در فوتر. نقشه را روی پین *verifyشده* بگذار، نه مختصات دوم اختراعی.
+2. صفحهٔ چندلوکیشن فقط وقتی هر صفحه شعبهٔ واقعی است.
+
+**جا خالی واقعی:** Yoast Local ادآن است؛ Rank Math و AIOSEO UI لوکال بیشتری در پلاگین اصلی دارند. Local Business در SEOPress همان کلاس فرم NAP/schema است. هیچ‌کدام API listing گوگل را جایگزین UI پروفایل نمی‌کنند. CPT لوکیشن تکراری برای محله‌ای که نیستی doorway است (ماژول ۰۶ / ۱۴).
+
+## پیاده‌سازی کد
+
+listing پیش گوگل است. سایت باید URL لوکیشن قابل crawl بدهد که پروفایل به آن اشاره کند:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Example Labs Café — Example St",
+  alternates: {
+    canonical: "https://www.example.com/locations/example-st",
+  },
+};
+
+export default function LocationPage() {
+  return (
+    <main>
+      <h1>Example Labs Café</h1>
+      <p>12 Example St</p>
+      <p>Open 08:00–18:00</p>
+    </main>
+  );
+}
+```
+
+App Router: `app/locations/[slug]/page.tsx` per شعبهٔ واقعی. Pages Router: `pages/locations/[slug].tsx`. ۲۰۰ قالب شهر که همه می‌گویند «به [شهر] سرویس می‌دهیم» بدون دفتر نساز (doorway).
+
+`proxy.ts` نباید Googlebot را geo-302 به URL شهر تصادفی کند (ماژول ۰۳، بین‌المللی).
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** Google My Business به‌عنوان اسم محصول فعلی در SOP (الان Business Profile است).
+- **DEPRECATED:** stuffing عنوان GBP با کلمه به‌عنوان تاکتیک پشتیبانی‌شده.
+- **DEPRECATED:** listing برای صندوق پستی / میز coworking که هیچ‌وقت نیرو نداری و اسمش را HQ گذاشتن.
+- خرید «بک‌لینک GBP» یا citation جعلی نقشه.
+- آژانس listing را با جیمیلی که بازیابی نمی‌کنی مالک شود.
+- ساعت «۲۴ ساعته باز» وقتی نیستی.
+
+## نکته‌های سطح بالا / پروداکشن
+
+مالکیت: ادمین listing = اکانت گوگل شرکتی با 2FA، نه جیمیل پیمانکار. کد بازیابی را مستند کن.
+
+زنجیره: گروه لوکیشن در مدیر Business Profile. هر فروشگاه هنوز ساعت دقیق و URL فرود یکتا می‌خواهد وقتی سایت صفحه per فروشگاه دارد.
+
+کسب‌وکار service-area: اگر سیاست می‌خواهد آدرس را مخفی کن؛ پین فروشگاه جعلی هم نگذار.
+
+اگر Maps در بازار نازک است، باز یک entity صادق روی سایت نگه دار. با ۸۰ صفحهٔ جعلی «دفتر سئو تهران» جبران نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| داشبورد GBP | verify شده؛ تو owner/manager هستی | معلق / «کس دیگری claim کرده» |
+| اسم در مقابل حقوقی / H1 سایت | همان رشته | شعار کلمه در عنوان |
+| فیلد وبسایت | URL لوکیشن یا خانه با 200 | 404، یا برند دیگر |
+| سرچ Maps برای اسم | یک پین | تکراری / ساختمان غلط |

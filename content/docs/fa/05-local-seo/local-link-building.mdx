@@ -1,0 +1,118 @@
+---
+title: لینک‌بیلدینگ لوکال
+description: citation و لینک جامعه که مکان واقعی را پشتیبانی می‌کنند — اتاق بازرگانی، پارتنر، اسپانسرشیپ — در مقابل doorway صفحهٔ شهر و دایرکتوری جعلی.
+module: 05-local-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+آف‌پیج لوکال هنوز **citation** (NAP روی هاست دیگر) به‌علاوهٔ **لینک** از جایی است که از قبل دربارهٔ محله یا صنف حرف می‌زند. مبانی ماژول ۰۴ برقرار است. پیچ لوکال: نزدیکی و حضور دنیای واقعی از گست‌پست عمومی روی بلاگ نامرتبط مهم‌تر است.
+
+منبع مفید وقتی واقعی است:
+
+- فهرست اتاق، اتحادیه، دانشگاه، بیمارستان، یا شهرداری.
+- پارتنر و تأمین‌کننده‌ای که از قبل مشتری می‌فرستد.
+- اسپانسرشیپی که واقعاً پول دادی (اگر تبلیغ است `sponsored` بگذار).
+- خبر محلی که رویداد را پوشش داد، نه شبکهٔ spun «۱۰ دندانپزشک برتر.»
+- تجمیع‌کننده / محصول نقشه که مشروع claim می‌کنی (Apple Business Connect، Bing Places، جایی که هستند).
+
+بی‌فایده / ضدسیاست: بلست citation خودکار، «بلاگ لوکال» PBN، doorway از `/plumber-tehran-1` تا `/plumber-tehran-80`، دایرکتوری نقشهٔ embed جعلی.
+
+خود GBP «بک‌لینکی» نیست که بسازی؛ فیلد وبسایت اشاره‌گر است. «citation گوگل مپ» نخر.
+
+## چرا مهم است
+
+کافه‌ای با listing اتاق، href تأمین‌کننده، و NAP یکدست معمولاً از کارخانهٔ geo-page بدون مغازه می‌برد. prominence لوکال تا حدی تأیید بیرون‌سایت همان entity است.
+
+<CorrectExample title="درست">
+اسپانسرشیپ واقعی، `rel` صادق اگر پولی است، مقصد = URL لوکیشن:
+
+```html
+<p>
+  Neighborhood festival sponsor:
+  <a href="https://www.example.com/locations/example-st">Example Labs Café</a>
+</p>
+```
+
+اگر جشنواره اسلات را به‌عنوان تبلیغ فروخت، `rel="sponsored"`. NAP صفحهٔ اسپانسر با GBP می‌خواند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="هشتاد URL نازک شهر و PBN لوکال پولی doorway است به‌علاوهٔ link scheme. Maps نجاتشان نمی‌دهد.">
+```html
+<a href="https://www.example.com/seo-company-saadat-abad">SEO Saadat Abad</a>
+<a href="https://www.example.com/seo-company-vanak">SEO Vanak</a>
+```
+
+هر صفحه سه جمله و H1 stuffed است. به‌علاوهٔ ۲۰۰ submit «citation» به سایتی که کسب‌وکار لیست نمی‌کند.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. URL لوکیشنی که می‌خواهی ارجاع شود را `noindex` نکن. canonical یواست باید همان شعبه باشد.
+2. Yoast citation submit نمی‌کند. اسپردشیت + آدم.
+
+**Rank Math**
+
+1. ریدایرکت Rank Math: بعد از نقل مکان URL محلهٔ قدیم را 301 کن. هر doorway شهر را به `/` 301 نکن و اسمش را سئوی لوکال نگذار.
+2. Instant Indexing قالب doorway آن را لوکیشن نمی‌کند.
+
+**AIOSEO**
+
+1. AIOSEO Local: یک پست لوکیشن per شعبهٔ **واقعی**. کلون CPT برای کلمه همان الگوی doorway است.
+2. اگر از قبل کلون فرستادی و داری می‌کشی، از XML sitemap بینداز (`noindex` + حذف از sitemap، بعد 301/410).
+
+**جا خالی واقعی:** هیچ پلاگینی لینک لوکال نمی‌خرد. SEOPress / Yoast / Rank Math / AIOSEO اگر بخواهی CPT doorway را sitemap می‌کنند. جا خالی IA است، نه «بوستر citation» جاافتاده.
+
+## پیاده‌سازی کد
+
+```tsx
+export default function LocationPage({ nearby }: { nearby: { href: string; label: string }[] }) {
+  return (
+    <main>
+      <h1>Example Labs Café</h1>
+      <p>12 Example St</p>
+      <nav aria-label="Related">
+        {nearby.map((n) => (
+          <a key={n.href} href={n.href}>
+            {n.label}
+          </a>
+        ))}
+      </nav>
+    </main>
+  );
+}
+```
+
+App Router: لینک داخلی به hub واقعی (منو، رزرو)، نه به خواهر تولیدشدهٔ شهر. Pages Router: همان. `generateStaticParams` باید **فروشگاه** را لیست کند، نه هر رشته در CSV شهر.
+
+خروجی به پارتنر: اگر editorial است `href` عادی؛ اگر پول دادی `rel="sponsored"` (ماژول ۰۴).
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «حجم citation» از پک Fiverr به‌عنوان اهرم رتبهٔ لوکال.
+- **DEPRECATED:** دامنهٔ exact-match `شهر + کلمه` به‌عنوان استراتژی لوکال (doorway می‌شوند).
+- صفحهٔ متقابل «پارتنر محلی» که فقط مزرعهٔ لینک است.
+- embed نقشه و اسمش را citation گذاشتن.
+- تاکتیک PBN ماژول ۰۴ با «لوکال» در عنوان مقاله.
+
+## نکته‌های سطح بالا / پروداکشن
+
+منشن بدون لینک در رسانهٔ محلی را مثل ماژول ۰۴ اولویت بده: یک درخواست برای URL. هاست مدنی و دانشگاهی کند است و می‌ماند.
+
+برند چندلوکیشن: citation هر فروشگاه باید NAP **همان** فروشگاه را استفاده کند، نه HQ قاطی با کلمهٔ شهر.
+
+اگر جایی Google Maps ضعیف است، لینک لوکال هنوز به کاربر و همتای Bing/Apple/نقشه کمک می‌کند. KPI فقط-GBP که بازار پشتیبانی نمی‌کند اختراع نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| هاست ارجاع‌دهنده | اتاق، رسانه، پارتنر | آشغال citation-blast |
+| URL لوکیشن | `200`، در sitemap، ارجاع‌شده | کلون doorway به‌جایش رتبه می‌گیرد |
+| انکر | برند + URL | فقط «best [خدمت] [شهر]» |
+| فیلد وبسایت GBP | همان location canonical | لندینگ شهر تصادفی |
