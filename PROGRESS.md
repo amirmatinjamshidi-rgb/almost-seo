@@ -1,0 +1,22 @@
+# Build Progress
+
+- [x] Phase 0 — Scaffold (2026-09-12)
+  - Next.js 16.3.5 + Fumadocs core/ui 16.15.9 + fumadocs-mdx 15.4.0 + pnpm
+  - `pnpm build` green: `/en`, `/fa`, `/en/docs`, `/fa/docs`
+  - `/` redirects 307 to `/en/`; `fa` uses `dir="rtl"`
+- [ ] Phase 1 — Architecture
+- [ ] Module 00 — Foundations (0/4 topics)
+- [ ] Module 01 — Keyword Research (0/6 topics)
+- [ ] Module 02 — On-page SEO (0/13 topics)
+- [ ] Module 03 — Technical SEO (0/16 topics)
+- [ ] Module 04 — Off-page SEO (0/7 topics)
+- [ ] Module 05 — Local SEO (0/5 topics)
+- [ ] Module 06 — Content strategy (0/6 topics)
+- [ ] Module 07 — Ecommerce SEO (0/5 topics)
+- [ ] Module 08 — Analytics (0/5 topics)
+- [ ] Module 09 — Algorithm updates (0/3 topics)
+- [ ] Module 10 — WordPress SEO (0/9 topics)
+- [ ] Module 11 — React/Next.js SEO (0/12 topics)
+- [ ] Module 12 — Mobile/voice/AI (0/4 topics)
+- [ ] Module 13 — Technical audits (0/3 topics)
+- [ ] Module 14 — Blackhat myths (0/5 topics)
