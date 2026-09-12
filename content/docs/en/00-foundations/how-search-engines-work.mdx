@@ -1,0 +1,150 @@
+---
+title: How search engines work
+description: Crawl, render, index, and serve — the pipeline Google actually uses, and what breaks it on real sites.
+module: 00-foundations
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A search engine does not “read your site like a human and then rank it.” It runs a pipeline:
+
+1. **Discovery.** Google learns a URL exists: an internal or external link, an XML sitemap, a redirect, or a URL you submit in Search Console.
+2. **Crawl.** Googlebot requests the URL. `robots.txt` can allow or disallow that fetch. Disallow blocks crawling; it does not guarantee the URL stays out of the index.
+3. **Render.** For many pages Googlebot executes JavaScript (Web Rendering Service). What it *uses* for indexing is the rendered DOM plus returned HTTP headers, not only the raw HTML view-source.
+4. **Index.** If the URL is eligible, Google stores a representation: main content, canonical choice, structured data it accepted, language, and other extracted signals. Duplicate or thin URLs may be crawled and then dropped or clustered.
+5. **Serve / rank.** For a query, ranking systems pick which indexed documents to show, in which format (organic result, snippet, local pack, AI-generated overview citing sources, and so on).
+
+These stages fail independently. A URL can be discovered but never crawled (budget, robots, 5xx). Crawled but not indexed (`noindex`, duplicate, quality filters). Indexed but never ranked for the queries you care about (intent mismatch, weaker document).
+
+Google Search Central still describes this as crawling, indexing, and serving. Rendering sits between crawl and index for JavaScript-heavy pages. Treat it as a first-class stage on React/Next and modern WordPress themes.
+
+## Why it matters
+
+You cannot fix “we don’t rank” until you know which stage broke. Ranking work on a URL that is `noindex`, blocked by robots, or returning `soft 404` is wasted. Pipeline diagnosis is the difference between an SEO program and a content calendar that never gets indexed.
+
+<CorrectExample>
+A public article that Google can complete end to end:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Cache-Control: public, max-age=300
+X-Robots-Tag: all
+
+<link rel="canonical" href="https://example.com/guides/espresso-machines" />
+```
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Best espresso machines for small cafes (2026 buyer’s guide)</title>
+    <meta name="description" content="How to choose a 2-group espresso machine for a 40-cover cafe: boiler type, plumbed vs tank, and service costs." />
+    <link rel="canonical" href="https://example.com/guides/espresso-machines" />
+  </head>
+  <body>
+    <main>
+      <h1>Best espresso machines for small cafes</h1>
+      <article><!-- unique, crawlable HTML, not a client-only empty shell --></article>
+    </main>
+  </body>
+</html>
+```
+
+`robots.txt` allows Googlebot. The URL is listed in the XML sitemap. Internal links from `/guides/` pass PageRank-like attention. Search Console URL Inspection shows “URL is on Google.”
+</CorrectExample>
+
+<IncorrectExample why="Googlebot never fetches the HTML, so the page cannot be rendered or indexed as you wrote it.">
+```txt
+# robots.txt
+User-agent: *
+Disallow: /
+```
+
+The homepage still “works” in Chrome. Search Console later shows discovered-but-not-crawled, or indexed with a generic snippet from an inbound anchor and no on-page content.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. SEO → Settings → Site features: enable XML sitemaps.
+2. Confirm `https://example.com/sitemap_index.xml` lists posts, pages, and (if used) custom types you want crawled.
+3. Do not set the site to discourage search engines in Settings → Reading.
+4. For a private/staging copy, use HTTP auth or `noindex` at the server — not a production `Disallow: /` you forget to revert.
+
+**Rank Math**
+
+1. Rank Math → Sitemap Settings: turn the sitemap on; exclude attachments unless they are landing pages.
+2. Rank Math → Titles & Meta: default type/pages should not be `noindex` unless you intend that.
+3. Instant Indexing ping is optional; it does not replace a crawlable IA.
+
+**AIOSEO**
+
+1. AIOSEO → Sitemaps: enable general sitemap.
+2. Search Appearance → Advanced: check robots meta defaults per type.
+3. Keep the HTML sitemap feature off unless you have a real navigation use for it; it is not a substitute for the XML sitemap.
+
+**Feature gap:** Yoast and Rank Math both expose per-post `noindex` clearly. AIOSEO’s robots defaults live under Search Appearance and are easier to mis-set sitewide. SEOPress puts robots and sitemap under separate SEO → Titles & Metas / XML sitemaps screens; the behavior is the same, the click path is not.
+
+## Code implementation
+
+App Router: return real HTML for the primary document. Do not hide the article behind a client-only fetch with an empty server tree.
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Best espresso machines for small cafes (2026 buyer’s guide)",
+  description:
+    "How to choose a 2-group espresso machine for a 40-cover cafe: boiler type, plumbed vs tank, and service costs.",
+  robots: { index: true, follow: true },
+  alternates: {
+    canonical: "https://example.com/guides/espresso-machines",
+  },
+};
+
+export default async function Page() {
+  const article = await getArticle("espresso-machines");
+
+  return (
+    <main>
+      <h1>{article.title}</h1>
+      <article>{article.body}</article>
+    </main>
+  );
+}
+```
+
+Pages Router difference: `next/head` or `pages/_document` does not replace `generateMetadata`. Prefer `next-seo` only if you are stuck on Pages Router; App Router metadata is the native path.
+
+A `robots.ts` that accidentally `disallow: '/'` reproduces the incorrect example above. Pair it with `sitemap.ts` that emits only 200, canonical, indexable URLs.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “If it is in the sitemap, Google must index it.” Sitemaps are hints. Quality, canonicals, and crawl capacity still decide.
+- **DEPRECATED:** “`robots.txt` Disallow removes the URL from the index.” It blocks crawl. Google may still index the URL from links, with little or no snippet.
+- **DEPRECATED:** “View-source is what Google ranks.” For JS pages, rendered DOM after WRS matters. View-source is the first paint of HTML only.
+- Confusing **crawl** with **index** with **rank**. Three different tickets.
+- Blocking `/_next/` or CSS/JS in `robots.txt` so Google cannot render.
+
+## Senior / production notes
+
+On large sites, crawl budget is a systems problem: parameter URLs, faceted navigation, infinite calendars, and stale sitemaps of 404s. Log-file analysis (Googlebot hits vs sitemap vs index coverage) is how you see the pipeline at scale. A 50-URL brochure site rarely needs crawl-budget work; a 2-million-SKU catalog does.
+
+Rendering: if the server HTML is an empty `<div id="root">` and the article appears only after client JS, you are betting on WRS. App Router RSC or SSR reduces that bet. WordPress with a well-built theme usually ships HTML; page builders that hydrate everything into a client app reintroduce the SPA crawl problem.
+
+Index bloat (millions of near-duplicates) is often more damaging than “not enough pages.” Coverage reports showing “Crawled — currently not indexed” or “Duplicate, Google chose different canonical” are pipeline symptoms, not ranking-system mysteries.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Search Console → URL Inspection | “URL is on Google”; last crawl recent; rendered screenshot shows main content | Discovered / crawled not indexed; robots blocked; empty render |
+| GSC → Indexing → Pages | Valid pages match URLs you want; reasons for exclusion are understood | Spike in “Excluded by ‘noindex’”, “Blocked by robots.txt”, “Soft 404” |
+| `curl -I` the URL | `200`, no accidental `X-Robots-Tag: noindex` | `302` chains, `404`, `503` for Googlebot only (cloaking risk) |
+| Rich Results Test / rendered HTML | Primary text present without clicking | Article missing until user interaction |
+| Screaming Frog (Googlebot UA) | Internal HTML links discover the URL; indexable | Orphan URL, only in sitemap, or canonicalised away |

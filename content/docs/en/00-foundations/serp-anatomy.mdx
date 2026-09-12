@@ -1,0 +1,133 @@
+---
+title: SERP anatomy
+description: How a 2026 Google results page is built — organic listings, features, ads, and AI surfaces — and what each one implies for SEO work.
+module: 00-foundations
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A SERP (search engine results page) is not ten blue links. For a given query, Google assembles a **layout of result types**. Organic web results still matter; they share the page with ads, local packs, images, videos, news, discussions, featured snippets, People Also Ask, knowledge panels, shopping units, and — where Google has rolled it out — **AI Overviews** / AI Mode that summarize and cite sources.
+
+Each block has different eligibility rules:
+
+- **Organic result.** Title link, URL/breadcrumb, snippet. Driven by ranking systems plus title and snippet selection.
+- **Featured snippet.** A passage or list pulled from a page, often position zero above classic organic. Same document can sit in the snippet and again as a classic result, or the snippet can suppress a duplicate listing depending on the layout.
+- **People Also Ask.** Expandable related questions; sources can rotate.
+- **Local pack.** Map + 3-pack for local-intent queries; Google Business Profile and local signals dominate.
+- **Knowledge panel.** Entity graph (brands, people, places). You influence it with consistent entity data and, for official knowledge panels, Search Console entity features — not with a “knowledge panel plugin.”
+- **Sitelinks.** Extra links under a domain’s result when Google is confident about site structure. Not a setting you toggle on.
+- **Ads / Shopping.** Paid. SEO work does not buy these slots.
+- **AI Overview.** Generated summary with supporting links. Citations are not a classic “rank #1.” Inclusion is closer to being a supporting source Google trusts for that query.
+
+Query intent changes the mix. “plumber near me” is local. “what is crawl budget” is informational and snippet/PAA-heavy. “buy espresso machine 2 group” is commercial / product.
+
+## Why it matters
+
+Optimizing only for a classic #1 organic listing can ignore the layout that actually appears. A page can “rank” inside a snippet, a PAA item, or an AI Overview citation and still generate clicks — or lose clicks to the overview. You measure the SERP you have, not the SERP from 2014 screenshots.
+
+<CorrectExample>
+Informational query you actually want a snippet from. Page answers in the first visible section, in HTML (not a screenshot):
+
+```html
+<h1>What is crawl budget?</h1>
+<p>
+  Crawl budget is how many URLs Googlebot is willing and able to crawl on your
+  site in a given timeframe. It is a combination of crawl capacity (your
+  server’s health) and crawl demand (how important or stale Google thinks
+  those URLs are).
+</p>
+<h2>How to tell if you have a crawl budget problem</h2>
+<ol>
+  <li>Compare Googlebot log hits to URLs you care about.</li>
+  <li>Check Search Console crawl stats for 4xx/5xx spikes.</li>
+  <li>Look for parameter or facet URLs absorbing crawls.</li>
+</ol>
+```
+
+Then inspect the live SERP in an incognito window (or rank tracker with SERP features enabled) for that exact query. If Google shows a paragraph snippet, your first paragraph is the candidate. If it shows a list snippet, the `<ol>` is the candidate.
+</CorrectExample>
+
+<IncorrectExample why="Google cannot quote a PNG. You trained the SERP to skip you for snippets and often for AI citations.">
+The definition of crawl budget lives only inside a 1200×800 infographic `<img alt="infographic">` with no accompanying HTML text. The H1 is “Complete Guide 2026!!!” and the first 200 words are an email-capture pitch.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. The schema graph (Organization, WebSite, SearchAction) feeds knowledge-panel *eligibility*, not a guaranteed panel.
+2. Breadcrumbs (Yoast → Settings → Advanced → Breadcrumbs) help sitelink-style paths in the snippet when they match real IA.
+3. Do not chase “position zero” with a Yoast toggle. There isn’t one. Write extractable HTML.
+
+**Rank Math**
+
+1. Rank Math → Schema: pick Article/BlogPosting for articles; FAQ schema only when the page visibly contains those Q&As.
+2. Rank Math’s “rich snippet” previews are a search-appearance mock, not a SERP reservation.
+
+**AIOSEO**
+
+1. Search Appearance → Content Types: set titles that describe the document, not “Home - Site - Site.”
+2. FAQ blocks: only if the FAQs are on the page. Hidden FAQ schema is spam-policy territory.
+
+**Feature gap:** Rank Math and AIOSEO expose more schema types in the editor than Yoast’s simpler graph. Extra types do not create extra SERP features by themselves. SEOPress schema builder is similarly powerful and equally easy to over-mark.
+
+## Code implementation
+
+Do not try to “enable sitelinks” in Next.js. You can only make structure obvious:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "What is crawl budget? (and when it actually matters)",
+  description:
+    "Crawl budget is Googlebot’s crawl capacity plus crawl demand. How to diagnose it in logs and Search Console.",
+};
+
+export default function Page() {
+  return (
+    <main>
+      <h1>What is crawl budget?</h1>
+      <p>{/* 40–60 word direct answer */}</p>
+      <nav aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/en/docs">Docs</a></li>
+          <li><a href="/en/docs/00-foundations">Foundations</a></li>
+          <li>SERP anatomy</li>
+        </ol>
+      </nav>
+    </main>
+  );
+}
+```
+
+FAQPage JSON-LD belongs only next to visible Q&A. Pages Router: same HTML rules; `next/head` title still must match the H1 topic.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Meta keywords fill the snippet.” Google has ignored them for years. Snippets come from the page, description, and query.
+- **DEPRECATED:** “We turned on sitelinks in Yoast.” Sitelinks are generated, not a plugin switch.
+- **DEPRECATED:** “Featured snippet is always better CTR.” Sometimes the snippet answers the query and click-through drops. Measure in GSC.
+- Stuffing FAQ schema for questions not on the page to hunt PAA.
+- Treating AI Overview citations like a stable rank position. Layouts change by locale, experiment, and query rewrite.
+
+## Senior / production notes
+
+SERP features are query- and locale-specific. A tracker that only stores “position 3” without feature occupancy will lie on branded, local, and AI-heavy queries. At enterprise scale, build a feature occupancy report: organic, snippet, PAA, local, shopping, AI Overview citation.
+
+Brand SERPs (query = your brand) are a different job: knowledge panel hygiene, sitelinks, sitelink search box, and reputation results. That is not the same template as a head-term blog post.
+
+Do not A/B test title tags using only rank, ignoring whether you lost a snippet or gained an AI citation.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Manual SERP (target locale, logged out) | Layout matches the intent you designed for | You wrote an article; Google shows only a local pack or shopping |
+| GSC → Search results, page filter | Clicks/impressions exist for the query family; appearance types if shown | Impressions with no eligible page, or query is branded-only |
+| Rich Results Test | Detected schema matches visible content | FAQ/QA schema with no FAQ on the page |
+| Ahrefs / similar SERP overlay | Feature occupancy tracked over time | Position-only tracking on snippet-dominated queries |
+| URL Inspection | Indexable canonical is the URL you optimized | Snippet pulled from a duplicate you did not intend |

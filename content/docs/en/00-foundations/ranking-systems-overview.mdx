@@ -1,0 +1,142 @@
+---
+title: Ranking systems overview
+description: Google does not run one algorithm. How core ranking, spam systems, and rater guidelines fit together in 2026.
+module: 00-foundations
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google Search is a stack of **ranking systems**, not a single secret formula. Search Central’s “A guide to Google Search ranking systems” is the primary public map. Treat it as current until Google revises it.
+
+Practically you work with three layers:
+
+1. **Retrieval + ranking of documents.** Core ranking systems score relevance and quality of the indexed document for the query (and query interpretations). Page experience signals such as Core Web Vitals can participate; they are not a substitute for relevance.
+2. **Spam and abuse systems.** Link spam, cloaking, expired domain abuse, scaled content abuse, site reputation abuse, and related spam policies can demote or exclude. These are not “the helpful content update” as a separate monthly knob anymore: Google folded the Helpful Content system into core ranking (announced March 2024). Core updates still happen; they are not a plugin you recover from with one tag change.
+3. **Human rating ≠ ranking score.** Search Quality Rater Guidelines describe **EEAT** (Experience, Expertise, Authoritativeness, Trust). Raters do not set your position. Their labels train and evaluate systems. You cannot “add EEAT” as a meta tag.
+
+Other named systems still matter when they apply: reviews-system behavior for review queries, local ranking for local intent, shopping systems for product queries, and spam-specific classifiers.
+
+When someone says “we got hit by an algorithm,” ask: core update window, spam action, technical exclusion, or a SERP-layout change. Those are different tickets.
+
+## Why it matters
+
+Teams waste quarters chasing a “Panda/Penguin era” checklist. In 2026 the working model is: make the document the best result for a query, stay inside spam policies, and keep the URL in the index. Named-update folklore without a Search Console or log diagnosis is not a strategy.
+
+<CorrectExample>
+A YMYL-adjacent medical explainer that matches how systems evaluate quality — not a fake “EEAT plugin”:
+
+```html
+<article>
+  <h1>How long does a sprained ankle typically swell?</h1>
+  <p>
+    Written by Dr. Sara N., board-certified sports medicine, last clinically
+    reviewed 2026-06. This page is general information, not a diagnosis.
+  </p>
+  <p>
+    Swelling from a grade 1 sprain often peaks in the first 48 hours…
+    <!-- specific, sourced ranges; no invented statistics -->
+  </p>
+  <h2>When to see a doctor the same day</h2>
+  <ul>
+    <li>Inability to bear weight</li>
+    <li>Numbness or a deformity</li>
+  </ul>
+</article>
+```
+
+Author identity is visible, claims are bounded, the page serves the query, and you are not spinning 500 AI doorway variants of the same file.
+</CorrectExample>
+
+<IncorrectExample why="Scaled content abuse and thin rewrites are spam-policy issues; they are not fixed by stuffing an author box.">
+```html
+<meta name="author" content="Medical Expert Team" />
+<h1>Sprained Ankle Complete Guide | Best Tips | 2026</h1>
+<p>
+  In today's digital landscape, ankle health is more important than ever…
+</p>
+<!-- 90 more pages with the same outline, swapped city names, no unique evidence -->
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Schema → Organization/Person: set a real publisher. This is structured data, not an EEAT score.
+2. Author archives: noindex thin author archives if authors are not real landing pages (Yoast → Settings → Taxonomies / Archives).
+3. Cornerstone content is an *internal linking hint* in Yoast, not a Google ranking system.
+
+**Rank Math**
+
+1. Content AI traffic lights are a plugin heuristic. They are not Google’s rater guidelines.
+2. Rank Math → Instant Indexing / SEO Analyzer cannot recover a sitewide spam classification. Fix the content and links.
+
+**AIOSEO**
+
+1. TruSEO scores are on-page checklists. Ignore any implication they are “the algorithm.”
+2. Use the webmaster tools verification fields to connect GSC; diagnosis lives in GSC, not the score widget.
+
+**Feature gap:** Rank Math and AIOSEO show more in-editor “content scores” than Yoast. Those scores correlate weakly with ranking systems. SEOPress is quieter (fewer gamified scores) which is often healthier for editors.
+
+## Code implementation
+
+There is no `rankingSystem: 'core'` API. You expose quality in HTML and metadata:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "How long a sprained ankle typically swells (and red flags)",
+  description:
+    "Typical swelling window after a grade 1 sprain, and symptoms that need same-day care. Reviewed by a sports-medicine physician.",
+  authors: [{ name: "Dr. Sara N.", url: "https://example.com/authors/sara-n" }],
+  robots: { index: true, follow: true },
+};
+
+export default function Page() {
+  return (
+    <article itemScope itemType="https://schema.org/Article">
+      <h1 itemProp="headline">How long does a sprained ankle typically swell?</h1>
+      <p>
+        <a href="/authors/sara-n">Dr. Sara N.</a>
+        <time dateTime="2026-06-12">Reviewed 12 Jun 2026</time>
+      </p>
+      {/* unique body */}
+    </article>
+  );
+}
+```
+
+JSON-LD `Person` / `Article` should match the visible byline. Pages Router: same constraint; do not inject author schema without an author UI.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Keyword density percentages as a ranking system. Google has said for years it does not use a target density. Stuffing still hurts (spam / poor writing).
+- **DEPRECATED:** Meta keywords as a ranking input.
+- **DEPRECATED:** “Domain Authority” (Moz metric) is a Google ranking system. It is a third-party score.
+- **DEPRECATED:** Treating Penguin/Panda as live, separate monthly buttons. Their ideas were absorbed years ago.
+- Confusing a **manual action** (GSC Security & Manual Actions) with a core update. Manual actions have a report and a reconsideration path. Core updates do not.
+- Buying “EEAT backlinks” as a product.
+
+## Senior / production notes
+
+On large sites, core updates move sections unevenly: a thin subdirectory can drop while a well-supported docs hub holds. Segment GSC by directory, template, and intent — never only domain-level average position.
+
+Spam systems at scale often fire on **patterns**: generated listings, expired-domain relaunches, Parasite/site-reputation abuse (third-party junk on a trusted hostname). Legal and brand teams need a policy for who can publish on the main domain.
+
+Page experience is a tie-breaker more often than a primary lever. Do not stall a relevance rewrite to chase 2 ms of INP if the document does not answer the query.
+
+Time-sensitive: Google can rename, merge, or add systems. Re-read Search Central’s ranking-systems page when a named update ships. This article reflects public guidance as of 2026-09.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC Performance, 16 months, segmented | Changes line up with a documented core update *or* with your ship dates | “Algorithm” blamed with no date overlap and no coverage change |
+| GSC Manual actions / Security | Empty | Unreviewed manual action or hacked content |
+| Search Central ranking-systems doc | Your theory maps to a named system or core | You are optimizing for a Moz/Ahrefs metric as if it were Google |
+| Quality rater guidelines (current PDF) | Page would not fail obvious YMYL tests | Anonymous YMYL advice with no sourcing |
+| Crawl / Indexing reports | Index population stable | You call it a ranking problem; GSC shows mass deindex |

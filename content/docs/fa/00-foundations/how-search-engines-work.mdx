@@ -1,0 +1,141 @@
+---
+title: موتور جستجو چطور کار می‌کند
+description: مسیر واقعی crawl، render، index و serve در گوگل؛ و اینکه هر مرحله کجا می‌شکند.
+module: 00-foundations
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+گوگل مثل آدم صفحه را «می‌خواند و بعد رتبه می‌دهد» نیست. یک خط لوله است:
+
+1. **Discovery.** URL از جایی پیدا می‌شود: لینک داخلی/خارجی، XML sitemap، ریدایرکت، یا خودت در Search Console می‌فرستی.
+2. **Crawl.** Googlebot درخواست می‌زند. `robots.txt` می‌تواند fetch را ببندد. Disallow یعنی نرو بخزش؛ تضمین نمی‌کند URL از ایندکس بیرون بماند.
+3. **Render.** خیلی از صفحات را جاوااسکریپت هم اجرا می‌کند (Web Rendering Service). چیزی که برای ایندکس به کار می‌آید DOM رندرشده است، نه فقط view-source خام.
+4. **Index.** اگر واجد شرایط باشد، یک نسخه ذخیره می‌شود: محتوای اصلی، انتخاب canonical، structured data قبول‌شده، زبان. URL تکراری یا thin ممکن است crawl شود و بعد کنار گذاشته شود.
+5. **Serve / rank.** برای کوئری، سیستم‌های رتبه‌بندی تصمیم می‌گیرند چه سندی، با چه قالبی نشان داده شود (نتیجه ارگانیک، اسنیپت، local pack، AI Overview و بقیه).
+
+این مرحله‌ها جدا خراب می‌شوند. URL کشف می‌شود ولی crawl نمی‌شود (بودجه، robots، 5xx). Crawl می‌شود ولی index نمی‌شود (`noindex`، duplicate، فیلتر کیفیت). ایندکس می‌شود ولی برای کوئری تو رتبه نمی‌گیرد. Search Central هنوز می‌گوید crawling، indexing، serving. برای React/Next و قالب‌های مدرن وردپرس، render را مرحله‌ی جدا حساب کن.
+
+## چرا مهم است
+
+تا نفهمی کدام مرحله شکسته، «رتبه نداریم» قابل تعمیر نیست. کار رتبه‌ای روی URLی که `noindex` است یا robots بسته‌اش، دور ریختن وقت است. تشخیص pipeline یعنی فرق برنامه SEO با تقویم محتوایی که هیچ‌وقت ایندکس نمی‌شود.
+
+<CorrectExample title="درست">
+مقاله‌ی عمومی که گوگل می‌تواند تا آخر خط لوله ببرد:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+X-Robots-Tag: all
+
+<link rel="canonical" href="https://example.com/fa/guides/espresso-machines" />
+```
+
+```html
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <title>بهترین دستگاه اسپرسو برای کافه کوچک (راهنمای خرید ۱۴۰۵)</title>
+    <link rel="canonical" href="https://example.com/fa/guides/espresso-machines" />
+  </head>
+  <body>
+    <main>
+      <h1>بهترین دستگاه اسپرسو برای کافه کوچک</h1>
+      <article><!-- HTML واقعی قابل crawl، نه پوسته‌ی خالی کلاینت --></article>
+    </main>
+  </body>
+</html>
+```
+
+`robots.txt` برای Googlebot باز است، URL داخل sitemap است، از `/guides/` لینک داخلی دارد. URL Inspection می‌گوید URL روی گوگل است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot HTML را نمی‌گیرد؛ پس همان چیزی که نوشتی render و index نمی‌شود.">
+```txt
+# robots.txt
+User-agent: *
+Disallow: /
+```
+
+در Chrome همه‌چیز «کار می‌کند». بعد در GSC می‌بینی discovered ولی crawl نشده، یا ایندکس با اسنیپت پوچ از روی انکر لینک دیگران.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. SEO ← Settings ← Site features: XML sitemap روشن.
+2. `sitemap_index.xml` باید پست و برگه‌هایی که می‌خواهی crawl شوند را لیست کند.
+3. Settings ← Reading: تیک «موتورهای جستجو را دلسرد کن» روی پروداکشن نماند.
+4. استیجینگ را با HTTP auth یا `noindex` سرور ببند؛ `Disallow: /` که یادت برود برگردانی، فاجعه است.
+
+**Rank Math**
+
+1. Sitemap Settings: روشن؛ attachment را معمولاً کنار بگذار.
+2. Titles & Meta: post typeهای اصلی بی‌دلیل `noindex` نباشند.
+3. Instant Indexing جای معماری crawlپذیر را نمی‌گیرد.
+
+**AIOSEO**
+
+1. Sitemaps: general sitemap روشن.
+2. Search Appearance ← Advanced: پیش‌فرض robots هر نوع محتوا را چک کن.
+3. HTML sitemap اگر ناوبری واقعی ندارد، لازم نیست؛ جایگزین XML نیست.
+
+**جا خالی واقعی:** در Yoast و Rank Math، `noindex` تک‌پست واضح است. در AIOSEO پیش‌فرض robots زیر Search Appearance راحت سایت‌واید اشتباه می‌شود. SEOPress همان کار را از Titles & Metas / XML sitemaps جدا می‌کند؛ رفتار یکی است، مسیر کلیک فرق دارد.
+
+## پیاده‌سازی کد
+
+App Router: HTML اصلی را سرور بده. مقاله را پشت fetch کلاینت با درخت خالی سرور قایم نکن.
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "بهترین دستگاه اسپرسو برای کافه کوچک",
+  robots: { index: true, follow: true },
+  alternates: {
+    canonical: "https://example.com/fa/guides/espresso-machines",
+  },
+};
+
+export default async function Page() {
+  const article = await getArticle("espresso-machines");
+  return (
+    <main>
+      <h1>{article.title}</h1>
+      <article>{article.body}</article>
+    </main>
+  );
+}
+```
+
+Pages Router: `next/head` جای `generateMetadata` را پر نمی‌کند. `robots.ts` با `disallow: '/'` همان مثال غلط است. `sitemap.ts` فقط URLهای 200 و indexable بدهد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «رفت تو sitemap پس گوگل باید ایندکس کند.» Sitemap فقط hint است.
+- **DEPRECATED:** «Disallow در robots.txt یعنی از ایندکس پاک می‌شود.» Crawl را می‌بندد؛ از روی لینک ممکن است URL بدون اسنیپت ایندکس شود.
+- **DEPRECATED:** «view-source همان چیزی است که رتبه می‌گیرد.» برای JS، DOM بعد از WRS مهم است.
+- قاطی کردن crawl و index و rank. سه تیکت جدا.
+- بستن `/_next/` یا CSS/JS در robots تا گوگل نتواند render کند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+سایت بزرگ یعنی crawl budget مسئله‌ی سیستم است: پارامتر، faceted nav، تقویم بی‌نهایت، sitemap پر از 404. لاگ Googlebot در مقابل sitemap و Coverage را بگذار کنار هم. سایت ۵۰ صفحه‌ای معمولاً به این کار نیاز ندارد؛ کاتالوگ میلیونی دارد.
+
+اگر HTML سرور `<div id="root">` خالی است و مقاله بعد از JS می‌آید، روی WRS شرط بسته‌ای. RSC/SSR این شرط را کم می‌کند. وردپرس با قالب معمولی HTML می‌دهد؛ صفحه‌سازهایی که همه‌چیز را SPA می‌کنند همان درد React را می‌آورند.
+
+Index bloat (میلیون‌ها نزدیک-تکراری) اغلب بدتر از «کم بودن صفحه» است. «Crawled — currently not indexed» یا «Duplicate, Google chose different canonical» علائم pipeline است، نه رمزآلود بودن الگوریتم.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| URL Inspection | URL روی گوگل است؛ رندر محتوای اصلی را نشان می‌دهد | robots blocked؛ رندر خالی |
+| GSC ← Pages | دلیل excludeها را بلدی | جهش `noindex` / robots / soft 404 |
+| `curl -I` | `200` بدون `X-Robots-Tag: noindex` اتفاقی | زنجیره‌ی 302؛ `503` فقط برای Googlebot |
+| Rich Results Test | متن اصلی بدون کلیک هست | مقاله تا تعامل کاربر نیست |
+| Screaming Frog (UA گوگل) | لینک HTML داخلی URL را پیدا می‌کند | یتیم؛ فقط در sitemap |

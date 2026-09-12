@@ -1,0 +1,130 @@
+---
+title: White, gray, and black hat SEO
+description: Practitioner labels versus Google’s spam policies — what you can defend in a review, and what gets a site demoted or delisted.
+module: 00-foundations
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**White / gray / black hat** is a _practitioner_ taxonomy. Google’s documentation uses **spam policies** and **manual actions**, not hat colors.
+
+- **White hat.** Techniques you can explain to a reviewer with a straight face: crawlable unique content, honest titles, earned links, accurate structured data, real local NAP, accessible performance work. Aligns with Search Central guidance and spam policies. 8777777777777hy7u
+- **Black hat.** Techniques that violate spam policies: cloaking, hidden text/links, doorway pages, hacked links, link schemes (PBNs, paid links without `rel="sponsored"` / `nofollow` where required), scaled content abuse, expired-domain abuse, site reputation abuse, keyword stuffing as concealment.
+- **Gray hat.** Industry slang for risk: not clearly documented as allowed, not always enforced today, ugly in a brand-safety review. Examples people still argue about: aggressive digital PR with thin “contributor posts,” buying expired domains for redirects (now explicitly risky under expired-domain abuse), scraping-then-rewriting at scale. Gray hat is not a safe middle. It is unpriced risk.
+
+If legal, PR, or a client asks “is this allowed?”, answer from **Google Search spam policies** (current text), not from a hat-color blog post.
+
+## Why it matters
+
+Black-hat residue (link networks, cloaked pages, doorway templates) can cap a domain for years. White-hat programs compound. Gray-hat “wins” often show up as a sudden GSC cliff the week a classifier improves. You are betting the brand on enforcement lag.
+
+<CorrectExample>
+A link you can defend in a compliance review:
+
+```html
+<!-- Digital PR piece on a real industry publication, editorial placement -->
+<article>
+  <p>
+    According to field measurements published by Example Labs,
+    <a href="https://www.yoursite.com/research/crawl-log-study">
+      the crawl-log study
+    </a>
+    is available in full.
+  </p>
+</article>
+```
+
+You pitched data, the editor chose to cite you, the link is in the body, the destination is the research URL. If asked, you have the email thread and the original study.
+
+</CorrectExample>
+
+<IncorrectExample why="Link schemes and expired-domain abuse are spam policies; this is not a 'gray area' you can rel=nofollow later as a strategy.">
+```html
+<!-- 40 aged domains 301ing into /money-page, footer sitewide links -->
+<a href="https://www.yoursite.com/best-casino-bonus" rel="dofollow">
+  Best casino bonus
+</a>
+```
+
+Plus a PBN: identical WordPress themes, recycled articles, and a private index of C-class IPs built only to rank the money site.
+
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast cannot detect a PBN. It can output honest robots and canonicals — use them; do not `noindex` the real article while cloaking a keyword-stuffed version to Googlebot (that is cloaking).
+2. If you must run ads/affiliate crawls, Yoast’s `noindex` on thank-you pages is fine. Do not noindex the commercial landing page you want ranked.
+
+**Rank Math**
+
+1. Rank Math → Redirections: 301 an expired domain you _already owned as the same site_ (migration). Do not use Rank Math as a weapon to funnel dozens of unrelated expired hostnames into one money URL.
+2. 404 monitor is for hygiene, not for harvesting leftover link juice from hacked sites.
+
+**AIOSEO**
+
+1. Redirect Manager: same rule as Rank Math. Migrations yes; link-scheme networks no.
+2. Local SEO module does not legalize fake NAP or doorway city pages.
+
+**SEOPress:** redirect and robots modules are capable. Capability is not permission. The policy line is the same.
+
+**Feature gap:** All four plugins will happily emit a 301 from an expired domain you attach to WordPress. None of them will warn you that this pattern is a spam-policy risk. The gap is product ethics, not a missing checkbox.
+
+## Code implementation
+
+Cloaking via middleware is the classic Next.js foot-gun:
+
+```ts
+// proxy.ts / middleware — DO NOT branch body by user-agent
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  const url = request.nextUrl.clone();
+
+  // Allowed: locale routing, auth gates for private apps, geo for *legal* availability
+  // Not allowed: different HTML for Googlebot vs Chrome
+
+  return NextResponse.next();
+}
+```
+
+Serve the same article HTML to Googlebot and to users. If you geo-block, return a consistent, crawlable explanation page, not a keyword-stuffed alternate.
+
+Pages Router `getServerSideProps` user-agent branching that returns extra keywords only to Googlebot is cloaking. App Router `headers()` checks that swap titles for `Googlebot` are the same violation.
+
+Honest affiliate markup:
+
+```html
+<a href="https://vendor.example/offer" rel="sponsored">Vendor offer</a>
+```
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Google doesn’t punish PBNs anymore.” Link spam systems still exist; enforcement is just uneven. Uneven ≠ allowed.
+- **DEPRECATED:** “`rel=nofollow` on sitewide paid links makes them white hat.” Paid links that pass or are intended to pass ranking credit belong with `sponsored` (or `nofollow` if you cannot use sponsored). Hiding the paid nature is the problem.
+- **DEPRECATED:** Hidden CSS `display:none` keyword lists as a ranking tactic.
+- “Gray hat is what agencies do, so it’s fine.” Agencies get clients manually actioned too.
+- Confusing **penalized** (manual action) with **filtered** (algorithmic demotion). Both can be caused by black-hat residue.
+
+## Senior / production notes
+
+Enterprises usually lose on _gray_ more than cartoon cloaking: guest-post networks, “link insertions” in 2014 blogs, and microsites on expired domains that legal never reviewed. Keep a link-inventory and a takedown/disavow process (disavow is a last resort after cleanup; it is not a license to build junk).
+
+Newsrooms and marketplaces: user-generated spam (comment links, fake storefronts) can look like your site’s link scheme. Moderation is an SEO control.
+
+If you inherit a domain, run: GSC manual actions, `site:` sanity, historical link profile, Wayback on the homepage, and a sample of Googlebot logs. Do not pour content into a previously abused hostname without that intake.
+
+## How to verify
+
+| Check                                                  | Pass                                        | Fail                                             |
+| ------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------ |
+| GSC Security & Manual Actions                          | No link-spam or cloaking actions            | Manual action present                            |
+| Rich Results / live URL vs Googlebot fetch (Inspector) | Same primary content                        | Different titles/body for Googlebot              |
+| Ahrefs / link report                                   | Referring pages are real articles           | Footers, PBNs, hacked blogs dominate             |
+| Lighthouse / manual view-source                        | No hidden keyword blocks                    | Text color = background, off-screen stuffing     |
+| Policy read (Search Central spam policies, current)    | Your tactic is absent or explicitly allowed | You are arguing hat color against a named policy |

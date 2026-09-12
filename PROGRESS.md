@@ -7,7 +7,8 @@
 - [x] Phase 1 — Architecture (2026-09-12)
   - Frontmatter schema, MDX examples, JsonLd, sitemap/robots, OG, hreflang, locale-split search
   - `pnpm build` green; `/sitemap.xml` and `/robots.txt` live
-- [ ] Module 00 — Foundations (0/4 topics)
+- [x] Module 00 — Foundations (4/4 topics, 2026-09-12)
+  - how-search-engines-work, serp-anatomy, ranking-systems-overview, white-gray-black-hat (en+fa)
 - [ ] Module 01 — Keyword Research (0/6 topics)
 - [ ] Module 02 — On-page SEO (0/13 topics)
 - [ ] Module 03 — Technical SEO (0/16 topics)
