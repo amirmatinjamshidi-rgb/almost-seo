@@ -1,0 +1,91 @@
+---
+title: Metadata API در Next.js
+description: head metadata شامل canonical، title و social tag را با API فعلی App Router در Next.js 16 درست بساز.
+module: 11-react-nextjs-seo
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+App Router از `metadata` ثابت، تابع dynamic به نام `generateMetadata` و file conventionهای metadata، tagهای head را می‌سازد. هر دو export فقط در Server Component مجازند و یک segment نمی‌تواند هر دو را داشته باشد. در Next.js 16، `params` و `searchParams` در routeهای dynamic از نوع Promise هستند.
+
+Metadata از root تا page resolve می‌شود و merge آن shallow است؛ یعنی `openGraph` فرزند کل `openGraph` والد را replace می‌کند. file-based metadata هم priority بالاتری دارد.
+
+## چرا مهم است
+
+Title، description، canonical، robots و social metadata باید همان URL و محتوایی را توضیح بدهند که واقعاً serve شده. دستکاری head بعد از hydration احتمال duplicate، timing bug و mismatch را بالا می‌برد.
+
+<CorrectExample title="درست">
+Defaultهای سایت در layout هستند. صفحهٔ محصول metadata را از همان record معتبرِ heading می‌سازد، برای record ناموجود `notFound()` می‌زند و canonical کامل و absolute دارد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Client Component نمی‌تواند Metadata API را export کند؛ titleهای چندگانه هم می‌توانند conflict بسازند.">
+```tsx
+"use client";
+export const metadata = { title: "Products" };
+export default function Page() {
+  return <title>Best product</title>;
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/products/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getProduct } from "@/lib/products";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+
+  const url = `https://example.com/products/${product.slug}`;
+  return {
+    title: product.name,
+    description: product.summary,
+    alternates: { canonical: url },
+    openGraph: {
+      title: product.name,
+      description: product.summary,
+      url,
+      type: "website",
+      images: [{ url: product.ogImage, alt: product.name }],
+    },
+  };
+}
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+  return <h1>{product.name}</h1>;
+}
+```
+
+اگر URL نسبی در metadata داری، در layout مناسب `metadataBase: new URL("https://example.com")` بگذار. Metadata dynamic ممکن است stream شود؛ Next برای HTML-limited botها blocking رفتار می‌کند. `htmlLimitedBots` را بدون نیاز اندازه‌گیری‌شده override نکن.
+
+تفاوت Pages Router: داخل هر page از `next/head` استفاده کن و key پایدار بده. `metadata` و `generateMetadata` زیر `pages/` کار نمی‌کنند؛ `_document` هم جای metadata متغیر هر صفحه نیست.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** گذاشتن `viewport`، `themeColor` و `colorScheme` داخل `metadata`؛ API viewport را استفاده کن.
+- **DEPRECATED:** «همهٔ tagهای متغیر را در `_document` بگذار.»
+- export هم‌زمان `metadata` و `generateMetadata`.
+- فراموش کردن shallow merge برای objectهای nested.
+- URL نسبی بدون `metadataBase`.
+- شخصی‌سازی title با cookie روی URL عمومی.
+
+## نکته‌های سطح بالا / پروداکشن
+
+Metadata و visible content را از یک domain object بساز. fallbackهای CMS را validate کن. fetch تکراری را با رفتار cache پشتیبانی‌شده یا React `cache` یکی کن. دربارهٔ facetها از قبل تصمیم بگیر: self-canonical، canonical به URL دیگر یا noindex؟
+
+## چطور مطمئن شوی
+
+در raw response و DOM نهایی فقط یک title و canonical درست ببین. record موجود، ناموجود و failure upstream را تست کن. URL تصویر OG باید absolute و public باشد. heading، canonical، JSON-LD و metadata باید با هم یکی باشند.

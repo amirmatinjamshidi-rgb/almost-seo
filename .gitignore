@@ -39,4 +39,8 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+.next-env.d.ts
+
+# local QA artifacts
+.tmp-lh/
+.tmp-*.mjs

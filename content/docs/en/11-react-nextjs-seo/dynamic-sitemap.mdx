@@ -1,0 +1,104 @@
+---
+title: Dynamic sitemaps in Next.js
+description: Generate canonical, truthful, and scalable XML sitemaps with Next.js 16 metadata routes and current Search guidance.
+module: 11-react-nextjs-seo
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+An XML sitemap is a discovery and canonicalization hint, not an indexing command. Next.js App Router supports `app/sitemap.ts`; it returns `MetadataRoute.Sitemap`. In Next.js 16, a `generateSitemaps` sitemap `id` is a promise resolving to a string.
+
+Include only absolute canonical URLs you want indexed. `lastModified` should reflect a significant page update, not request time. Google ignores sitemap `priority` and `changefreq`, so omit them unless another consumer has a defined need.
+
+## Why it matters
+
+Database-driven sites cannot maintain accurate XML manually. A generated sitemap can exclude drafts, redirects, errors, noindex pages, and duplicate parameter URLs from the same publish-state source used by rendering.
+
+<CorrectExample>
+The sitemap queries published, indexable records, emits stable absolute URLs and their real modification dates, and splits large collections. Removed records disappear and their old URLs return the intended status or redirect.
+</CorrectExample>
+
+<IncorrectExample why="Every request invents a fresh modification date and exposes drafts, duplicate filters, and redirected URLs. The sitemap sends signals that disagree with the site.">
+```ts
+return allRows.map((row) => ({
+  url: `/products/${row.id}`,
+  lastModified: new Date(),
+}));
+```
+</IncorrectExample>
+
+## Code implementation
+
+```ts
+// app/sitemap.ts
+import type { MetadataRoute } from "next";
+import { getPublishedArticles } from "@/lib/articles";
+
+const ORIGIN = "https://example.com";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const articles = await getPublishedArticles();
+
+  return [
+    { url: ORIGIN, lastModified: "2026-09-01" },
+    ...articles.map((article) => ({
+      url: `${ORIGIN}/articles/${article.slug}`,
+      lastModified: article.updatedAt,
+    })),
+  ];
+}
+```
+
+For large sets, colocate `generateSitemaps` with the sitemap route:
+
+```ts
+// app/products/sitemap.ts
+import type { MetadataRoute } from "next";
+import { countIndexableProducts, getIndexableProducts } from "@/lib/products";
+
+const BATCH_SIZE = 50_000;
+
+export async function generateSitemaps() {
+  const count = await countIndexableProducts();
+  return Array.from({ length: Math.ceil(count / BATCH_SIZE) }, (_, id) => ({ id }));
+}
+
+export default async function sitemap({
+  id,
+}: {
+  id: Promise<string>;
+}): Promise<MetadataRoute.Sitemap> {
+  const page = Number(await id);
+  const products = await getIndexableProducts(page * BATCH_SIZE, BATCH_SIZE);
+  return products.map((product) => ({
+    url: `https://example.com/products/${product.slug}`,
+    lastModified: product.updatedAt,
+  }));
+}
+```
+
+Validate `id` before using it in a database offset in production. One sitemap is limited by the protocol to 50,000 URLs or 50 MB uncompressed.
+
+Pages Router difference: create `pages/sitemap.xml.tsx`, fetch server-side, set `Content-Type: application/xml`, write escaped XML, and end the response; or generate files during deployment. The Metadata Route API is App Router-only.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “Submitting a sitemap guarantees indexing.”
+- **DEPRECATED:** “High `priority` forces important pages to rank.”
+- Setting every `lastModified` to build/request time.
+- Listing `noindex`, redirected, noncanonical, private, or 404 URLs.
+- Building URLs from untrusted `Host` headers.
+- Loading millions of rows into memory instead of partitioning.
+
+## Senior / production notes
+
+Track sitemap cohorts in Search Console. Compare sitemap URLs against canonical, status, robots, and publish-state datasets in CI or a scheduled audit. Keep generation available during CMS outages with a controlled last-known-good strategy. Reference sitemap locations in `robots.txt`.
+
+Official reference: [Google sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
+
+## How to verify
+
+Fetch every sitemap in production; require `200`, XML content type, valid UTF-8 XML, absolute same-property URLs, and no duplicates. Sample URLs for `200`, self-consistent canonical, indexability, and accurate `lastmod`. Confirm split sitemap routes resolve and stay under protocol limits.

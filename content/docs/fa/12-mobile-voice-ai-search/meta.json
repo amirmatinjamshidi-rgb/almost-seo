@@ -1,0 +1,10 @@
+{
+  "title": "جست‌وجوی موبایل، صوتی و هوش مصنوعی",
+  "defaultOpen": true,
+  "pages": [
+    "mobile-ux-indexing",
+    "voice-search",
+    "geo-aeo-optimization",
+    "llms-txt"
+  ]
+}

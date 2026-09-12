@@ -1,0 +1,158 @@
+---
+title: چک‌لیست کامل ممیزی تکنیکال سئو
+description: ممیزی را با ریسک، شواهد و triage جلو ببر؛ نه با خروجی بی‌انتهای ابزار و ticketهای بی‌صاحب.
+module: 13-technical-audits
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+ممیزی کامل تکنیکال قرار نیست طولانی‌ترین export ممکن باشد؛ باید یک **سیستم تصمیم‌گیری** بسازد. آخر کار باید بدانی چه چیزی خراب است، کدام URL و کاربر در معرضش هستند، تشخیصت به چه مدرکی تکیه دارد و اول چه چیزی باید درست شود. قبل از تغییر config، scope ممیزی، بازهٔ release، hostهای production، locale/device و templateهای حیاتی کسب‌وکار را فریز کن. شواهد خام را هم نگه دار.
+
+هر finding را روی چند محور مستقل triage کن:
+
+1. **ریسک:** اگر بماند روی indexation، درآمد، امنیت/حقوق یا measurement چه اثری دارد؟
+2. **دامنه:** یک URL است، یک template، یک locale، یک host یا کل property؟
+3. **کیفیت مدرک:** پاسخ یا render قابل تکرار داری، فقط signal نمونه‌ای داری یا هنوز hypothesis است؟
+4. **فوریت:** incident فعال، blocker انتشار، اصلاح برنامه‌ریزی‌شده یا فقط monitor؟
+5. **برگشت‌پذیری:** toggle امن است، migration است، تغییر مخرب است یا dependency بیرونی دارد؟
+
+severity را از تعداد warning نساز. یک `noindex` سراسری می‌تواند از هزاران meta description خالی مهم‌تر باشد. crawler برای کشف pattern خوب است؛ log، HTML رندرشده، source config، Search Console، field data و analytics برای تشخیص کمک می‌کنند.
+
+یک evidence matrix محدود و روشن داشته باش:
+
+- **Crawl و index:** robots، meta/X-Robots، sitemap membership، discoverability، شاهد index و fetch در server log.
+- **Canonical و duplicate:** canonical اعلام‌شده در برابر انتخاب‌شده، نرمال‌سازی protocol/host/path، parameter، pagination و مقصد redirect.
+- **Rendering:** محتوای اصلی، link، metadata و structured data در خروجی اولیه و رندرشده؛ asset بسته و hydration error.
+- **Core Web Vitals:** field data به تفکیک template/device اگر موجود است، lab برای تشخیص و نسبت‌دادن محتاطانه به release.
+- **Structured data:** eligibility، هماهنگی با محتوای visible، property لازم، owner و validation error.
+- **Internal link:** anchor قابل crawl، orphan candidate، depth، مقصد شکسته، redirect hop و overlinking قالبی.
+- **International:** مالکیت URL هر locale، hreflang دوطرفه، `x-default` در جای لازم، alignment با canonical و redirect.
+- **Security و status code:** HTTPS/mixed content، نشانهٔ compromise، soft 404، خطای 4xx/5xx، loop، rate limit و برابری bot/user.
+- **Analytics:** رفتار tag و consent، event تکراری، تعریف channel، annotation انتشار و این‌که impact واقعاً قابل اندازه‌گیری هست یا نه.
+
+## چرا مهم است
+
+ممیزی بی‌مرز وقت engineering را می‌سوزاند و حس قطعیت تقلبی می‌دهد. spreadsheet صدستونه ممکن است همان defect قالبی مهم را قایم کند. triage مبتنی بر ریسک به engineering یک failure قابل تکرار، به product یک impact روشن و به مدیر confidence صادقانه می‌دهد.
+
+<CorrectExample title="درست">
+قبل از release، baseline crawl، header پاسخ، snapshot رندر، نمونهٔ log، export سرچ کنسول، field-performance و تعریف analytics با timestamp ذخیره می‌شود. finding می‌گوید: «variantهای محصول فارسی در production به URL انگلیسی canonical می‌شوند. روی خود template و یک نمونهٔ لایه‌بندی‌شده تکرار شد و sitemap فارسی URLهای فارسی را دارد. ریسک: signal متناقض canonical/hreflang در سطح template. confidence: بالا. owner: تیم platform SEO. acceptance: نمونهٔ تعریف‌شده بعد از deploy پاسخ 200، self-canonical و hreflang دوطرفه بدهد و در sitemap فارسی بماند.»
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="خروجی ابزار جای diagnosis نشسته، scope و مدرک production ندارد و owner هم نمی‌داند دقیقاً چه چیزی یعنی کار تمام شده.">
+auditor همهٔ warningهای crawler را در یک sheet می‌ریزد، همگی را critical می‌زند، با یک منحنی عمومی کلیک «traffic از‌دست‌رفته» می‌سازد و می‌گوید canonical، cache، schema، redirect و analytics یک‌جا عوض شوند. header، screenshot، template، تاریخ و rollback condition هم ندارد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+قبل از دست‌زدن به settingها، pluginهای فعال، theme، permalink، URLهای sitemap، خروجی robots، رفتار cache/CDN و URL نماینده برای هر post type و taxonomy عمومی را ثبت کن. production را هم logged-in و هم logged-out ببین؛ preview ادمین ممکن است cache یا consent را دور بزند.
+
+**Yoast SEO**
+
+1. مالکیت post type، taxonomy، archive، canonical، robots، breadcrumb و XML sitemap را در Search Appearance بررسی کن.
+2. setting را export کن و HTML/header واقعی را sample بگیر؛ چراغ سبز analysis مدرک ممیزی نیست.
+3. مطمئن شو plugin دوم یا theme یک canonical یا schema graph دیگر چاپ نمی‌کند.
+
+**Rank Math**
+
+1. Titles & Meta، Sitemap Settings، Redirections، 404 Monitor، Schema Templates و مرز اتصال Analytics را مرور کن.
+2. 404 Monitor فقط لیست request دیده‌شده است؛ ثابت نمی‌کند هر request باید redirect شود.
+3. خروجی frontend را با cache سرد و گرم مقایسه کن؛ template یا filter ممکن است setting module را override کند.
+
+**AIOSEO**
+
+1. Search Appearance، Sitemap، Redirect، Schema و اگر license/connection اجازه می‌دهد Search Statistics را ببین.
+2. پیشنهاد TruSEO را با intent و خروجی رندرشده بسنج؛ score آن severity تکنیکال نیست.
+3. قبل از remediation از config مدرک export یا screenshot بگیر.
+
+**SEOPress، فقط وقتی واقعاً دخیل است:** اگر مالک redirect، sitemap، schema، تزریق analytics یا robots است، همان خروجی‌ها را audit کن. اگر فقط نصب است و چیزی emit نمی‌کند، همین fact را ثبت کن؛ کار نمایشی نساز.
+
+**جا خالی واقعی:** plugin سئو فقط بخشی از خروجی CMS را مدیریت می‌کند. رفتار status در CDN، رندر JS، compromise در origin، server log، field CWV، consent، reciprocity بین چند سیستم و impact کسب‌وکار را ثابت نمی‌کند. برای هر خروجی دقیقاً یک owner داشته باش و پاسخ عمومی را تست کن.
+
+## پیاده‌سازی کد
+
+در App Router به‌جای crawler proxy آزاد، یک endpoint داخلی و محدود برای جمع‌کردن evidence بساز. allowlist صریح داشته باش و observation برگردان، نه «SEO score»:
+
+```ts
+// app/api/internal/seo-evidence/route.ts
+type EvidenceRecord = {
+  check: "status" | "canonical" | "robots";
+  observed: string | number | null;
+  source: "production-response";
+  capturedAt: string;
+};
+
+const allowedPaths = new Set(["/", "/en/products", "/fa/products"]);
+
+export async function POST(request: Request) {
+  const auditToken = process.env.AUDIT_TOKEN;
+  if (!auditToken) {
+    return Response.json({ error: "Audit service unavailable" }, { status: 503 });
+  }
+
+  if (request.headers.get("authorization") !== `Bearer ${auditToken}`) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as { path?: string };
+  if (!body.path || !allowedPaths.has(body.path)) {
+    return Response.json({ error: "Path is not allowlisted" }, { status: 400 });
+  }
+
+  const response = await fetch(new URL(body.path, "https://www.example.com"), {
+    cache: "no-store",
+    redirect: "manual",
+  });
+  const html = await response.text();
+  const canonical =
+    html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1] ?? null;
+
+  const evidence: EvidenceRecord[] = [
+    { check: "status", observed: response.status, source: "production-response", capturedAt: new Date().toISOString() },
+    { check: "canonical", observed: canonical, source: "production-response", capturedAt: new Date().toISOString() },
+    { check: "robots", observed: response.headers.get("x-robots-tag"), source: "production-response", capturedAt: new Date().toISOString() },
+  ];
+
+  return Response.json({ path: body.path, evidence });
+}
+```
+
+token را فقط سمت سرور نگه دار، rate limit بگذار، fetch به host دلخواه یا private network را ببند و برای size/time پاسخ سقف تعیین کن. retention policy سازمان را هم رعایت کن. regex در این مثال محدود قابل‌قبول است، ولی parser عمومی HTML نیست؛ در production parser استاندارد و hash پاسخ خام می‌خواهی.
+
+یادداشت Pages Router: همین service دارای allowlist را پشت `pages/api/internal/seo-evidence.ts` بگذار، method غیر POST را رد کن و adapter مربوط به `NextApiRequest`/`NextApiResponse` بنویس. قانون ممیزی را در دو router کپی نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «ممیزی وقتی تمام است که score ابزار 100 شود.»
+- **DEPRECATED:** «گوگل بالاخره همه‌چیز را render می‌کند، پس HTML اولیه مهم نیست.»
+- **DEPRECATED:** «Disallow در robots.txt یعنی URL از index حذف می‌شود.»
+- **DEPRECATED:** «هر 404 باید redirect شود؛ بهتر است به homepage.»
+- تبدیل هر warning ابزار به ticket بدون reproduction و scope.
+- تست فقط homepage و جاانداختن template، locale، device و حالت logged-out.
+- استفاده از lab CWV به‌عنوان اثبات impact کاربر واقعی.
+- validate کردن syntax اسکیما بدون دیدن اختلافش با محتوای visible.
+- تغییر هم‌زمان چند signal owner و نابودکردن rollback و attribution.
+- فرستادن log خصوصی، query string، شناسهٔ مشتری یا export analytics به سرویس تأییدنشده.
+
+## نکته‌های سطح بالا / پروداکشن
+
+نمونه‌گیری لایه‌بندی‌شده داشته باش: template حیاتی، locale پرریسک، route تازه‌تغییرکرده، نمونهٔ long-tail، failure شناخته‌شده و control. numerator و denominator را با هم بگو. تعداد failure بدون eligible population معنای کافی ندارد؛ از sample هم بیشتر از طراحی نمونه‌گیری نتیجه نگیر.
+
+**finding**، **hypothesis** و **decision** را جدا نگه دار. label سرچ کنسول signal است؛ response فعلی و صفحهٔ renderشده evidence هستند؛ config اپ یا CDN شاید root cause را ثابت کند. اگر شواهد با هم نمی‌خوانند، تناقض را نگه دار و ابزارها را به زور هم‌نظر نکن.
+
+risk register باید evidence link، affected scope، confidence، owner، effort band، dependency، rollback و acceptance test داشته باشد. بعد از remediation فقط check مرتبط را دوباره اجرا کن و سپس یک regression crawl کوچک بگیر. bulk redirect، removal، canonical change یا خروج از sitemap بدون diff بازبینی‌شده و راه برگشت ممنوع.
+
+برای finding امنیتی، جزئیات را در گزارش SEO پخش نکن. exploit، credential، PII و raw log باید در incident system با least privilege باشد؛ ticket ممیزی فقط همان چیزی را بگوید که owner برای اصلاح لازم دارد.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Scope | host، environment، template، locale، device و cutoff روشن | «کل سایت» بدون مرز |
+| Evidence | response/render/log/source زمان‌دار و لینک‌شده | کپی label ابزار |
+| Coverage | هر ۹ حوزه با ریسک triage شده | blind spot بر اساس ابزار |
+| اولویت | risk، reach، confidence، urgency و reversibility جدا | تعداد warning یعنی severity |
+| اصلاح | یک owner، تغییر محدود، rollback و acceptance | «SEO را درست کن» |
+| Recheck | اثبات هدفمند + نمونهٔ regression | بستن ticket فقط بعد deploy |

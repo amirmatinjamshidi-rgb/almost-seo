@@ -1,0 +1,96 @@
+---
+title: Dynamic OG images with ImageResponse
+description: Generate deterministic, cacheable Open Graph images with the Next.js 16 ImageResponse file convention.
+module: 11-react-nextjs-seo
+topic_order: 6
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Create `opengraph-image.tsx` or `twitter-image.tsx` in an App Router segment and return `ImageResponse` from `next/og`. In Next.js 16, dynamic segment `params` is a promise. Generated image routes are statically optimized and cached by default unless request-time APIs or uncached data make them dynamic.
+
+`ImageResponse` supports flexbox and a subset of CSS, not full browser layout. Export `alt`, `size`, and `contentType` beside the default image function.
+
+## Why it matters
+
+Dynamic generation can keep article cards on-brand and current, but it also creates a public rendering endpoint. Unbounded input, missing fonts, slow CMS calls, unsupported CSS, or nondeterministic output can break every share preview and waste compute.
+
+<CorrectExample>
+The route resolves a validated slug to a published record, uses fixed dimensions and local font data, truncates text safely, has a fallback, and generates the same bytes for the same content version.
+</CorrectExample>
+
+<IncorrectExample why="Raw query text turns the route into an unbounded public image renderer; unsupported CSS and remote dependencies make output unreliable.">
+```tsx
+export default async function Image({ searchParams }) {
+  return new ImageResponse(<div style={{ display: "grid" }}>{searchParams.text}</div>);
+}
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/articles/[slug]/opengraph-image.tsx
+import { ImageResponse } from "next/og";
+import { notFound } from "next/navigation";
+import { getArticle } from "@/lib/articles";
+
+export const alt = "Article preview";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
+
+export default async function Image({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const article = await getArticle((await params).slug);
+  if (!article) notFound();
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "72px",
+          background: "#0b1020",
+          color: "white",
+        }}
+      >
+        <div style={{ display: "flex", fontSize: 30 }}>Example Research</div>
+        <div style={{ display: "flex", fontSize: 64, marginTop: 28 }}>
+          {article.title.slice(0, 90)}
+        </div>
+      </div>
+    ),
+    size,
+  );
+}
+```
+
+For local fonts or logos, load immutable assets at module scope with Node file APIs as documented, or fetch stable public assets. Do not import inside the function. If multiple variants are needed, use `generateImageMetadata` and validate its promised `id`.
+
+Pages Router difference: there is no segment image convention. Build an API route or external image service that returns an image response, then reference its absolute URL through `next/head`. Define cache headers, validation, and runtime support explicitly.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “OG routes always run at the edge.” Current behavior depends on runtime and deployment.
+- **DEPRECATED:** “Any CSS that works in Chrome works in `ImageResponse`.”
+- Awaiting slow third-party APIs on every social fetch.
+- Using user-supplied text or URLs without length and source controls.
+- Omitting alt, fixed size, fallback, or content type.
+- Assuming social platform cache invalidates when application cache does.
+
+## Senior / production notes
+
+Precompute popular images when generation cost is meaningful. Include a content version in manually constructed image URLs when cards must refresh. Bound title length, fonts, images, and total response time. Test right-to-left and long-language variants. Monitor non-200 rates separately from page rendering.
+
+## How to verify
+
+Build the app, fetch generated routes directly without cookies, check `200 image/png`, dimensions, cache behavior, and visual output for long/empty/RTL titles. Test missing slugs and CMS downtime. Confirm the page’s `og:image` resolves to the intended image route and remains publicly fetchable.

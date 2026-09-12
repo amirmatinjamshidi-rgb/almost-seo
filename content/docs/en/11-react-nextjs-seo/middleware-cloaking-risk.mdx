@@ -1,0 +1,80 @@
+---
+title: Proxy, historical middleware, and cloaking risk
+description: Use Next.js 16 proxy.ts narrowly and prevent user-agent, cookie, or header rules from serving deceptive search-only content.
+module: 11-react-nextjs-seo
+topic_order: 11
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+In Next.js 16, the `middleware.ts` file convention is deprecated and renamed to `proxy.ts`; the exported function is `proxy`. The historical filename remains in this topic because old code and audits still call the layer middleware.
+
+Proxy runs before route rendering and can redirect, rewrite, or change headers. Cloaking risk appears when logic serves materially different meaning to crawlers than to users—not merely when legitimate device, locale, authentication, or rendering adaptation exists.
+
+## Why it matters
+
+Bot-specific branches are hard to observe, cache, and test. A rule intended for previews, A/B testing, or performance can accidentally give crawlers different text, links, status, canonical, or robots directives. Shared CDN caches can then leak one variant to another audience.
+
+<CorrectExample>
+Proxy handles a narrow, user-visible locale entry redirect. Explicit locale URLs remain stable. Public content, status, canonical, and structured data do not change based on whether the requester claims to be Googlebot.
+</CorrectExample>
+
+<IncorrectExample why="The rewrite gives a crawler a keyword page while users receive the product application. That is deceptive serving and also risks cache contamination.">
+```ts
+if (request.headers.get("user-agent")?.includes("Googlebot")) {
+  return NextResponse.rewrite(new URL("/seo-copy", request.url));
+}
+```
+</IncorrectExample>
+
+## Code implementation
+
+```ts
+// proxy.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const PUBLIC_LOCALES = ["en", "fa"] as const;
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const hasLocale = PUBLIC_LOCALES.some(
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
+  );
+
+  if (hasLocale) return NextResponse.next();
+
+  const target = request.nextUrl.clone();
+  target.pathname = `/en${pathname}`;
+  return NextResponse.redirect(target);
+}
+
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+  ],
+};
+```
+
+Matchers must be static constants. Without a matcher, Proxy can run for assets and image optimization too. Proxy defaults to Node.js runtime in Next.js 16; setting a `runtime` export there is unsupported. Prefer config redirects, route handlers, and server authorization when they solve the need more directly.
+
+Pages Router difference: the same root `proxy.ts` convention can affect Pages Router routes. It is not Express middleware and should not be the sole authorization boundary; Pages Router API routes and data access still need their own checks.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** creating new `middleware.ts` in Next.js 16; migrate to `proxy.ts`.
+- **DEPRECATED:** assuming Proxy uses Edge runtime by default; Next.js 16 defaults it to Node.js.
+- **DEPRECATED:** “Different HTML for every user agent is automatically cloaking.” Intent and material meaning matter, but bot-only SEO content is high risk.
+- Trusting spoofable user-agent strings for security.
+- Letting cache keys ignore locale, cookie, or header variants.
+- Running Proxy on `_next`, sitemap, robots, and image routes unintentionally.
+
+## Senior / production notes
+
+Maintain a decision log for every bot/header branch. Compare status, text, links, canonical, robots, and schema across representative user agents. Keep authorization in the data-access layer and Server Functions, not only Proxy. Use Next’s experimental proxy test utilities to assert matcher and rewrite behavior, then add production synthetic checks through the real CDN.
+
+## How to verify
+
+Fetch the same URL as a normal browser, Googlebot token, social crawler, no user agent, and authenticated/anonymous users. Diff meaningful output and headers. Verify cache variation, matcher exclusions, redirect destinations, and direct access to protected data. Any search-only claims or links require removal, not a crawler allowlist.

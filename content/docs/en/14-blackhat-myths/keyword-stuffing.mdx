@@ -1,0 +1,121 @@
+---
+title: Keyword stuffing myths
+description: Natural topical coverage versus repetitive query blocks, city lists, and metadata written to manipulate rankings.
+module: 14-blackhat-myths
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Keyword stuffing** is filling a page with keywords or numbers in an unnatural or out-of-context way to manipulate rankings. It includes repeated phrases, blocks of cities or phone numbers, and awkward variants forced into headings, body copy, alt text, anchors, or metadata.
+
+Using the exact term where it helps a reader is not stuffing. Neither are a useful specification table, a real store directory, or natural synonyms. The test is purpose and readability: does each occurrence communicate something, or is it there because a ranking checklist demanded a density?
+
+Google does not publish a safe keyword-density percentage. Search systems understand language better than a fixed repetition formula.
+
+## Why it matters
+
+Stuffing makes copy less useful, can trigger spam enforcement, and often damages conversion before search visibility changes. It also contaminates templates: one stuffed title formula can spread to every product or location.
+
+<CorrectExample>
+A category page uses the query in the title, answers the shopping task, and lets product facts provide natural language:
+
+```html
+<title>Trail running shoes: grip, fit, and terrain guide | Northstar</title>
+<h1>Trail running shoes</h1>
+<p>
+  Compare lug depth, cushioning, and waterproofing before choosing a pair.
+  Our fit notes come from returns data and staff field tests.
+</p>
+```
+
+The term appears where it labels the page. The rest of the copy adds evidence and helps a decision.
+</CorrectExample>
+
+<IncorrectExample why="The repeated query variants and unrelated city list exist to influence rankings, not to help the shopper.">
+```html
+<title>Best Trail Shoes, Trail Running Shoes, Buy Trail Shoes</title>
+<h1>Best trail shoes and trail running shoes</h1>
+<p>
+  Buy trail shoes, cheap trail shoes, trail shoes Tehran, trail shoes Karaj,
+  best running trail shoes and waterproof trail running shoes.
+</p>
+```
+
+Changing punctuation, hiding part of the list, or moving it into `alt` attributes does not change the intent.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Treat the focus keyphrase and readability analysis as editorial prompts, not pass/fail ranking requirements.
+2. Write one descriptive SEO title and excerpt; do not repeat every variant to turn indicators green.
+
+**Rank Math**
+
+1. Ignore a low keyword-density score when the page already answers the query naturally.
+2. Audit Titles & Meta templates for repeated sitewide phrases, especially product and location variables.
+
+**AIOSEO**
+
+1. Use TruSEO recommendations as review cues. Do not append “related keyphrases” as a visible block.
+2. Check image alt text manually; describe the image instead of copying the focus phrase onto every image.
+
+**Feature gap:** None of these plugins can reliably judge whether repetition is useful in context. Editorial review, rendered-template sampling, and query-to-page intent mapping fill that gap.
+
+## Next.js implementation
+
+Keep metadata and visible copy driven by the page's real subject, not an array of query permutations:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Trail running shoes: grip, fit, and terrain guide",
+  description:
+    "Compare trail shoe grip, cushioning, waterproofing, and fit using field-tested notes.",
+};
+
+export default function TrailShoesPage() {
+  return (
+    <main>
+      <h1>Trail running shoes</h1>
+      <p>Choose by terrain, fit, and conditions—not by a manufactured keyword count.</p>
+    </main>
+  );
+}
+```
+
+In the App Router, export `metadata` or `generateMetadata` from a Server Component; do not export both in one segment. Avoid code that joins a keyword array into titles, hidden spans, or every product description.
+
+Pages Router note: use `next/head` for a concise title and description. The same content rule applies; generating variants in `getStaticProps` does not make them legitimate.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A page needs 2–3% keyword density.”
+- **DEPRECATED:** “Every synonym must appear in the title, H1, first paragraph, and every H2.”
+- **DEPRECATED:** “Meta keywords still help Google rankings.”
+- Stuffing image `alt` text and internal-link anchors.
+- Publishing city/ZIP/phone-number lists with no directory function.
+- Using AI to inject exact-match phrases after the useful draft is finished.
+
+## Senior / production notes
+
+Audit at the template level. Compare titles, H1s, intros, alt attributes, and anchor text across representative URLs; repetition caused by shared components is higher risk than one clumsy sentence.
+
+For remediation, preserve the page's real information, rewrite for the task, remove query blocks, and update templates before requesting recrawl. Do not promise a recovery date. If a manual action exists, document the cleanup and submit a factual reconsideration request.
+
+Large catalogs legitimately repeat product names and attributes. Judge whether values describe real inventory and whether each URL completes a distinct task; raw term frequency alone is weak evidence.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Read aloud | Natural, informative copy | Repetitive or awkward variants |
+| Template crawl | Distinct titles and useful intros | Same phrase chain sitewide |
+| Image audit | Alt describes each image | Exact phrase copied everywhere |
+| GSC manual actions | No spam action | Keyword-stuffing-related action |
+| Editorial trace | Each occurrence has a reader purpose | Density score is the only reason |

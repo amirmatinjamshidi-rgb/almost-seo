@@ -1,0 +1,91 @@
+---
+title: Open Graph and Twitter cards
+description: Keep Open Graph and Twitter card metadata complete, absolute, and consistent across Next.js 16 routes.
+module: 11-react-nextjs-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Open Graph and Twitter card tags describe how a URL may look when shared. They are presentation metadata, not a substitute for title, canonical, visible content, or indexability. Next.js App Router exposes `openGraph` and `twitter` fields through the Metadata API, plus static file conventions such as `opengraph-image.jpg`, `twitter-image.jpg`, and adjacent `.alt.txt` files.
+
+## Why it matters
+
+Social crawlers often fetch a document without executing the same JavaScript as browsers. Missing absolute image URLs, blocked assets, stale caches, or metadata that disagrees with the page produce broken cards and misleading previews.
+
+<CorrectExample>
+Each article has a stable canonical URL, concise title and description, a fetchable image with dimensions and alt text, and metadata generated from the same article record as the visible page.
+</CorrectExample>
+
+<IncorrectExample why="A relative image without `metadataBase`, a reused generic title, and no alt text make cards brittle and disconnected from the shared URL.">
+```ts
+export const metadata = {
+  openGraph: { title: "Blog", images: ["/api/image?id=current"] },
+};
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/articles/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getArticle } from "@/lib/articles";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/articles/[slug]">): Promise<Metadata> {
+  const article = await getArticle((await params).slug);
+  if (!article) notFound();
+
+  const url = `https://example.com/articles/${article.slug}`;
+  const image = `https://cdn.example.com/og/${article.ogImageKey}.png`;
+
+  return {
+    title: article.title,
+    description: article.summary,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      url,
+      title: article.title,
+      description: article.summary,
+      images: [{ url: image, width: 1200, height: 630, alt: article.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.summary,
+      images: [{ url: image, alt: article.title }],
+    },
+  };
+}
+
+export default async function Page() {
+  return <main>{/* article */}</main>;
+}
+```
+
+For a static route image, place `opengraph-image.png` and `opengraph-image.alt.txt` in the route segment; a deeper file overrides a parent’s file. Next.js enforces file-size limits documented for these conventions.
+
+Pages Router difference: emit equivalent tags with `next/head`, including `property="og:*"` and `name="twitter:*"`. Manage deduplication and absolute URLs yourself. App Router file conventions do not apply under `pages/`.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “`twitter:*` tags guarantee a preview on every platform.”
+- **DEPRECATED:** “Open Graph tags improve organic rankings.”
+- Using request host headers to build public URLs without an allowlist.
+- Letting child `openGraph` metadata shallowly erase inherited fields.
+- Serving an image behind authentication, robots blocks, hotlink protection, or unstable signed URLs.
+- Changing an image while keeping an aggressively cached URL.
+
+## Senior / production notes
+
+Version card assets when content changes and define a fallback for missing media. Keep asset response time and byte size within platform limits. Avoid putting sensitive, personalized, or unreviewed text into preview images. Card platforms cache independently; a corrected page may need each platform’s refresh/debug workflow.
+
+## How to verify
+
+Inspect raw metadata, then request every image URL without cookies using the social crawler’s likely method. Validate status, content type, dimensions, bytes, alt, title, and URL consistency. Test a new URL and an updated cached URL in platform-specific card debuggers; do not infer success from browser display alone.

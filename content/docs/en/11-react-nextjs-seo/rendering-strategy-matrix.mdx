@@ -1,0 +1,94 @@
+---
+title: Rendering strategy matrix for SEO
+description: Choose prerendering, request rendering, streaming, or client rendering per content boundary instead of treating SEO as an SSR switch.
+module: 11-react-nextjs-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Rendering is a delivery decision, not a ranking label. In Next.js 16 App Router, static and dynamic behavior can coexist at component boundaries: a route may ship a prerendered shell, cached content, and streamed request-time sections. The SEO question is whether each public URL returns the intended status, metadata, links, and meaningful content reliably.
+
+| Need | Preferred starting point | Main risk |
+| --- | --- | --- |
+| Stable public content | Prerender and revalidate when source changes | Stale output |
+| Request-specific public content | Server render the necessary boundary | Slow origin or unstable response |
+| Personalized/private UI | Keep indexable shell public; isolate private section | Leaking user state into shared cache |
+| Browser-only application | Client render only the interactive island | Empty initial content, waterfalls, soft 404s |
+
+## Why it matters
+
+Google can render JavaScript, but crawling, rendering, and indexing are separate phases. Server-side or prerendered HTML also works for agents that do not execute JavaScript. CSR-only delivery adds failure modes without creating an SEO advantage.
+
+<CorrectExample>
+The product name, description, price state, canonical link, navigation, and 404 handling are resolved on the server. A stock notifier is a Client Component. Product updates invalidate the cached product record rather than forcing every visitor into request rendering.
+</CorrectExample>
+
+<IncorrectExample why="The same 200 app shell is returned for products, missing products, and errors; title and content appear only after a browser fetch. Crawlers and users can receive empty or soft-404 pages.">
+```tsx
+"use client";
+
+export default function Product() {
+  return <div id="app">Loading...</div>;
+}
+```
+</IncorrectExample>
+
+## Code implementation
+
+App Router example with a server-rendered public record and explicit not-found handling:
+
+```tsx
+// app/products/[slug]/page.tsx
+import { notFound } from "next/navigation";
+import { AddToWatchlist } from "./add-to-watchlist";
+import { getProduct } from "@/lib/products";
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+
+  if (!product) notFound();
+
+  return (
+    <main>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+      <AddToWatchlist productId={product.id} />
+    </main>
+  );
+}
+```
+
+Use `fetch` cache controls, Cache Components, or source-specific revalidation deliberately; do not copy a stale ISR recipe without defining freshness. With Cache Components, cache reusable data at the function boundary and keep request-time reads isolated behind appropriate dynamic boundaries.
+
+Pages Router difference: public data usually comes from `getStaticProps` plus `revalidate`, or `getServerSideProps` when every request truly needs fresh server data. `getStaticPaths` defines prerendered dynamic paths and fallback behavior. Pages Router rendering choices are route-level compared with App Router’s finer component-level model.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “SSR always ranks better than SSG.” Search systems receive output, not framework labels.
+- **DEPRECATED:** “Client Components are CSR-only.” They can be prerendered; `"use client"` marks the client boundary.
+- Making the whole route dynamic because one widget uses cookies.
+- Caching personalized HTML under a shared public key.
+- Returning `200` for missing entities.
+- Assuming streaming, PPR, or ISR is automatically supported with identical performance on every host.
+
+## Senior / production notes
+
+Write a rendering contract per template: status behavior, initial HTML requirements, cache owner, invalidation trigger, maximum staleness, and fallback behavior. Keep HTML and RSC cache invalidation consistent across instances. Test cold origin, warm cache, disabled JavaScript, and upstream failure—not only local client navigation.
+
+Official references: [Next.js rendering philosophy](https://nextjs.org/docs/app/guides/rendering-philosophy) and [Google JavaScript SEO basics](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Raw response | Main content, links, metadata present | Only shell/loading text |
+| Missing URL | Real 404 response | Branded error with 200 |
+| Cache | Freshness and invalidation measured | Accidental permanent staleness |
+| JS disabled | Public meaning remains available | Page becomes empty |
+| Deployment | Streaming/cache behavior tested on target | Assumed from local dev |

@@ -10,11 +10,13 @@ import "../globals.css";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 
 const vazirmatn = Vazirmatn({
   subsets: ["arabic", "latin"],
   variable: "--font-vazir",
+  display: "swap",
 });
 
 export function generateStaticParams() {

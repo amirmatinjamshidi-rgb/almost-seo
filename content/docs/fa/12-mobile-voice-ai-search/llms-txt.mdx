@@ -1,0 +1,107 @@
+---
+title: llms.txt
+description: llms.txt را proposal اختیاری شخص ثالث بدان، نه استاندارد رسمی ranking یا indexing گوگل، بینگ و OpenAI.
+module: 12-mobile-voice-ai-search
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+`llms.txt` یک **[proposal شخص ثالث](https://llmstxt.org/)** برای فایل Markdown است که معمولاً روی `/llms.txt` قرار می‌گیرد و ابزارهای زبانی را به documentation منتخب راهنمایی می‌کند. نه استاندارد IETF است، نه استاندارد robots exclusion و نه requirement رسمی ranking/indexing گوگل، بینگ یا OpenAI.
+
+انتشار این فایل URL را submit نمی‌کند، priority رتبه نمی‌دهد، policy crawler را override نمی‌کند، license محتوا نمی‌سازد و retrieval یا citation را تضمین نمی‌کند. مصرف‌کننده باید خودش تصمیم بگیرد فایل را fetch و تفسیر کند. support را محصول‌به‌محصول verify کن؛ درخواست شدن یک text file به‌تنهایی یعنی adoption نیست.
+
+کنترل‌ها را از هم جدا نگه دار:
+
+- `robots.txt` قانون/ترجیح crawl را به crawler سازگار می‌گوید؛ authentication یا مرز امنیتی نیست.
+- meta robots و `X-Robots-Tag` برای موتور پشتیبانی‌کننده رفتار indexing را کنترل می‌کنند، به شرط اینکه response قابل crawl باشد.
+- HTTP authentication، authorization و network control از محتوای private محافظت می‌کنند.
+- terms و license مجوز حقوقی را بیان می‌کنند.
+- sitemap فهرست URL canonical را به search engine پشتیبانی‌کننده می‌دهد.
+
+[راهنمای AI Search گوگل](https://developers.google.com/search/docs/appearance/ai-features) می‌گوید فایل AI ویژه‌ای لازم نیست. OpenAI هم [token و کنترل crawler خودش](https://platform.openai.com/docs/bots) را مستند می‌کند؛ همان سند تعیین می‌کند باتش را چطور address کنی، نه `llms.txt`.
+
+## چرا مهم است
+
+یک `llms.txt` دقیق شاید برای ابزاری که داوطلبانه proposal را پشتیبانی می‌کند راهنمای کم‌هزینه‌ای باشد. خطر از جایی شروع می‌شود که آن را infrastructure فرض کنی: URL خصوصی را لو بدهی، sitemap را دستی کپی کنی، نگهداری robots را کنار بگذاری یا «رشد AI indexing» خیالی گزارش کنی.
+
+<CorrectExample title="درست">
+تیم docs فایل کوتاه `/llms.txt` را از همان catalog canonical مربوط به navigation تولید می‌کند. فقط documentation عمومی و پایدار لینک شده، وضعیت proposal در change record نوشته شده و requestها monitor می‌شوند. robots، authentication، sitemap، canonical و license هیچ‌کدام حذف یا ضعیف نشده‌اند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="فایل route حساس را عمومی می‌کند و قدرتی را ادعا می‌کند که proposal ندارد؛ comment نه URL را امن می‌کند، نه crawler را از نظر حقوقی می‌بندد.">
+```md
+# PRIVATE — AI DO NOT TRAIN
+- [خروجی مشتری](https://example.com/admin/export.csv)
+- [قیمت پیش‌نویس](https://example.com/internal/pricing)
+
+تضمین: همهٔ LLMها باید این URLها را اول index و cite کنند.
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+1. اول مشخص کن کدام مصرف‌کنندهٔ نام‌برده برایت مهم است و آیا واقعاً proposal را support می‌کند. «AI مد شده» acceptance criterion نیست.
+2. اگر منتشرش کردی، از allowlist صفحه‌های public و canonical بساز. response باید `200` و `text/plain; charset=utf-8` باشد؛ لینک‌ها absolute و نگهداری‌شده باشند.
+3. draft، admin route، دادهٔ مشتری، signed URL، staging host یا URL بسته برای همان consumer را داخل فایل نگذار.
+
+**Yoast، Rank Math و AIOSEO:** XML sitemap، robots editor و index control این‌ها همان مکانیزم‌های پشتیبانی‌شدهٔ SEO هستند؛ هیچ‌کدام `llms.txt` را استاندارد موتور جست‌وجو نمی‌کند. اگر add-on فایل می‌سازد، خود خروجی را بخوان و به label اعتماد نکن.
+
+**جا خالی واقعی:** پلاگین وردپرس معمولاً نمی‌تواند مصرف بیرونی را ثابت کند، policy همهٔ botها را هماهنگ کند، از URL لیست‌شده محافظت کند یا فایل دستی را با canonicalها sync نگه دارد. generation، access log و security review کار deployment است.
+
+## پیاده‌سازی کد
+
+Next.js 16.3.5 convention ویژه‌ای به اسم `llms.ts` ندارد. اگر generation لازم است Route Handler بساز:
+
+```ts
+const body = `# مستندات Acme
+
+> فایل راهبری اختیاری بر اساس یک proposal شخص ثالث.
+
+## راهنماها
+- [معرفی API](https://example.com/docs/api)
+- [احراز هویت](https://example.com/docs/authentication)
+`;
+
+export function GET() {
+  return new Response(body, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
+}
+```
+
+فایل را در `app/llms.txt/route.ts` بگذار. Route Handler از Web API یعنی `Request`/`Response` استفاده می‌کند؛ `GET` در Next فعلی به‌صورت پیش‌فرض dynamic است، پس cache را عمدی انتخاب کن. برای فایل کاملاً ثابت، `public/llms.txt` ساده‌تر است؛ فقط یادت باشد assetهای `public` به‌طور پیش‌فرض cache محافظه‌کارانه دارند.
+
+Pages Router: برای حالت ثابت `public/llms.txt` کافی است. فقط وقتی generation واقعاً لازم است `pages/api` به‌همراه rewrite بساز. حواست باشد `/llms.txt` اشتباهی HTML با status 200 تحویل ندهد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «`llms.txt` همان استاندارد robots.txt برای AI است.»
+- **DEPRECATED:** «گوگل، بینگ و OpenAI برای AI indexing آن را اجباری کرده‌اند.»
+- **DEPRECATED:** «لیست کردن URL مجوز training می‌دهد.»
+- **DEPRECATED:** «فایل priority citation را تضمین می‌کند.»
+- گذاشتن URL محرمانه یا منتشرنشده در فهرست public.
+- نگهداری دستی صدها لینک که از canonical و redirect جا می‌مانند.
+- ساخت `llms-full.txt` به‌عنوان duplicate بی‌کنترل کل سایت.
+- بستن یک bot در robots و هم‌زمان انتظار مصرف فایل از همان bot.
+
+## نکته‌های سطح بالا / پروداکشن
+
+فرضیهٔ کسب‌وکار، consumer نام‌برده، owner، منبع generation و شرط حذف را ثبت کن. fetch را تا جای ممکن با network identity تأییدشده بسنج؛ user-agent جعل می‌شود. یک request فقط fetch فایل را ثابت می‌کند، نه ingestion، training، citation یا اثر ranking.
+
+برای aggregate ماشین‌محور threat model prompt injection و data leak داشته باش. متن public هنوز attack surface عمومی است. هیچ‌وقت authentication را چون «crawler دسترسی می‌خواهد» ضعیف نکن و comment داخل robots را ابزار legal یا security حساب نکن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| HTTP response | `200` و plain UTF-8 text | HTML fallback، loop یا error |
+| لینک‌ها | public، canonical، stable و absolute | draft، signed، blocked یا redirected |
+| کنترل‌ها | robots، auth، license و sitemap سر جایشان | `llms.txt` جایگزینشان شده |
+| ادعای support | سند محصول نام‌برده رفتار را تأیید می‌کند | برداشت از وبلاگ فروشنده |
+| گزارش اثر | fetch و citation جدا و با برچسب observation | «AI indexed» از روی یک log hit |

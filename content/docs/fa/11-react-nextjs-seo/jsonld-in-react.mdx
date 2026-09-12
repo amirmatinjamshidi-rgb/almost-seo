@@ -1,0 +1,101 @@
+---
+title: JSON-LD در React و Next.js
+description: JSON-LD دقیق و مقاوم در برابر XSS را از همان server data محتوای قابل‌مشاهده render و جداگانه validate کن.
+module: 11-react-nextjs-seo
+topic_order: 7
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+JSON-LD دادهٔ machine-readable داخل `<script type="application/ld+json">` است. Next.js پیشنهاد می‌کند آن را مستقیم در layout یا page رندر کنی. JSON-LD باید entityهای واقعی و قابل‌مشاهدهٔ همان صفحه را توصیف کند؛ fact نمی‌سازد و rich result را guarantee نمی‌کند.
+
+`JSON.stringify` به‌تنهایی رشتهٔ `<` کنترل‌شده توسط مهاجم را برای inline script امن نمی‌کند. `<` را به `\u003c` تبدیل کن یا serializer reviewشده داشته باش.
+
+## چرا مهم است
+
+Structured data می‌تواند فهم معنای صفحه را بهتر و صفحه را برای بعضی featureها eligible کند. type غلط، review ساختگی، property مخفی، graph duplicate یا قیمت کهنه، consistency را خراب می‌کند.
+
+<CorrectExample title="درست">
+Server، Product JSON-LD را از همان record نام، تصویر، offer، availability و canonical می‌سازد. فقط property واقعی و پشتیبانی‌شده می‌آید و string کاربر امن serialize می‌شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Markup rating و availability ناموجود در صفحه را می‌سازد و serialization خام مسیر inline-script injection باز می‌کند.">
+```tsx
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{ __html: JSON.stringify(untrustedProduct) }}
+/>
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/products/[slug]/page.tsx
+import { notFound } from "next/navigation";
+import { getProduct } from "@/lib/products";
+
+function serializeJsonLd(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+
+  const url = `https://example.com/products/${product.slug}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${url}#product`,
+    name: product.name,
+    description: product.summary,
+    image: product.images,
+    offers: {
+      "@type": "Offer",
+      price: product.price.amount,
+      priceCurrency: product.price.currency,
+      availability: product.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      url,
+    },
+  };
+
+  return (
+    <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
+      <h1>{product.name}</h1>
+      <p>{product.summary}</p>
+    </main>
+  );
+}
+```
+
+از native script استفاده کن، نه `next/script`؛ JSON-LD executable code نیست. package type می‌تواند کمک کند، ولی سند featureهای Google قرارداد eligibility است، نه فقط schema.org.
+
+تفاوت Pages Router: همین script را در page یا `next/head` از دادهٔ `getStaticProps`/`getServerSideProps` بساز. entity مخصوص صفحه را در `_document` نگذار.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «schema معتبر یعنی rich result قطعی.»
+- **DEPRECATED:** «type بیشتر همیشه بهتر است.»
+- markup برای چیزی که کاربر نمی‌بیند.
+- graphهای duplicate و متناقض.
+- price با format نمایشی locale به‌جای مقدار machine.
+- اعتماد به TypeScript برای policy و صحت claim.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برای entity پایدار `@id` پایدار بده و مالک emission هر graph را معلوم کن. تغییر schema را version و templateهای نمونه را test کن. اگر داده نیست property را حذف کن؛ fallback ساختگی نساز.
+
+## چطور مطمئن شوی
+
+raw HTML را parse کن و graph را با visible content و canonical مقایسه کن. Schema Markup Validator برای vocabulary و Rich Results Test برای eligibility feature است. بعد deploy هم URL Inspection و monitoring template لازم است.

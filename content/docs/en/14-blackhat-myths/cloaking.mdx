@@ -1,0 +1,105 @@
+---
+title: Cloaking myths
+description: How manipulative search-engine/user differences differ from legitimate localization, personalization, testing, and access control.
+module: 14-blackhat-myths
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Cloaking** is showing different content to search engines and people **with intent to manipulate rankings and mislead users**. Typical cases give Googlebot a useful, keyword-rich page while users receive an ad, redirect, or substantially different offer.
+
+Not every response variation is cloaking. Legitimate localization, consent states, logged-in personalization, inventory, accessibility adaptations, and controlled experiments can vary a page when they serve users rather than secretly target crawlers. Keep the same primary purpose, provide crawlable locale URLs where appropriate, and do not branch on “Googlebot gets the ranking version.”
+
+User-agent detection is not automatically spam, but using it to grant a crawler content unavailable to comparable users is the decisive risk.
+
+## Why it matters
+
+Cloaking can produce a manual action or algorithmic loss and creates serious QA, legal, and security exposure. It also makes diagnostics unreliable: staff, crawlers, and customers may all see different failures.
+
+<CorrectExample>
+A Persian visitor chooses `/fa/pricing`; an English visitor can choose `/en/pricing`. Both URLs are crawlable, self-canonical, reciprocally annotated with `hreflang`, and describe the same product with region-appropriate currency and legally accurate availability.
+
+Logged-in customers additionally see their account discount. Googlebot and a logged-out visitor receive the same public offer. A language suggestion banner can be dismissed; it does not force every crawler through an IP redirect.
+</CorrectExample>
+
+<IncorrectExample why="The application identifies Googlebot to serve rankable text while ordinary visitors are redirected to a different commercial experience. That intent and mismatch are cloaking.">
+The server returns a 2,000-word “medical guide” to requests labeled Googlebot. Browsers receive a JavaScript redirect to an affiliate checkout, with no guide. Staff call it “SEO rendering,” but users cannot access the indexed content.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Use normal per-locale posts with self-canonicals and reciprocal `hreflang`; do not switch the post body for crawler user agents.
+2. Verify caching and translation plugins do not serve Googlebot a stale or privileged variant.
+
+**Rank Math**
+
+1. Its redirection and role-based controls are not a cloaking exception. Keep public snippets aligned with the public destination.
+2. Test schema and visible claims together; structured data must describe what users can see.
+
+**AIOSEO**
+
+1. Keep dynamic title and description variables consistent with the rendered public page.
+2. Clear page/CDN caches after personalization rules change, then compare anonymous responses.
+
+**SEOPress:** Only materially different when paired with its redirection or multilingual integrations; the same crawler-versus-user parity test applies.
+
+**Feature gap:** SEO plugins do not inspect CDN workers, personalization engines, ad scripts, or WordPress must-use plugins for crawler branching. Server logs and response-diff tests are required.
+
+## Next.js implementation
+
+Next.js 16 uses the `proxy.ts` convention; `middleware.ts` is deprecated. Localize by URL and offer a user choice without special crawler content:
+
+```ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/en", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};
+```
+
+Put localized pages at stable `/en/...` and `/fa/...` URLs. Personalize account-only components from authenticated state, but keep the public page's primary content and claims available to anonymous users and crawlers.
+
+Pages Router note: the same rule applies in `getServerSideProps` and legacy middleware. Do not inspect `user-agent` to return extra headings or alternate offers to Googlebot.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Dynamic rendering is a permanent license to send bots different content.”
+- **DEPRECATED:** “If the Googlebot user agent is real, any alternate response is allowed.”
+- **DEPRECATED:** “Geo-redirecting every crawler to one market improves international SEO.”
+- Mistaking login walls or legal availability rules for cloaking while failing to provide an honest public explanation.
+- Letting an A/B test change the page's fundamental purpose only for crawlers.
+- Debugging only in a browser and never comparing raw server responses.
+
+## Senior / production notes
+
+Maintain a variation register: rule owner, audience, reason, affected components, cache key, and expiry date. Cache by the minimum legitimate dimensions; accidental cache poisoning can look exactly like cloaking.
+
+Detection should compare rendered primary content, status, redirect chain, canonical, robots, structured data, and links across verified crawler fetches and normal anonymous requests. Do not publish fingerprinting or bypass recipes; the remediation is to remove crawler-targeted branches.
+
+If a hacked site cloaks spam, contain the breach, remove malicious server/CDN rules, rotate credentials, verify all variants, and use GSC's Security Issues and Manual Actions reports. Do not estimate a fixed recovery timeline.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| URL Inspection vs anonymous fetch | Same primary purpose and claims | Bot-only guide or links |
+| Redirect comparison | Locale/user choice is explainable | Googlebot bypasses user destination |
+| CDN/cache review | Legitimate cache dimensions documented | User-agent keyword branches |
+| Structured data | Matches visible public content | Bot-only ratings or offers |
+| GSC | No cloaking/security action | Cloaking or hacked-content warning |

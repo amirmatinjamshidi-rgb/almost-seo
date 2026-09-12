@@ -1,0 +1,90 @@
+---
+title: robots.ts in Next.js
+description: Generate a safe robots.txt with Next.js 16 while separating crawl control, indexing control, and access control.
+module: 11-react-nextjs-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+`app/robots.ts` is an App Router metadata route returning `MetadataRoute.Robots`. It controls crawler access patterns; it does not secure data and is not a reliable way to remove HTML URLs from search. A disallowed URL can still be known or shown without a snippet. Use authentication for private content and a crawlable `noindex` directive for public pages that must leave the index.
+
+Next.js 16.3 adds the typed `other` field for non-standard per-agent directives, passed through verbatim. Use it only from the target crawler’s documentation.
+
+## Why it matters
+
+A one-line production mistake can block the whole site, while blocking a page that carries `noindex` can prevent a crawler from seeing the directive. Blocking CSS or JavaScript required for rendering can also impair understanding.
+
+<CorrectExample>
+Production allows public routes, disallows low-value internal crawl paths, publishes an absolute sitemap URL, and protects account data with authentication. Preview deployments intentionally disallow crawling through deployment controls and are not linked publicly.
+</CorrectExample>
+
+<IncorrectExample why="robots.txt is public, does not authenticate requests, and `Disallow` is crawl control rather than a dependable removal mechanism.">
+```txt
+User-agent: *
+Disallow: /private-customer-records/
+Noindex: /
+```
+</IncorrectExample>
+
+## Code implementation
+
+```ts
+// app/robots.ts
+import type { MetadataRoute } from "next";
+
+const ORIGIN = "https://example.com";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/internal-search/"],
+    },
+    sitemap: `${ORIGIN}/sitemap.xml`,
+    host: ORIGIN,
+  };
+}
+```
+
+The special route is cached by default unless it uses a request-time API or dynamic configuration. Prefer environment-specific deployment policy over deriving public rules from an untrusted request host.
+
+If separate rules are necessary, return an array:
+
+```ts
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      { userAgent: "*", allow: "/", disallow: "/internal-search/" },
+      { userAgent: "ExampleBot", disallow: "/" },
+    ],
+    sitemap: "https://example.com/sitemap.xml",
+  };
+}
+```
+
+Pages Router difference: serve `public/robots.txt` when static, or create `pages/robots.txt.ts` and write `text/plain`. Do not also ship a competing static file. The typed metadata route belongs to App Router.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “Put `noindex` in robots.txt.” Google does not support it there.
+- **DEPRECATED:** “Disallow keeps a URL secret.”
+- Blocking a URL and expecting its meta `noindex` to be read.
+- Blocking `_next/static`, required scripts, styles, or images indiscriminately.
+- Returning preview rules in production because an environment variable was missing.
+- Adding unsupported directives without crawler-specific evidence.
+
+## Senior / production notes
+
+Treat robots policy as deploy-critical configuration. Add a production assertion that `/robots.txt` never contains a global disallow unless explicitly approved. Monitor changes, fetch from every hostname/protocol variant, and align sitemap hosts. Rate limits and bot abuse require infrastructure controls, not voluntary robots directives.
+
+Official reference: [Google robots.txt introduction](https://developers.google.com/search/docs/crawling-indexing/robots/intro).
+
+## How to verify
+
+Fetch `/robots.txt` as plain text in every environment. Test representative URLs with the intended crawler token, verify sitemap fetchability, and inspect rendered pages for `noindex` separately. Confirm private routes reject unauthenticated requests even when the caller ignores robots.txt.

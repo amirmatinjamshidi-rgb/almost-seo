@@ -1,0 +1,127 @@
+---
+title: Hidden text myths
+description: Accessible visually hidden labels and interactive content versus concealed keywords and links intended only for search engines.
+module: 14-blackhat-myths
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Hidden text or link abuse** places content where people cannot easily see it, solely to manipulate search rankings. Examples include white text on white, zero-size or zero-opacity text, text behind images, off-screen keyword blocks, and links hidden on tiny characters.
+
+Visibility alone does not decide abuse. Accessible visually hidden labels, skip links, responsive navigation, tabs, accordions, and screen-reader instructions are legitimate when they help users and become available in the intended interaction. The distinction is function and intent: accessibility text names a control; hidden keyword spam targets search systems.
+
+Content collapsed for usability is not automatically discounted or spam. It still needs to be useful, reachable, and semantically connected to the page.
+
+## Why it matters
+
+Hidden spam can trigger enforcement and often enters through compromised themes, widgets, or injected CSS. Overreacting is also harmful: deleting screen-reader labels to “avoid hidden text” breaks accessibility without improving SEO.
+
+<CorrectExample>
+An icon-only search button has an accessible name, and a skip link becomes visible on focus:
+
+```html
+<a class="skip-link" href="#main">Skip to main content</a>
+<button type="submit">
+  <svg aria-hidden="true"><!-- search icon --></svg>
+  <span class="sr-only">Search the documentation</span>
+</button>
+```
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link:focus { position: static; width: auto; height: auto; margin: 0; }
+```
+</CorrectExample>
+
+<IncorrectExample why="The off-screen paragraph and tiny linked character have no user or accessibility function; they conceal ranking terms and a manipulative link.">
+```html
+<p class="seo-copy">cheap loans fast loans city1 city2 city3 best loan rates</p>
+<p>Compare options<a class="pixel-link" href="https://network.example">.</a></p>
+```
+
+```css
+.seo-copy { position: absolute; left: -99999px; }
+.pixel-link { font-size: 1px; opacity: 0; }
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Inspect the rendered theme; Yoast analysis cannot see every CSS rule, injected widget, or compromised template.
+2. Keep useful accordion copy in the HTML and ensure controls are keyboard accessible.
+
+**Rank Math**
+
+1. Do not use custom fields or schema fields as a hidden reservoir for phrases unrelated to visible content.
+2. Review footer and reusable-block links after theme or plugin updates.
+
+**AIOSEO**
+
+1. Its headline and keyphrase checks do not justify hidden fallback paragraphs.
+2. Compare source and rendered DOM when a security scan finds injected links.
+
+**Feature gap:** These plugins are not accessibility auditors or malware scanners. Use keyboard/screen-reader checks, DOM/CSS inspection, file-integrity monitoring, and security tooling.
+
+## Next.js implementation
+
+Use a reusable accessibility utility for control labels, not for keyword copy:
+
+```tsx
+export function SearchButton() {
+  return (
+    <button type="submit">
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m16 16 4 4" />
+      </svg>
+      <span className="sr-only">Search the documentation</span>
+    </button>
+  );
+}
+```
+
+In the App Router, Server Components already emit this meaningful HTML. Do not render crawler-only hidden blocks from `headers()`; in Next.js 16, `headers()` is asynchronous and using it for bot-targeted content adds cloaking to the hidden-text abuse.
+
+Pages Router note: JSX and CSS rules are identical. Avoid bot-only props in `getServerSideProps`; test the built page with CSS enabled, disabled, keyboard focus, and an accessibility tree.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Any `sr-only` class is a Google penalty.”
+- **DEPRECATED:** “Text in an accordion does not count, so copy it invisibly too.”
+- **DEPRECATED:** “Google cannot render CSS or JavaScript-hidden spam.”
+- Hiding duplicated H1s at mobile breakpoints instead of fixing the component.
+- Using transparent anchors to pass ranking credit.
+- Removing legitimate form labels because an automated SEO audit flags them as hidden.
+
+## Senior / production notes
+
+Review intent alongside implementation. A one-pixel accessible label can be correct; a visually prominent but unreadable keyword list can still be stuffing. Security and accessibility teams belong in the triage.
+
+For remediation, locate the owner: CMS content, theme, tag manager, dependency, database injection, or compromised account. Remove the source, not only the CSS. Rotate credentials and patch the entry point when compromise is involved.
+
+Keep visual-regression and accessibility tests for skip links, dialogs, menus, and accordions. A CSS cleanup that exposes every helper label or hides focus content is a production regression.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Keyboard/screen reader | Hidden label names a real control | No user function |
+| DOM/CSS review | Hidden content is accessibility/UI support | Keyword block off-screen |
+| Link audit | Every link is perceivable and purposeful | Transparent/tiny paid link |
+| Source ownership | Component and reason documented | Unknown injected markup |
+| GSC/security scan | Clean | Hidden-link or hacked-content evidence |

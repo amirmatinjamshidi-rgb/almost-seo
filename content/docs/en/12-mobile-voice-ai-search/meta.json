@@ -1,0 +1,10 @@
+{
+  "title": "Mobile, Voice, and AI Search",
+  "defaultOpen": true,
+  "pages": [
+    "mobile-ux-indexing",
+    "voice-search",
+    "geo-aeo-optimization",
+    "llms-txt"
+  ]
+}

@@ -1,0 +1,99 @@
+---
+title: Redirects and rewrites in Next.js config
+description: Choose permanent or temporary redirects and transparent rewrites without breaking canonical URLs or creating routing loops.
+module: 11-react-nextjs-seo
+topic_order: 10
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A redirect changes the visible URL and returns a 3xx response. A rewrite serves another destination while keeping the requested URL. In `next.config.ts`, `permanent: true` produces 308 and `false` produces 307, preserving the request method.
+
+App Router also offers `redirect()` for temporary render-time routing and `permanentRedirect()` for permanent moves. Conditional pre-render routing belongs in current `proxy.ts` only when simpler config or route APIs do not fit.
+
+## Why it matters
+
+Permanent redirects are canonicalization signals; rewrites are not. A rewrite can create two public URLs with the same content unless metadata, links, sitemap, and redirect policy define one canonical address. Redirect chains waste requests and loops make content unavailable.
+
+<CorrectExample>
+An old product slug returns one 308 to its exact replacement. Internal links, canonical, sitemap, and structured data use the destination. A temporary maintenance route uses 307 and is removed after recovery.
+</CorrectExample>
+
+<IncorrectExample why="A rewrite hides the destination but leaves both URLs live, while a blanket redirect to the home page loses intent and may be treated as a soft 404.">
+```ts
+async rewrites() {
+  return [{ source: "/old/:path*", destination: "/" }];
+}
+```
+</IncorrectExample>
+
+## Code implementation
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/guides/:slug",
+        destination: "/docs/:slug",
+        permanent: true,
+      },
+      {
+        source: "/campaign",
+        destination: "/campaign-paused",
+        permanent: false,
+      },
+    ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: "/support/:path*",
+          destination: "https://help.example.com/:path*",
+        },
+      ],
+      fallback: [],
+    };
+  },
+};
+
+export default nextConfig;
+```
+
+Execution order matters: config headers and redirects run before Proxy; Proxy precedes `beforeFiles` rewrites and filesystem routes. Keep source patterns anchored and test query propagation. For a changed entity URL in App Router:
+
+```tsx
+import { permanentRedirect } from "next/navigation";
+
+export default async function LegacyProduct() {
+  permanentRedirect("/products/new-slug");
+}
+```
+
+Pages Router difference: config redirects/rewrites are shared, and `getStaticProps`/`getServerSideProps` can return redirects. Config redirects may not apply to Pages Router client navigation unless matching Proxy is present, so remove old internal links instead of depending on that behavior.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “A rewrite transfers SEO signals like a 301/308.”
+- **DEPRECATED:** “JavaScript `window.location` is equivalent to a server redirect.” Google recommends server-side redirects when possible.
+- Redirecting all removed pages to home.
+- Creating multi-hop chains or source/destination loops.
+- Keeping old URLs in navigation and sitemap.
+- Choosing permanent status for an experiment that will be reverted.
+
+## Senior / production notes
+
+Keep redirects in a versioned map with owner, reason, launch date, and permanence. Detect cycles and destination failures before deploy. At large scale, use an optimized lookup and exact fallback verification; a Bloom filter alone has false positives. Preserve path/query values only when their semantics remain valid.
+
+Official reference: [Google redirects guidance](https://developers.google.com/search/docs/crawling-indexing/301-redirects).
+
+## How to verify
+
+Request sources without following redirects; assert exact status and `Location`. Then follow once and require the intended final `200`, canonical, and content. Crawl for chains, loops, broken destinations, redirected sitemap URLs, and internal links to old paths. Verify rewrites keep the browser URL and do not expose duplicate indexable aliases.

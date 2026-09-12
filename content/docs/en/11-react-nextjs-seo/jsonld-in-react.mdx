@@ -1,0 +1,103 @@
+---
+title: JSON-LD in React and Next.js
+description: Render accurate, XSS-safe JSON-LD from the same server data as visible content and validate eligibility separately from syntax.
+module: 11-react-nextjs-seo
+topic_order: 7
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+JSON-LD is machine-readable structured data embedded in a native `<script type="application/ld+json">`. Next.js recommends rendering it in an App Router layout or page. It describes visible page entities; it does not create facts, guarantee rich results, or replace content.
+
+`JSON.stringify` alone does not neutralize an attacker-controlled `<` sequence inside an inline script. Escape `<` as `\u003c` or use a reviewed serializer.
+
+## Why it matters
+
+Structured data can help systems understand page meaning and may make a page eligible for supported search features. Incorrect types, invented reviews, hidden properties, duplicate graphs, or stale prices undermine consistency and eligibility.
+
+<CorrectExample>
+The server creates Product JSON-LD from the same record used for the visible name, image, offer, availability, and canonical URL. Only supported, truthful properties are emitted and user strings are safely serialized.
+</CorrectExample>
+
+<IncorrectExample why="The markup invents ratings and availability not shown or supported by the page, and raw serialization can create an inline-script injection path.">
+```tsx
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{ __html: JSON.stringify(untrustedProduct) }}
+/>
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/products/[slug]/page.tsx
+import { notFound } from "next/navigation";
+import { getProduct } from "@/lib/products";
+
+function serializeJsonLd(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+
+  const url = `https://example.com/products/${product.slug}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${url}#product`,
+    name: product.name,
+    description: product.summary,
+    image: product.images,
+    offers: {
+      "@type": "Offer",
+      price: product.price.amount,
+      priceCurrency: product.price.currency,
+      availability: product.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      url,
+    },
+  };
+
+  return (
+    <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
+      <h1>{product.name}</h1>
+      <p>{product.summary}</p>
+    </main>
+  );
+}
+```
+
+Use a native script, not `next/script`; JSON-LD is data, not executable JavaScript. Type it with a maintained schema type package if useful, while treating Google’s feature documentation—not schema.org alone—as the eligibility contract.
+
+Pages Router difference: render the same native script in the page component or `next/head`, using data from `getStaticProps`/`getServerSideProps`. Avoid `_document` for page-specific entities.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “Valid schema guarantees a rich result.”
+- **DEPRECATED:** “More schema types always help.”
+- Adding markup for content users cannot see.
+- Combining conflicting plugins/components that emit duplicate entities.
+- Using locale-formatted price strings instead of machine values.
+- Trusting TypeScript to enforce search-feature policy or truthfulness.
+
+## Senior / production notes
+
+Give stable entities stable `@id` values and connect graphs intentionally. Define ownership so only one layer emits each entity. Log schema version changes, test representative templates, and remove properties when source data is unavailable rather than fabricating fallbacks.
+
+Official references: [Next.js JSON-LD guide](https://nextjs.org/docs/app/guides/json-ld) and [Google structured data introduction](https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data).
+
+## How to verify
+
+Inspect raw HTML for exactly the intended graph, parse every JSON-LD block, and compare values with visible content and canonical URLs. Use Schema Markup Validator for vocabulary and Google Rich Results Test for supported-feature eligibility. Recheck production with URL Inspection and template monitoring after deployments.

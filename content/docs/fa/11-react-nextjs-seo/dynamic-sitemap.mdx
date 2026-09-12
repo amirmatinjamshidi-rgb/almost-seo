@@ -1,0 +1,101 @@
+---
+title: Sitemap پویا در Next.js
+description: XML sitemap را با metadata route نسخهٔ Next.js 16 از URLهای canonical و دادهٔ واقعی تولید و در مقیاس بزرگ split کن.
+module: 11-react-nextjs-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Sitemap برای discovery و canonicalization یک hint است، نه دستور index شدن. در App Router فایل `app/sitemap.ts` مقدار `MetadataRoute.Sitemap` برمی‌گرداند. در Next.js 16، مقدار `id` در `generateSitemaps` یک Promise است که به string resolve می‌شود.
+
+فقط URL کامل، canonical و مطلوب برای index را لیست کن. `lastModified` باید زمان آخرین تغییر مهم صفحه باشد، نه زمان هر request. Google مقدارهای `priority` و `changefreq` را نادیده می‌گیرد.
+
+## چرا مهم است
+
+سایت database-driven نمی‌تواند XML دستی را سالم نگه دارد. Sitemap تولیدی باید draft، redirect، noindex، duplicate parameter و 404 را با همان publish-state صفحه حذف کند.
+
+<CorrectExample title="درست">
+Query فقط recordهای published و indexable را می‌گیرد، URL پایدار و تاریخ واقعی می‌دهد و dataset بزرگ را split می‌کند. record حذف‌شده از sitemap می‌رود و URL قدیمی status یا redirect درست دارد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="تاریخ ساختگی تازه و URL نسبی، sitemap را با واقعیت سایت ناسازگار می‌کند و draftها را لو می‌دهد.">
+```ts
+return allRows.map((row) => ({
+  url: `/products/${row.id}`,
+  lastModified: new Date(),
+}));
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```ts
+// app/sitemap.ts
+import type { MetadataRoute } from "next";
+import { getPublishedArticles } from "@/lib/articles";
+
+const ORIGIN = "https://example.com";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const articles = await getPublishedArticles();
+  return [
+    { url: ORIGIN, lastModified: "2026-09-01" },
+    ...articles.map((article) => ({
+      url: `${ORIGIN}/articles/${article.slug}`,
+      lastModified: article.updatedAt,
+    })),
+  ];
+}
+```
+
+برای مجموعهٔ بزرگ:
+
+```ts
+// app/products/sitemap.ts
+import type { MetadataRoute } from "next";
+import { countIndexableProducts, getIndexableProducts } from "@/lib/products";
+
+const BATCH_SIZE = 50_000;
+
+export async function generateSitemaps() {
+  const count = await countIndexableProducts();
+  return Array.from({ length: Math.ceil(count / BATCH_SIZE) }, (_, id) => ({ id }));
+}
+
+export default async function sitemap({
+  id,
+}: {
+  id: Promise<string>;
+}): Promise<MetadataRoute.Sitemap> {
+  const page = Number(await id);
+  const rows = await getIndexableProducts(page * BATCH_SIZE, BATCH_SIZE);
+  return rows.map((row) => ({
+    url: `https://example.com/products/${row.slug}`,
+    lastModified: row.updatedAt,
+  }));
+}
+```
+
+در production مقدار `id` را قبل از database offset validate کن. سقف protocol برای هر sitemap برابر ۵۰هزار URL یا ۵۰MB حالت uncompressed است.
+
+تفاوت Pages Router: در `pages/sitemap.xml.tsx` XML escapeشده را با `Content-Type: application/xml` بنویس و response را تمام کن، یا فایل را در deploy بساز. Metadata Route مخصوص App Router است.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «submit sitemap یعنی index قطعی.»
+- **DEPRECATED:** «`priority` بالا ranking را مجبور می‌کند.»
+- `lastModified` برابر زمان build/request برای همه.
+- لیست کردن noindex، redirect، noncanonical، private یا 404.
+- ساخت origin از `Host` غیرقابل‌اعتماد.
+- ریختن میلیون‌ها row داخل memory.
+
+## نکته‌های سطح بالا / پروداکشن
+
+در CI یا job دوره‌ای sitemap را با status، canonical، robots و publish state join کن. cohortهای sitemap را جدا در Search Console ببین. برای outage منبع داده، last-known-good کنترل‌شده داشته باش و sitemap را در robots.txt معرفی کن.
+
+## چطور مطمئن شوی
+
+تمام sitemapها باید `200`، XML معتبر UTF-8، URL absolute و بدون duplicate بدهند. sample URLها را از نظر `200`، canonical، indexability و `lastmod` بررسی کن. split routeها و محدودیت حجم/تعداد را هم تست کن.

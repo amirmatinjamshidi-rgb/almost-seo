@@ -1,0 +1,80 @@
+---
+title: Proxy، middleware تاریخی و ریسک cloaking
+description: proxy.ts نسخهٔ Next.js 16 را محدود استفاده کن و نگذار ruleهای bot/header محتوای مخصوص موتور جستجو بسازند.
+module: 11-react-nextjs-seo
+topic_order: 11
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+در Next.js 16، file convention قدیمی `middleware.ts` deprecated و به `proxy.ts` تغییر نام داده؛ نام function هم `proxy` است. اسم middleware در عنوان این topic فقط برای audit کدهای قدیمی مانده.
+
+Proxy قبل از render route اجرا می‌شود و می‌تواند redirect، rewrite یا header را عوض کند. ریسک cloaking وقتی جدی است که منطق، معنای محتوا را برای crawler با user عادی فرق بدهد؛ هر adaptation مشروعِ locale، device یا authentication الزاماً cloaking نیست.
+
+## چرا مهم است
+
+Branch بر اساس bot سخت‌تر observe، cache و test می‌شود. rule مربوط به preview، A/B test یا performance ممکن است ناخواسته text، link، status، canonical یا robots متفاوتی به crawler بدهد. CDN مشترک حتی ممکن است variant را به audience اشتباه leak کند.
+
+<CorrectExample title="درست">
+Proxy فقط redirect محدود و قابل‌مشاهدهٔ locale را انجام می‌دهد. URL صریح هر زبان پایدار است. status، canonical، visible content و schema بر اساس اسم Googlebot عوض نمی‌شوند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Crawler یک صفحهٔ پر از keyword می‌بیند ولی user app محصول را؛ این serving فریبنده است و cache contamination هم می‌سازد.">
+```ts
+if (request.headers.get("user-agent")?.includes("Googlebot")) {
+  return NextResponse.rewrite(new URL("/seo-copy", request.url));
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```ts
+// proxy.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const PUBLIC_LOCALES = ["en", "fa"] as const;
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const hasLocale = PUBLIC_LOCALES.some(
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
+  );
+
+  if (hasLocale) return NextResponse.next();
+
+  const target = request.nextUrl.clone();
+  target.pathname = `/en${pathname}`;
+  return NextResponse.redirect(target);
+}
+
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+  ],
+};
+```
+
+Matcher باید constant قابل‌تحلیل باشد. بدون matcher، Proxy روی asset و image optimization هم می‌دود. در Next.js 16 runtime پیش‌فرض Proxy، Node.js است و export کردن config `runtime` در آن پشتیبانی نمی‌شود. اگر config redirect یا route API کافی است، Proxy اضافه نکن.
+
+تفاوت Pages Router: همین `proxy.ts` root می‌تواند pageهای Pages Router را هم بگیرد. Express middleware نیست و نباید تنها authorization boundary باشد؛ API route و data access باید check خودشان را داشته باشند.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** ساخت `middleware.ts` جدید در Next.js 16؛ به `proxy.ts` migrate کن.
+- **DEPRECATED:** «Proxy پیش‌فرض Edge runtime است.» در نسخهٔ 16 پیش‌فرض Node.js است.
+- **DEPRECATED:** «هر HTML متفاوت بر اساس UA، cloaking است.» intent و تفاوت معنایی مهم‌اند؛ محتوای SEO مخصوص bot پرریسک است.
+- اعتماد امنیتی به user-agent قابل spoof.
+- cache key بدون locale/cookie/header لازم.
+- matcher شامل `_next`، sitemap، robots و image.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برای هر branch وابسته به bot/header decision log داشته باش. status، text، link، canonical، robots و schema را بین UAها diff کن. authorization را در data layer و Server Function نگه دار. matcher را با utilityهای آزمایشی Next و بعد از CDN واقعی test کن.
+
+## چطور مطمئن شوی
+
+یک URL را با browser UA، Googlebot token، social crawler، UA خالی و حالت login/out fetch کن. خروجی معنایی و headerها را diff کن. cache variation، exclusion matcher، redirect و دسترسی مستقیم به دادهٔ private را بررسی کن. search-only content باید حذف شود، نه allowlist.

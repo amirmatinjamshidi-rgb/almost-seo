@@ -1,0 +1,108 @@
+---
+title: Mobile UX and indexing
+description: Build one responsive, complete experience; mobile-first indexing is complete, not a separate mobile rank or index.
+module: 12-mobile-voice-ai-search
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google completed its move to **mobile-first indexing** in 2023. Googlebot Smartphone normally crawls the mobile presentation as the primary version used for indexing. This does **not** create a separate mobile index, a second mobile rank, or a switch that an SEO plugin can turn on.
+
+The practical rule is parity: one responsive URL should expose the same primary content, headings, links, images and alt text, structured data, metadata, and robots directives at narrow and wide viewports. Layout may change. The facts and destinations should not disappear.
+
+Mobile UX is broader than indexing. Readable text, stable layouts, usable controls, fast interaction, and non-obstructive overlays help real visitors. Core Web Vitals measure part of that experience, but neither a Lighthouse score nor “mobile friendly” is a complete ranking diagnosis. See Google’s [mobile-first indexing guidance](https://developers.google.com/search/docs/crawling-indexing/mobile/mobile-sites-mobile-first-indexing) and [page experience guidance](https://developers.google.com/search/docs/appearance/page-experience).
+
+## Why it matters
+
+If the mobile HTML is a thin version, that is the version Search primarily has available to understand. Missing product descriptions, internal links, image alt text, or `noindex` parity can damage discovery and interpretation. Separately, a slow or awkward mobile page can lose users even when it remains indexed.
+
+<CorrectExample>
+The same product URL server-renders its name, price, availability, specifications, reviews, canonical, and Product markup for every viewport. CSS turns the desktop grid into a single column. A disclosure control collapses specifications visually, but the content remains in the HTML.
+</CorrectExample>
+
+<IncorrectExample why="The smartphone response withholds the useful page, so the primary crawler sees less content and fewer discovery paths than desktop users.">
+```txt
+Desktop UA: full guide + related links + Product JSON-LD
+Mobile UA: 90-word teaser + "open the app" overlay
+Mobile meta robots: noindex
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+1. Use a responsive theme and one canonical URL. Retire `m.example.com`, UA-switched templates, and unnecessary AMP copies with a tested migration.
+2. Compare mobile and desktop source for the main copy, menus, pagination, media, canonicals, robots directives, hreflang, and schema.
+3. Optimize the actual bottleneck: reserve media dimensions, compress the LCP asset, remove render-blocking excess, and keep tap targets usable. Do not delete useful content to make a synthetic score green.
+
+**Yoast, Rank Math, and AIOSEO:** all can emit canonical, robots, sitemap, breadcrumb, and schema data, but none makes a theme responsive or guarantees mobile parity. Check that template conditions and cache variants do not cause plugin output to differ by user agent.
+
+**Feature gap:** no SEO plugin audits rendered mobile/desktop parity, intrusive overlays, navigation reachability, or real-user responsiveness end to end. Theme, cache/CDN, consent manager, and front-end ownership are the gap.
+
+## Code implementation
+
+Next.js 16.3.5 supplies a default responsive viewport. Export one only when you need to state the policy explicitly, and keep primary content in a Server Component:
+
+```tsx
+import Image from "next/image";
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+export default function ProductPage() {
+  return (
+    <main>
+      <h1>Trail camera X2</h1>
+      <Image
+        src="/products/x2.jpg"
+        alt="Trail camera X2 mounted on a tree"
+        width={1200}
+        height={800}
+        sizes="(max-width: 768px) 100vw, 50vw"
+        preload
+      />
+      <p>Weather-sealed camera with a six-month field warranty.</p>
+      <details>
+        <summary>Specifications</summary>
+        <p>IP66 enclosure; replaceable battery; night capture.</p>
+      </details>
+    </main>
+  );
+}
+```
+
+In Next 16, `next/image` requires meaningful `alt`, uses dimensions to reserve aspect ratio, and uses `sizes` to avoid an unnecessarily large responsive download. `preload` replaces the deprecated `priority` prop; reserve it for the actual above-the-fold LCP candidate.
+
+Pages Router: use the same page component and `next/image`; put a custom viewport in `_document.tsx` only if the default document behavior must be overridden. Do not branch primary content on `window.innerWidth` or user agent in either router.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Google maintains a separate mobile index and mobile rank.”
+- **DEPRECATED:** “Enable mobile-first indexing in Yoast.”
+- **DEPRECATED:** “AMP is required for mobile rankings.”
+- **DEPRECATED:** “Anything inside a collapsed accordion is ignored.” Omitted content is the problem; HTML behind a usable disclosure is not automatically absent.
+- Hiding internal navigation on mobile without another crawlable route to those pages.
+- Loading the hero late while eagerly loading every below-the-fold image.
+- Treating Lighthouse lab data as proof that field users pass Core Web Vitals.
+- Blocking CSS, JavaScript, or image resources needed for rendering.
+
+## Senior / production notes
+
+Test response parity at the CDN edge, not only in local React. UA-based cache keys, personalization, consent layers, experiments, and bot protection can send Googlebot Smartphone a different document. Keep essential copy and links in initial HTML; enhance interaction on the client.
+
+Use real-user monitoring segmented by page template and device class. A sitewide median can hide a slow product template or a poor 75th percentile. Treat mobile UX, crawlability, and indexing as related systems with different evidence—not one “mobile SEO score.”
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| URL Inspection | Crawled mobile HTML contains full primary content | Teaser, blocked assets, or missing sections |
+| Mobile/desktop source diff | Content, metadata, links, and schema equivalent | UA-dependent canonical, robots, or facts |
+| Responsive interaction | No clipping; controls and disclosures work | App wall, overlay, inaccessible menu |
+| Image delivery | Correct dimensions, `sizes`, and LCP behavior | Layout shift or oversized mobile download |
+| Field data | Template/device trends explained | Lighthouse-only sign-off |

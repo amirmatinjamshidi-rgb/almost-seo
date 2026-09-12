@@ -1,0 +1,104 @@
+---
+title: Voice search
+description: Make answers clear and accessible without inventing a voice ranking score, voice schema, or guaranteed assistant placement.
+module: 12-mobile-voice-ai-search
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Voice search** is an input and output mode, not a documented standalone ranking system. A person may speak a query to a phone, browser, car, smart speaker, or assistant; the product may return a conventional search result, local result, action, or generated answer.
+
+There is no general-purpose “voice search schema,” no official Google or Bing voice SEO score, and no published recipe that guarantees an assistant will read your page. `SpeakableSpecification` exists at Schema.org, but Google’s documented [`speakable` feature](https://developers.google.com/search/docs/appearance/structured-data/speakable) has been limited/beta and is not a general ranking switch. Compare any markup claim with Google’s current [Search Gallery](https://developers.google.com/search/docs/appearance/structured-data/search-gallery); do not add it sitewide based on plugin marketing.
+
+Optimize the underlying retrieval task: satisfy the real intent, use the language customers use, put a concise answer near the relevant question, keep local/business facts consistent, and make the page crawlable and accessible. Confirm current eligibility in the engine’s official feature documentation before implementing product-specific markup.
+
+## Why it matters
+
+Spoken queries are often conversational, local, or task-oriented, but not every long query is voice and analytics usually cannot prove the input method. Clear answers and accurate entity facts help users across typed search, snippets, assistants, and accessibility tools without creating a speculative “voice-only” content silo.
+
+<CorrectExample>
+A clinic page visibly answers “Are you open on Fridays?” with the current Friday hours, links to the appointment page, and keeps the same hours in its business profile and LocalBusiness data. The answer is useful whether typed, spoken, or read by a screen reader.
+</CorrectExample>
+
+<IncorrectExample why="The page fabricates a voice-only signal, duplicates thin questions, and claims certainty no search engine documents.">
+```txt
+Install Voice SEO schema
+Generate 300 pages: "near me by voice in {neighborhood}"
+Set voiceRankingScore: 100
+Guarantee: Alexa, Siri, Google Assistant position #1
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+1. Research customer phrasing from support calls, site search, Search Console queries, sales notes, and local questions. Do not label every long-tail phrase “voice.”
+2. Write a visible question heading only when it helps scanning, then answer it directly before adding nuance.
+3. Keep name, address, phone, hours, price, availability, and policies in one maintained source. Use only structured-data types that accurately match visible content.
+
+**Yoast, Rank Math, and AIOSEO:** their FAQ, HowTo, Local, and schema features do not create voice eligibility. Use FAQ markup only where the visible page and current search feature rules qualify; a green plugin score does not measure spoken retrieval.
+
+**SEOPress, only where different:** its custom schema can technically express more properties, including unsupported experiments. That flexibility is not evidence an assistant consumes them.
+
+**Feature gap:** none of these plugins validates assistant answers across products, detects whether a query was spoken, or guarantees citation. Call tracking, user research, local-profile management, and factual content ownership remain separate.
+
+## Code implementation
+
+Server-render a compact answer with ordinary semantic HTML. Do not hide it in JSON-LD or require a client event:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Friday opening hours",
+  description: "Friday opening hours and appointment options for Acme Clinic.",
+};
+
+export default function FridayHoursPage() {
+  return (
+    <main>
+      <h1>Is Acme Clinic open on Fridays?</h1>
+      <p>
+        Yes. The clinic is open Friday from 8:00 to 16:00. Holiday hours may
+        differ, so check the appointment calendar before travelling.
+      </p>
+      <p>
+        <a href="/appointments">Check appointments</a>
+      </p>
+    </main>
+  );
+}
+```
+
+This App Router page keeps static metadata in the Server Component, as required by Next.js 16.3.5, and puts the answer in initial HTML. Add JSON-LD only if an accurate supported type exists and generate it from the same source as the visible hours.
+
+Pages Router: place the component under `pages/` and use `next/head` for title and description. Router choice does not produce voice visibility.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Voice search has a separate published ranking algorithm and score.”
+- **DEPRECATED:** “FAQ schema guarantees a spoken answer.”
+- **DEPRECATED:** “Every voice query starts with who, what, where, when, why, or how.”
+- **DEPRECATED:** “Write at an arbitrary grade level and assistants will select you.”
+- Creating one thin URL per conversational variation.
+- Stuffing “near me” into copy instead of maintaining real local relevance.
+- Marking content `speakable` without checking the current product, language, country, and publisher requirements.
+- Measuring featured snippets as if they prove the original query was spoken.
+
+## Senior / production notes
+
+Define the outcome before reporting: phone call, direction request, completed task, conventional click, or cited answer. Search Console and web analytics can show queries and visits, but generally do not provide a reliable “voice input” dimension. State that limitation instead of converting long queries into a fabricated voice KPI.
+
+For business facts, use an authoritative data owner and expiry/review rules. An elegantly formatted answer with stale holiday hours is worse than no answer. Test accessibility: headings, link names, pronunciation-sensitive abbreviations, and visible text all affect more users than speculative voice markup.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Visible answer | Direct, current, qualified where needed | Keyword preamble or hidden answer |
+| Source consistency | Page, profile, schema, and booking system agree | Conflicting hours or phone |
+| Markup | Supported type mirrors visible facts | Invented voice property or hidden FAQ |
+| Assistant spot check | Logged as volatile observation | Reported as guaranteed ranking |
+| Measurement | Outcome and attribution limits stated | Long query counted as proven voice |

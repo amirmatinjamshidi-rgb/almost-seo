@@ -1,0 +1,160 @@
+---
+title: Technical SEO stakeholder reporting
+description: Turn audit findings into evidence-led decisions with impact, confidence, ownership, effort, and verifiable acceptance tests.
+module: 13-technical-audits
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A stakeholder report is an interface for decisions. It should let a reader distinguish what was observed, what it may affect, how certain the diagnosis is, who must act, what the work costs, and how completion will be proved. Never collapse those fields into a proprietary “site health” or “SEO score.”
+
+Use one contract for every finding:
+
+1. **Evidence:** timestamped response, rendered output, log/query, configuration, or reproducible test.
+2. **Impact:** affected users, templates, search behavior, business process, and downside; use ranges or qualitative bands when measurement is unavailable.
+3. **Confidence:** high, medium, or low with a reason. Confidence describes the evidence, not severity.
+4. **Owner:** one accountable role/team, plus dependencies and decision maker.
+5. **Effort:** a team-agreed band that includes implementation, QA, rollout, and monitoring—not invented hours.
+6. **Acceptance test:** exact observable state, sample, environment, and time window required to close.
+
+Keep diagnosis and recommendation separate. “Canonical differs from the locale URL on sampled product pages” is evidence. “The shared head builder is likely using the default locale” is a root-cause hypothesis until source or runtime proof confirms it. “Change the builder and regression-test all locales” is the recommendation.
+
+Different audiences need different views of the same register:
+
+- Executives need material risk, decision, owner, trend, and blocked dependencies.
+- Product and engineering need reproduction, scope, source owner, rollback, and acceptance tests.
+- Content and regional teams need affected templates, editorial consequences, and safe workarounds.
+- Analysts need metric definitions, breakpoints, confidence, and measurement limitations.
+
+## Why it matters
+
+Vanity scores reward closing easy warnings while material defects stay open. Vague traffic-loss claims damage trust, and technical dumps transfer interpretation work to the reader. A structured finding preserves uncertainty while making the next decision concrete.
+
+<CorrectExample>
+Evidence: logged-out production HTML on the Persian product template emitted an English canonical in a timestamped stratified sample; the locale sitemap and reciprocal hreflang point to Persian URLs. Impact: conflicting consolidation signals on a revenue-supporting template; exact search loss is not measurable from available data. Confidence: high for the defect, medium for its incremental performance impact. Owner: storefront platform; dependency: localization. Effort: medium by the team’s rubric. Acceptance: after rollout, the defined Persian sample returns 200, emits one self-canonical and reciprocal hreflang, and passes a regression sample in English.
+</CorrectExample>
+
+<IncorrectExample why="A score hides materiality and uncertainty, the revenue claim has no causal measurement, and nobody knows who acts or what passing means.">
+“SEO health fell from green to amber. Fix every critical error immediately; resolving them will recover a large share of organic revenue.” The slide contains a crawler screenshot but no URLs, source response, date, owner, effort rubric, dependency, or acceptance test.
+</IncorrectExample>
+
+## WordPress implementation
+
+Report the public output and accountable owner, not screenshots of plugin dashboards alone. Capture WordPress version, active theme/plugin owner, cache/CDN state, representative URLs, and whether evidence came from production logged-out HTML.
+
+**Yoast SEO**
+
+1. Export or record the relevant Search Appearance/schema/sitemap setting and pair it with actual frontend evidence.
+2. Translate traffic-light recommendations into findings only when they map to a reproducible user/search risk.
+3. Assign theme, editorial, platform, or plugin ownership accurately; “Yoast issue” is not a root cause.
+
+**Rank Math**
+
+1. Cite 404 Monitor, Redirections, schema, or analytics views with date and scope, then verify against response/log/source evidence.
+2. Do not report Rank Math’s SEO score as impact or use an analytics widget without its source definition.
+3. Record plan/module dependencies when a feature is unavailable.
+
+**AIOSEO**
+
+1. Treat TruSEO and Search Statistics as supporting views, not a universal health measure.
+2. Pair configuration evidence with the rendered tag, sitemap entry, redirect response, or source record it controls.
+3. Keep historical exports when configuration changes would erase the baseline.
+
+**SEOPress, when material:** include it only when it owns the reported output or supplied the observation. Its analytics, redirects, schema, and monitoring features still need scope, source, and production verification.
+
+**Feature gap:** no SEO plugin knows organizational priority, causal business impact, engineering effort, accountable owner, rollback risk, or whether an acceptance test passed across CDN and application layers. The finding register should remain independent of whichever plugin is active.
+
+## Code implementation
+
+Model report fields explicitly and render them on the server. This App Router example makes missing ownership or acceptance criteria difficult to hide:
+
+```tsx
+// app/internal/seo-report/page.tsx
+type Finding = {
+  id: string;
+  title: string;
+  evidence: string[];
+  impact: string;
+  confidence: "low" | "medium" | "high";
+  owner: string;
+  effort: "small" | "medium" | "large";
+  acceptanceTest: string;
+  status: "open" | "blocked" | "verifying" | "closed";
+};
+
+const findings: Finding[] = [
+  {
+    id: "SEO-014",
+    title: "Locale canonical mismatch",
+    evidence: ["Production response captured 2026-09-08", "Locale sitemap snapshot"],
+    impact: "Conflicting consolidation signals on the Persian product template; exact loss unknown.",
+    confidence: "high",
+    owner: "Storefront platform",
+    effort: "medium",
+    acceptanceTest: "Defined locale sample returns 200 with one self-canonical and reciprocal hreflang.",
+    status: "open",
+  },
+];
+
+export default function SeoReportPage() {
+  return (
+    <main>
+      <h1>Technical SEO decision register</h1>
+      {findings.map((finding) => (
+        <article key={finding.id}>
+          <h2>{finding.id}: {finding.title}</h2>
+          <p><strong>Impact:</strong> {finding.impact}</p>
+          <p><strong>Confidence:</strong> {finding.confidence}</p>
+          <p><strong>Owner:</strong> {finding.owner}</p>
+          <p><strong>Effort:</strong> {finding.effort}</p>
+          <p><strong>Acceptance:</strong> {finding.acceptanceTest}</p>
+          <p><strong>Status:</strong> {finding.status}</p>
+          <ul>{finding.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+        </article>
+      ))}
+    </main>
+  );
+}
+```
+
+Authorize this route at the server boundary, keep confidential evidence links out of public HTML, and load records from a governed source rather than hard-coding production data. Use a discriminated status workflow in real code and enforce required fields during transitions: a finding cannot become `closed` merely because code deployed; it must pass acceptance.
+
+Pages Router note: reuse the report types and component from `pages/internal/seo-report.tsx`, load authorized data with `getServerSideProps`, and prevent caching of confidential responses. Router migration must not create two independent finding registers.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A single SEO health score represents business risk.”
+- **DEPRECATED:** “Every crawler error is critical and every warning should reach leadership.”
+- **DEPRECATED:** “Rank or traffic movement proves the last SEO release caused it.”
+- **DEPRECATED:** “Closing the engineering ticket proves the search defect is fixed.”
+- Combining severity and confidence into one color.
+- Claiming revenue loss from modeled traffic, generic click-through rates, or undocumented attribution.
+- Reporting percentages without numerator, denominator, eligible population, and sample method.
+- Omitting owners or assigning every finding to “development.”
+- Hiding dependencies, rollback risk, privacy/security limits, or contradictory evidence.
+- Comparing periods with releases, seasonality, consent, tracking, or search-demand changes left unannotated.
+
+## Senior / production notes
+
+Define the report schema, severity rubric, confidence rubric, and effort bands before the audit. Version changes to those definitions. Maintain one finding ID across slides, tickets, evidence, deployments, and verification so status cannot drift between tools.
+
+Report trends by material findings and exposure, not raw warning counts. Show opened, mitigated, accepted, blocked, and verified states separately. An accepted risk is not a fixed defect; record who accepted it, why, until when, and what trigger reopens it.
+
+For impact, prefer observed first-party measures with documented scope. If attribution is weak, say so. Use “may affect,” “associated with,” or “cannot quantify” instead of manufacturing certainty. Security details, personal data, raw server logs, and commercially sensitive competitor notes belong behind least-privilege links, not in the executive deck.
+
+Close the loop after deployment: record release ID, deployment time, targeted check, regression sample, monitoring window, result, and verifier. If the signal is slow—such as recrawl or field CWV—separate **implementation accepted** from **outcome monitoring** instead of leaving closure ambiguous.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Evidence | Timestamped, reproducible, scoped, linked | Dashboard screenshot only |
+| Impact | Affected process/template and limits stated | Invented traffic or revenue |
+| Confidence | Independent rating with rationale | Hidden inside severity color |
+| Ownership | One accountable owner and dependencies | “SEO/dev team” |
+| Effort | Shared band includes QA and rollout | Unsupported hour estimate |
+| Acceptance | Observable state, sample, environment, window | “Deploy fix” |
+| Reporting | Audience view comes from one register | Slides and tickets disagree |

@@ -1,0 +1,158 @@
+---
+title: Full technical SEO audit checklist
+description: Run a risk-led technical audit that preserves evidence, separates discovery from diagnosis, and ends with owned acceptance tests.
+module: 13-technical-audits
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A full technical audit is a **decision system**, not a maximum-length export. It answers four questions: what is failing, which URLs and users are exposed, what evidence supports the diagnosis, and what should be fixed first. Start by freezing the audit scope, release window, production hosts, locale/device variants, and business-critical templates. Preserve raw evidence before changing configuration.
+
+Triage every finding on independent dimensions:
+
+1. **Risk:** indexation, revenue, legal/security, or measurement consequence if it remains.
+2. **Reach:** isolated URL, template, locale, host, or entire property.
+3. **Evidence quality:** reproducible response/render, sampled signal, or unverified hypothesis.
+4. **Urgency:** active incident, release blocker, planned correction, or monitor.
+5. **Reversibility:** safe toggle, migration, destructive change, or external dependency.
+
+Severity is not “number of warnings.” One accidental site-wide `noindex` can outrank thousands of harmless missing meta descriptions. A crawler discovers patterns; logs, rendered HTML, source configuration, Search Console, field data, and analytics help diagnose them.
+
+Use a bounded evidence matrix:
+
+- **Crawl and index:** robots rules, meta/X-Robots directives, sitemap membership, discoverability, index evidence, and server-log fetches.
+- **Canonicals and duplication:** declared versus selected canonical, protocol/host/path normalization, parameters, pagination, and redirect destinations.
+- **Rendering:** meaningful main content, links, metadata, and structured data in the initial and rendered output; blocked assets and hydration failures.
+- **Core Web Vitals:** field data by template/device where available, lab reproduction for diagnosis, and release attribution without inventing causality.
+- **Structured data:** eligibility, visible-content agreement, required properties, ownership, and validation errors.
+- **Internal links:** crawlable anchors, orphan candidates, depth, broken destinations, redirect hops, and template-generated overlinking.
+- **International:** locale URL ownership, reciprocal hreflang, `x-default` where appropriate, canonical alignment, language/region correctness, and redirects.
+- **Security and status codes:** HTTPS/mixed content, compromise signals, soft 404s, 4xx/5xx, redirect loops, rate limiting, and bot/user parity.
+- **Analytics:** tag and consent behavior, duplicate events, channel definitions, release annotations, and whether a defect’s impact can actually be measured.
+
+## Why it matters
+
+Unbounded audits waste engineering time and create false certainty. A hundred-column spreadsheet can hide the one template defect causing real exposure. Risk-led triage gives engineering a reproducible failure, product an impact statement, and leadership an honest confidence level.
+
+<CorrectExample>
+The baseline crawl, response headers, rendered snapshots, log sample, GSC export, field-performance view, and analytics definitions are timestamped before a release. A finding says: “Product variants on `/fa/` return a self-canonical to their English URL in production. Reproduced on the template and a documented stratified sample; the locale sitemap contains the Persian URLs. Risk: conflicting canonical/hreflang signals across the template. Confidence: high. Owner: platform SEO. Acceptance: sampled Persian variants return 200, self-canonical, reciprocal hreflang, and remain in the Persian sitemap after deploy.”
+</CorrectExample>
+
+<IncorrectExample why="The list confuses tool output with diagnosis, has no production evidence or affected scope, and gives owners no safe definition of done.">
+The auditor merges every crawler warning into one sheet, assigns “critical” to all rows, estimates lost traffic with a generic click-through curve, and recommends changing canonicals, caching, schema, redirects, and analytics at once. Screenshots, headers, templates, dates, and rollback conditions are missing.
+</IncorrectExample>
+
+## WordPress implementation
+
+Before touching settings, record active plugins, theme, permalink structure, sitemap URLs, robots output, cache/CDN behavior, and representative URLs for every public post type and taxonomy. Test production output while authenticated **and** logged out; admin previews can bypass cache and consent behavior.
+
+**Yoast SEO**
+
+1. Inspect Search Appearance ownership for post types, taxonomies, archives, canonicals, robots, breadcrumbs, and XML sitemaps.
+2. Export settings and sample the actual HTML/headers; a green analysis indicator is not audit evidence.
+3. Check that no second plugin or theme emits another canonical or schema graph.
+
+**Rank Math**
+
+1. Review Titles & Meta, Sitemap Settings, Redirections, 404 Monitor, Schema Templates, and Analytics connection boundaries.
+2. Treat the 404 monitor as an observed request list, not proof that every request deserves a redirect.
+3. Compare frontend output with cache cleared and warm; module settings can be overridden by templates or filters.
+
+**AIOSEO**
+
+1. Review Search Appearance, Sitemaps, Redirects, Schema, and Search Statistics where licensed and connected.
+2. Validate TruSEO recommendations against intent and rendered output; its score is not technical severity.
+3. Export or screenshot configuration evidence before remediation.
+
+**SEOPress, when material:** include it when it owns redirects, sitemaps, schema, analytics insertion, or robots output. Audit those outputs exactly as above. If it is installed but inactive and emits nothing, record that fact instead of adding busywork.
+
+**Feature gap:** SEO plugins manage selected CMS outputs. They do not prove CDN status behavior, JavaScript rendering, origin compromise, server logs, field CWV, consent correctness, international reciprocity across systems, or business impact. Keep exactly one owner for each output and test the public response.
+
+## Code implementation
+
+In the App Router, expose a narrow, authenticated evidence endpoint rather than an unrestricted crawler proxy. Use explicit allowlists and return observations—not a pass/fail “SEO score”:
+
+```ts
+// app/api/internal/seo-evidence/route.ts
+type EvidenceRecord = {
+  check: "status" | "canonical" | "robots";
+  observed: string | number | null;
+  source: "production-response";
+  capturedAt: string;
+};
+
+const allowedPaths = new Set(["/", "/en/products", "/fa/products"]);
+
+export async function POST(request: Request) {
+  const auditToken = process.env.AUDIT_TOKEN;
+  if (!auditToken) {
+    return Response.json({ error: "Audit service unavailable" }, { status: 503 });
+  }
+
+  if (request.headers.get("authorization") !== `Bearer ${auditToken}`) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as { path?: string };
+  if (!body.path || !allowedPaths.has(body.path)) {
+    return Response.json({ error: "Path is not allowlisted" }, { status: 400 });
+  }
+
+  const response = await fetch(new URL(body.path, "https://www.example.com"), {
+    cache: "no-store",
+    redirect: "manual",
+  });
+  const html = await response.text();
+  const canonical =
+    html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)/i)?.[1] ?? null;
+
+  const evidence: EvidenceRecord[] = [
+    { check: "status", observed: response.status, source: "production-response", capturedAt: new Date().toISOString() },
+    { check: "canonical", observed: canonical, source: "production-response", capturedAt: new Date().toISOString() },
+    { check: "robots", observed: response.headers.get("x-robots-tag"), source: "production-response", capturedAt: new Date().toISOString() },
+  ];
+
+  return Response.json({ path: body.path, evidence });
+}
+```
+
+Keep the token server-only, rate-limit calls, prevent private-network or arbitrary-host fetches, cap response size/time, and store evidence under the organization’s retention policy. Regex is acceptable for this tightly bounded observation example, not as a general HTML parser. A production auditor should use a standards-aware parser and preserve the raw response hash.
+
+Pages Router note: place the same allowlisted service behind `pages/api/internal/seo-evidence.ts`, reject non-POST methods, and adapt `NextApiRequest`/`NextApiResponse`; do not duplicate the audit rules in both routers.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A technical audit is complete when the crawler score reaches 100.”
+- **DEPRECATED:** “Google renders everything eventually, so initial HTML does not matter.”
+- **DEPRECATED:** “Disallowing a URL in robots.txt removes it from the index.”
+- **DEPRECATED:** “Every 404 needs a redirect, preferably to the homepage.”
+- Turning all tool warnings into tickets without reproduction or scope.
+- Testing only a homepage and missing template, locale, device, and logged-out variants.
+- Using lab CWV as proof of real-user impact or claiming a release caused movement from correlation alone.
+- Validating JSON-LD syntax while ignoring disagreement with visible content.
+- Changing several signal owners together, making rollback and attribution impossible.
+- Uploading private logs, query strings, customer identifiers, or analytics exports to unapproved services.
+
+## Senior / production notes
+
+Use stratified sampling: business-critical templates, high-risk locales, recently changed routes, long-tail samples, known failures, and controls. Record both numerator and denominator. A failure count means little without the tested and eligible populations, but never extrapolate beyond the sampling design.
+
+Separate **finding**, **hypothesis**, and **decision**. A GSC indexing label is a signal; the current response and rendered page are evidence; the application/CDN configuration may establish root cause. Preserve contradictory evidence rather than forcing tools to agree.
+
+Build a risk register with evidence links, affected scope, confidence, owner, effort band, dependency, rollback, and acceptance test. Re-run only the relevant checks after remediation, then perform a small regression crawl. Never ship destructive bulk redirects, removals, canonical changes, or sitemap exclusions without a reviewed diff and rollback path.
+
+For security findings, minimize exposure in the SEO report. Put exploit details, credentials, personal data, and raw logs in the incident system with least-privilege access. The audit ticket should contain only what the implementation owner needs.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Scope | Hosts, environments, templates, locales, devices, and cutoff recorded | “Whole site” with no boundary |
+| Evidence | Timestamped raw response/render/log/source linked | Tool label copied without reproduction |
+| Coverage | All nine audit domains triaged by risk | Tool-driven checklist leaves blind spots |
+| Prioritization | Risk, reach, confidence, urgency, and reversibility separated | Warning count becomes severity |
+| Remediation | One owner, bounded change, rollback, acceptance test | “Fix SEO” with no definition of done |
+| Recheck | Targeted proof plus regression sample | Ticket closed after deployment only |

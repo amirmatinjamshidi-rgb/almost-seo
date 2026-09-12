@@ -1,0 +1,92 @@
+---
+title: i18n و hreflang در Next.js
+description: locale route، hreflang دوطرفه، canonical و redirect زبانی امن را در Next.js 16 پیاده کن.
+module: 11-react-nextjs-seo
+topic_order: 9
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+در App Router معمولاً locale با `app/[lang]` و برای تشخیص اختیاری ورودی بدون prefix با `proxy.ts` مدیریت می‌شود. `hreflang` URLهای localized معادل را map می‌کند. هر نسخه باید خودش و تمام alternateهای دوطرفه را با URL کامل لیست کند. code زبان معتبر، region اختیاری و `x-default` واقعی برای fallback/selector بده.
+
+هر ترجمه معمولاً باید self-canonical باشد. canonical کردن همهٔ زبان‌ها به انگلیسی، ترجمه‌ها را خنثی می‌کند.
+
+## چرا مهم است
+
+Locale routing، زبان محتوا، canonical و alternate چهار سیستم جدا هستند. redirect کور با header می‌تواند crawler یا user را از URL انتخابی بیرون کند. return link ناقص یا ترجمهٔ ناموجود mapping را خراب می‌کند.
+
+<CorrectExample title="درست">
+`/en/products/shoe` و `/fa/products/shoe` هر دو HTML ترجمه‌شده و indexable می‌دهند، self-canonical هستند و مجموعهٔ یکسان `en`، `fa` و `x-default` دارند. language switch هم link واقعی است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="canonical فارسی به انگلیسی درخواست consolidation می‌دهد ولی hreflang می‌گوید هر دو alternate indexable هستند؛ این دو signal با هم دعوا دارند.">
+```html
+<link rel="canonical" href="https://example.com/en/products/shoe" />
+<link rel="alternate" hreflang="fa" href="/fa/products/shoe" />
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/[lang]/products/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+const locales = ["en", "fa"] as const;
+type Locale = (typeof locales)[number];
+
+function isLocale(value: string): value is Locale {
+  return locales.some((locale) => locale === value);
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[lang]/products/[slug]">): Promise<Metadata> {
+  const { lang, slug } = await params;
+  if (!isLocale(lang)) notFound();
+
+  const origin = "https://example.com";
+  return {
+    alternates: {
+      canonical: `${origin}/${lang}/products/${slug}`,
+      languages: {
+        en: `${origin}/en/products/${slug}`,
+        fa: `${origin}/fa/products/${slug}`,
+        "x-default": `${origin}/products/${slug}`,
+      },
+    },
+  };
+}
+
+export default async function Page({
+  params,
+}: PageProps<"/[lang]/products/[slug]">) {
+  const { lang } = await params;
+  if (!isLocale(lang)) notFound();
+  return <main>{/* localized product */}</main>;
+}
+```
+
+در `app/[lang]/layout.tsx` مقدار `<html lang>` را درست بده و در صورت نیاز `generateStaticParams` بساز. برای ورودی بدون prefix از `proxy.ts` فعلی استفاده کن، نه `middleware.ts` deprecated؛ explicit locale URL و `_next`/API/metadata route را دست نزن.
+
+تفاوت Pages Router: config داخلی `i18n` routing و `router.locale` دارد، اما graph درست hreflang را خودکار نمی‌سازد. alternateها را با `next/head` بده. App Router برای locale model به route segment تکیه می‌کند.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «`lang` جای hreflang است.»
+- **DEPRECATED:** «App Router خودش hreflang کامل می‌سازد.»
+- code اشتباه مثل country-only یا `UK`.
+- نبود self-reference یا return link.
+- alternateای که redirect/404 است یا واقعاً ترجمه نشده.
+- redirect هر request بر اساس `Accept-Language` حتی روی URL صریح.
+
+## نکته‌های سطح بالا / پروداکشن
+
+رابطهٔ ترجمه را با content ID پایدار نگه دار، نه حدس slug. ترجمه‌ها را atomic publish کن یا alternate ناموجود را حذف کن. یک کانال قابل‌نگهداری—HTML یا sitemap—کافی است؛ سه implementation موازی زود drift می‌کنند.
+
+## چطور مطمئن شوی
+
+هر pair زبانی را crawl کن: `200`، محتوای localized، self-canonical، alternate reciprocal و `x-default` درست. direct load را با header/cookie مختلف ببین. locale نامعتبر باید 404 بدهد، نه fallback با status 200.

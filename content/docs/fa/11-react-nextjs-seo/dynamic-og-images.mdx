@@ -1,0 +1,96 @@
+---
+title: تصویر OG پویا با ImageResponse
+description: تصویر Open Graph قطعی و cacheable را با ImageResponse و file convention فعلی Next.js 16 بساز.
+module: 11-react-nextjs-seo
+topic_order: 6
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+داخل segment App Router فایل `opengraph-image.tsx` یا `twitter-image.tsx` بساز و `ImageResponse` را از `next/og` برگردان. در Next.js 16، `params` یک Promise است. این image routeها معمولاً به‌شکل static optimize و cache می‌شوند، مگر request-time API یا دادهٔ uncached آن‌ها را dynamic کند.
+
+`ImageResponse` از flexbox و بخشی از CSS پشتیبانی می‌کند، نه کل layout engine مرورگر. کنار function اصلی `alt`، `size` و `contentType` را export کن.
+
+## چرا مهم است
+
+Dynamic OG تصویر brandشده و به‌روز می‌سازد، ولی خودش یک endpoint عمومی است. input نامحدود، font گم‌شده، CMS کند، CSS پشتیبانی‌نشده یا خروجی nondeterministic می‌تواند همهٔ previewها را بشکند.
+
+<CorrectExample title="درست">
+Route، slug معتبر را به article منتشرشده resolve می‌کند، dimension ثابت و asset محلی دارد، طول title را محدود می‌کند و برای یک content version همیشه همان خروجی را می‌سازد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="query آزاد route را به image renderer عمومی تبدیل می‌کند و `display: grid` در ImageResponse پشتیبانی نمی‌شود.">
+```tsx
+export default async function Image({ searchParams }) {
+  return new ImageResponse(<div style={{ display: "grid" }}>{searchParams.text}</div>);
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/articles/[slug]/opengraph-image.tsx
+import { ImageResponse } from "next/og";
+import { notFound } from "next/navigation";
+import { getArticle } from "@/lib/articles";
+
+export const alt = "Article preview";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
+
+export default async function Image({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const article = await getArticle((await params).slug);
+  if (!article) notFound();
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "72px",
+          background: "#0b1020",
+          color: "white",
+        }}
+      >
+        <div style={{ display: "flex", fontSize: 30 }}>Example Research</div>
+        <div style={{ display: "flex", fontSize: 64, marginTop: 28 }}>
+          {article.title.slice(0, 90)}
+        </div>
+      </div>
+    ),
+    size,
+  );
+}
+```
+
+Font یا logo ثابت را طبق runtime در module scope load کن؛ import را داخل function نگذار. برای چند variant از `generateImageMetadata` استفاده کن و `id` promised را validate کن.
+
+تفاوت Pages Router: file convention segment وجود ندارد. یک API route یا image service بساز، cache header و validation را مشخص کن و URL absolute آن را با `next/head` معرفی کن.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «OG route همیشه روی Edge اجرا می‌شود.» runtime به تنظیم و deployment بستگی دارد.
+- **DEPRECATED:** «هر CSS مرورگر در ImageResponse کار می‌کند.»
+- API ثالث کند در هر social fetch.
+- متن و URL کاربر بدون محدودیت طول و منبع.
+- حذف alt، size، fallback یا content type.
+- یکی دانستن app cache با cache شبکه‌های اجتماعی.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برای routeهای پرترافیک precompute را بررسی کن. اگر refresh card مهم است، content version را در URL تصویر بیاور. زمان response، font، تصویر و طول متن را bound کن و RTL/عنوان بلند را تست کن.
+
+## چطور مطمئن شوی
+
+بعد از build، route تصویر را بدون cookie بگیر و `200 image/png`، dimension و cache را بررسی کن. عنوان بلند، خالی و RTL، slug ناموجود و outage CMS را تست کن. `og:image` صفحه باید دقیقاً به endpoint public درست برسد.

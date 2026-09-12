@@ -1,0 +1,90 @@
+---
+title: Open Graph و Twitter Card
+description: metadata اشتراک‌گذاری را در routeهای Next.js 16 کامل، absolute و هماهنگ با محتوای واقعی نگه دار.
+module: 11-react-nextjs-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Open Graph و Twitter Card مشخص می‌کنند preview یک URL در شبکه‌ها و پیام‌رسان‌ها چطور *ممکن است* نمایش داده شود. جای title، canonical، visible content یا indexability را نمی‌گیرند. App Router فیلدهای `openGraph` و `twitter` و file conventionهایی مثل `opengraph-image.jpg`، `twitter-image.jpg` و فایل `.alt.txt` کنار آن‌ها دارد.
+
+## چرا مهم است
+
+Social crawlerها لزوماً مثل مرورگر JavaScript اجرا نمی‌کنند. image URL نسبی یا private، cache کهنه و metadata ناسازگار card را خراب یا گمراه‌کننده می‌کند.
+
+<CorrectExample title="درست">
+هر article یک URL canonical پایدار، title/description کوتاه، تصویر public با dimension و alt دارد. metadata از همان recordی می‌آید که متن صفحه را render کرده.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="image نسبی بدون metadataBase، title عمومی و alt خالی به URL shareشده هویت قابل‌اعتماد نمی‌دهد.">
+```ts
+export const metadata = {
+  openGraph: { title: "Blog", images: ["/api/image?id=current"] },
+};
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/articles/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getArticle } from "@/lib/articles";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/articles/[slug]">): Promise<Metadata> {
+  const article = await getArticle((await params).slug);
+  if (!article) notFound();
+
+  const url = `https://example.com/articles/${article.slug}`;
+  const image = `https://cdn.example.com/og/${article.ogImageKey}.png`;
+  return {
+    title: article.title,
+    description: article.summary,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      url,
+      title: article.title,
+      description: article.summary,
+      images: [{ url: image, width: 1200, height: 630, alt: article.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.summary,
+      images: [{ url: image, alt: article.title }],
+    },
+  };
+}
+
+export default async function Page() {
+  return <main>{/* article */}</main>;
+}
+```
+
+برای route ثابت `opengraph-image.png` و `opengraph-image.alt.txt` را در همان segment بگذار. فایل segment پایین‌تر، فایل parent را override می‌کند.
+
+تفاوت Pages Router: tagها را با `next/head` و `property="og:*"` یا `name="twitter:*"` بساز. absolute URL و dedupe با خودت است؛ file conventionهای App Router زیر `pages/` کار نمی‌کنند.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «Twitter tag نمایش preview را روی همهٔ platformها guarantee می‌کند.»
+- **DEPRECATED:** «Open Graph باعث ranking بهتر می‌شود.»
+- ساخت URL از Host header بدون allowlist.
+- پاک شدن فیلدهای inherited به‌خاطر shallow merge `openGraph`.
+- تصویر پشت login، robots block، hotlink protection یا signed URL کوتاه.
+- عوض کردن تصویر با URL cacheشدهٔ ثابت.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برای asset تغییرکرده version جدید بساز و fallback واقعی داشته باش. byte size و latency را کنترل کن. متن شخصی یا reviewنشده را داخل card نبر. cache هر platform مستقل است و شاید refresh tool خودش لازم باشد.
+
+## چطور مطمئن شوی
+
+raw metadata را ببین، بعد image URL را بدون cookie fetch کن. status، content type، dimension، size، alt، title و canonical را مقایسه کن. فقط به preview مرورگر اعتماد نکن؛ debugger platform را هم برای URL تازه و cacheشده تست کن.

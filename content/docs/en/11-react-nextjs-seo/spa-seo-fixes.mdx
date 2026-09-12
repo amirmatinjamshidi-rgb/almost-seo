@@ -1,0 +1,94 @@
+---
+title: SPA SEO fixes in Next.js
+description: Repair crawlability, status codes, metadata, links, and render delivery in React SPAs without sacrificing client-side navigation.
+module: 11-react-nextjs-seo
+topic_order: 12
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A strict SPA serves one shell and lets browser JavaScript create routes and content. Next.js can retain SPA-like client transitions while producing separate server/prerendered HTML entry points. Fixing SPA SEO means making each public URL independently fetchable with meaningful content, crawlable links, accurate metadata, and real HTTP status behavior.
+
+## Why it matters
+
+Google renders JavaScript, but rendering is a separate phase and can fail or be delayed. Other consumers may not render it. Hash routes, click-only navigation, client fetch waterfalls, and universal `200` responses reduce discovery and create soft 404s.
+
+<CorrectExample>
+Every product has a file-system route and direct-load response. The server renders the product and metadata, `next/link` creates real anchors, `notFound()` returns 404, and client components add filters and cart interactions.
+</CorrectExample>
+
+<IncorrectExample why="Hash states are not reliable document URLs, buttons expose no crawlable `href`, and missing products still return the same 200 shell.">
+```tsx
+"use client";
+
+export default function App() {
+  return <button onClick={() => location.hash = "#/products/1"}>Product</button>;
+}
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/products/[slug]/page.tsx
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Filters } from "./filters";
+import { getProduct } from "@/lib/products";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+  return {
+    title: product.name,
+    description: product.summary,
+    alternates: {
+      canonical: `https://example.com/products/${product.slug}`,
+    },
+  };
+}
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+
+  return (
+    <main>
+      <nav><Link href="/products">All products</Link></nav>
+      <h1>{product.name}</h1>
+      <p>{product.summary}</p>
+      <Filters />
+    </main>
+  );
+}
+```
+
+Keep URL state with path segments or meaningful search parameters. `window.history.pushState` can integrate with App Router for shallow URL state, but indexability still needs an explicit rule for each parameter combination. Use `next/dynamic({ ssr: false })` only around truly browser-only islands, not the primary public content.
+
+Pages Router difference: use page files, `next/head`, `getStaticProps`/`getServerSideProps`, and `notFound: true` or server status handling. Client navigation does not remove the need to test direct document requests. Static export creates HTML per supported route but cannot use server-only features.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “Google executes JavaScript, so delivery does not matter.”
+- **DEPRECATED:** “A loading skeleton is equivalent to rendered main content.”
+- Hash-fragment routing for distinct indexable views.
+- Navigation elements without anchor `href` values.
+- Rendering canonical/noindex only after a client API call.
+- Returning `200` for errors, empty search states, and missing entities.
+
+## Senior / production notes
+
+Migrate by template, not by component aesthetics: inventory URLs, status, canonical, content source, and link discovery first. Preserve route parity and analytics during cutover. Avoid dual-rendering systems that briefly emit conflicting titles or canonicals. Measure JS errors, hydration failures, rendered HTML parity, and origin performance.
+
+Official reference: [Google JavaScript SEO basics](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics).
+
+## How to verify
+
+Directly request deep URLs with no prior session and disabled JavaScript. Require meaningful HTML, crawlable anchors, correct status, title, canonical, and robots. Test unknown IDs, API failure, blocked resources, client transitions, browser history, and rendered output in Search Console URL Inspection.

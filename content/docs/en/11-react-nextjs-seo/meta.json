@@ -1,0 +1,18 @@
+{
+  "title": "React and Next.js SEO",
+  "defaultOpen": true,
+  "pages": [
+    "rendering-strategy-matrix",
+    "metadata-api",
+    "dynamic-sitemap",
+    "robots-ts",
+    "og-twitter-cards",
+    "dynamic-og-images",
+    "jsonld-in-react",
+    "next-image-cwv",
+    "i18n-hreflang-nextjs",
+    "redirects-rewrites-config",
+    "middleware-cloaking-risk",
+    "spa-seo-fixes"
+  ]
+}

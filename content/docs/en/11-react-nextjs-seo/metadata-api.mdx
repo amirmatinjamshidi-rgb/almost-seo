@@ -1,0 +1,98 @@
+---
+title: Next.js Metadata API
+description: Build canonical, descriptive, and shareable head metadata with the current Next.js 16 App Router Metadata API.
+module: 11-react-nextjs-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Next.js 16 App Router creates head tags from a typed static `metadata` export, dynamic `generateMetadata`, and metadata file conventions. Both exports work only in Server Components, and a segment cannot export both. Dynamic route `params` and `searchParams` are promises.
+
+Metadata resolves from root to page and merges shallowly. A child `openGraph` object replaces the parent object rather than deep-merging it. File-based metadata has higher priority than object/function metadata.
+
+## Why it matters
+
+Unique titles, descriptions, canonicals, robots directives, and social metadata must describe the URL actually served. Client-side head mutation adds timing, duplication, and mismatch risk. `metadataBase` safely resolves relative URL fields when configured at the appropriate parent.
+
+<CorrectExample>
+Static site defaults live in a layout. The product page uses `generateMetadata` from the same validated product record as its visible heading, returns `notFound()` for missing records, and emits an absolute canonical.
+</CorrectExample>
+
+<IncorrectExample why="A Client Component cannot export Metadata API values, duplicate canonical tags may conflict, and a generic title does not describe each product.">
+```tsx
+"use client";
+
+export const metadata = { title: "Products" };
+
+export default function Page() {
+  return <title>Best product</title>;
+}
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/products/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getProduct } from "@/lib/products";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+  if (!product) notFound();
+
+  const url = `https://example.com/products/${product.slug}`;
+  return {
+    title: product.name,
+    description: product.summary,
+    alternates: { canonical: url },
+    openGraph: {
+      title: product.name,
+      description: product.summary,
+      url,
+      type: "website",
+      images: [{ url: product.ogImage, alt: product.name }],
+    },
+  };
+}
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+  return <h1>{product.name}</h1>;
+}
+```
+
+Set a site-level `metadataBase: new URL("https://example.com")` in a parent layout when relative URL metadata is intentional. Prerenderable metadata appears in initial HTML. Dynamic metadata may stream; Next.js blocks streaming for HTML-limited bots by user agent. Override `htmlLimitedBots` only with measured need because broad blocking can increase response time.
+
+Pages Router difference: use `next/head` inside each page (or a shared component) and give repeated elements stable keys. There is no App Router `metadata`/`generateMetadata` export in `pages/`; `_document` is for document structure, not changing per-page head content.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** `viewport`, `themeColor`, and `colorScheme` inside `metadata`; use `viewport`/`generateViewport`.
+- **DEPRECATED:** “Put all changing tags in `_document`.”
+- Exporting both `metadata` and `generateMetadata` from one segment.
+- Forgetting that nested objects shallowly replace parent values.
+- Emitting relative image/canonical URLs without a valid `metadataBase`.
+- Personalizing titles by cookie and creating unstable indexable output.
+
+## Senior / production notes
+
+Build metadata from the same domain object as visible content. Validate title/description fallbacks in the CMS. Memoize duplicate record access with supported `fetch` behavior or React `cache`; do not create separate SEO data that drifts. Decide whether faceted query URLs self-canonicalize, canonicalize elsewhere, or are noindexed as a product rule.
+
+## How to verify
+
+- Inspect the production raw response and rendered DOM for one title, one canonical, and intended robots tags.
+- Test dynamic and missing records, including upstream failures.
+- Confirm Open Graph URLs are absolute and fetchable.
+- Compare page heading, canonical, JSON-LD, and metadata fields.
+- Check Pages Router pages with direct document loads, not only client navigation.

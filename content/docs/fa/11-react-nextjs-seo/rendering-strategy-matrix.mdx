@@ -1,0 +1,83 @@
+---
+title: ماتریس انتخاب rendering برای SEO
+description: به‌جای تبدیل SEO به کلید SSR، برای هر مرز محتوا بین prerender، request rendering، streaming و client rendering انتخاب کن.
+module: 11-react-nextjs-seo
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Rendering یک تصمیم دربارهٔ تحویل محتواست، نه برچسب ranking. در App Router نسخهٔ Next.js 16 یک route می‌تواند هم‌زمان shell از قبل renderشده، دادهٔ cacheشده و بخش request-time داشته باشد که stream می‌شود. سؤال SEO این است: هر URL عمومی status، metadata، link و محتوای اصلی درست را قابل‌اعتماد تحویل می‌دهد یا نه؟
+
+| نیاز | انتخاب شروع | ریسک اصلی |
+| --- | --- | --- |
+| محتوای عمومی پایدار | prerender و revalidate موقع تغییر منبع | خروجی کهنه |
+| محتوای عمومی request-specific | فقط همان boundary را روی server render کن | origin کند یا ناپایدار |
+| UI شخصی/خصوصی | shell عمومی indexable؛ بخش خصوصی جدا | نشت state کاربر در cache مشترک |
+| app فقط مرورگری | فقط island تعاملی را client render کن | HTML خالی، waterfall و soft 404 |
+
+## چرا مهم است
+
+Google می‌تواند JavaScript را render کند، ولی crawl، render و index سه مرحلهٔ جدا هستند. HTML سمت server برای agentهایی که JS اجرا نمی‌کنند هم قابل‌استفاده است. CSR-only مزیت SEO ذاتی نمی‌سازد؛ فقط failure mode اضافه می‌کند.
+
+<CorrectExample title="درست">
+نام و توضیح محصول، وضعیت قیمت، canonical، navigation و 404 روی server حل می‌شوند. فقط stock notifier یک Client Component است. تغییر محصول همان record cacheشده را invalidate می‌کند، نه اینکه کل صفحه برای هر request dynamic شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="برای محصول موجود، محصول حذف‌شده و خطا همان shell با status 200 می‌آید؛ title و محتوا بعد از fetch مرورگر ساخته می‌شوند. نتیجه می‌تواند صفحهٔ خالی یا soft 404 باشد.">
+```tsx
+"use client";
+
+export default function Product() {
+  return <div id="app">Loading...</div>;
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/products/[slug]/page.tsx
+import { notFound } from "next/navigation";
+import { AddToWatchlist } from "./add-to-watchlist";
+import { getProduct } from "@/lib/products";
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+  if (!product) notFound();
+
+  return (
+    <main>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+      <AddToWatchlist productId={product.id} />
+    </main>
+  );
+}
+```
+
+برای `fetch`، Cache Components یا revalidation قرارداد freshness مشخص بنویس. با Cache Components دادهٔ reusable را در سطح function cache کن و request-time read را در boundary درست نگه دار.
+
+تفاوت Pages Router: معمولاً `getStaticProps` همراه `revalidate` برای محتوای قابل‌cache و `getServerSideProps` برای نیاز واقعی هر request استفاده می‌شود. `getStaticPaths` مسیرهای dynamic را می‌سازد. انتخاب rendering در Pages Router بیشتر route-level است.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «SSR همیشه از SSG بهتر rank می‌گیرد.» موتور جستجو خروجی را می‌بیند، نه اسم تکنیک را.
+- **DEPRECATED:** «Client Component یعنی CSR-only.» `"use client"` مرز client را تعریف می‌کند و component می‌تواند prerender شود.
+- dynamic کردن کل route به‌خاطر یک widget دارای cookie.
+- cache کردن HTML شخصی با public key.
+- دادن status `200` برای entity ناموجود.
+- فرض اینکه streaming/PPR روی هر host دقیقاً یک رفتار دارد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برای هر template قرارداد بنویس: status، نیاز HTML اولیه، مالک cache، trigger ابطال، حداکثر کهنگی و fallback. consistency بین HTML و RSC cache را در چند instance تست کن. cold origin، warm cache، JS خاموش و failure منبع داده را هم ببین.
+
+## چطور مطمئن شوی
+
+raw response باید main content، link و metadata داشته باشد؛ URL ناموجود باید 404 واقعی بدهد؛ disabled-JS نباید معنای عمومی صفحه را حذف کند. رفتار cache/streaming را روی deployment نهایی اندازه بگیر، نه فقط `next dev`.

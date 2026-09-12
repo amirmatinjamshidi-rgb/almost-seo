@@ -1,0 +1,92 @@
+---
+title: رفع مشکل SEO در SPA
+description: Crawlability، status، metadata، link و rendering را در React SPA درست کن و client navigation سریع را نگه دار.
+module: 11-react-nextjs-seo
+topic_order: 12
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Strict SPA یک shell می‌دهد و JavaScript مرورگر route و محتوا را می‌سازد. Next.js می‌تواند حس navigation یک SPA را نگه دارد ولی برای هر route، HTML مستقل server/prerendered بسازد. Fix واقعی یعنی هر URL عمومی direct fetch شود و main content، link قابل‌crawl، metadata و HTTP status واقعی داشته باشد.
+
+## چرا مهم است
+
+Google JavaScript را render می‌کند، ولی rendering مرحله‌ای جداست و ممکن است delay یا fail شود؛ consumerهای دیگر هم شاید اصلاً JS اجرا نکنند. hash route، navigation بدون anchor، client waterfall و status `200` همگانی discovery و error handling را خراب می‌کنند.
+
+<CorrectExample title="درست">
+هر محصول file-system route دارد. Server محصول و metadata را render می‌کند، `next/link` anchor واقعی می‌سازد، `notFound()` 404 می‌دهد و Client Component فقط filter/cart را تعاملی می‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Hash state URL سند قابل‌اعتماد نیست، button هیچ `href` قابل‌crawl ندارد و محصول ناموجود هم همان shell با 200 می‌گیرد.">
+```tsx
+"use client";
+
+export default function App() {
+  return <button onClick={() => location.hash = "#/products/1"}>Product</button>;
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/products/[slug]/page.tsx
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Filters } from "./filters";
+import { getProduct } from "@/lib/products";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+  return {
+    title: product.name,
+    description: product.summary,
+    alternates: {
+      canonical: `https://example.com/products/${product.slug}`,
+    },
+  };
+}
+
+export default async function ProductPage({
+  params,
+}: PageProps<"/products/[slug]">) {
+  const product = await getProduct((await params).slug);
+  if (!product) notFound();
+
+  return (
+    <main>
+      <nav><Link href="/products">همهٔ محصولات</Link></nav>
+      <h1>{product.name}</h1>
+      <p>{product.summary}</p>
+      <Filters />
+    </main>
+  );
+}
+```
+
+State مهم URL را با path یا search parameter معنی‌دار نگه دار. `window.history.pushState` با App Router sync می‌شود، ولی indexability هر combination هنوز policy لازم دارد. `next/dynamic({ ssr: false })` فقط دور browser-only island باشد، نه main content عمومی.
+
+تفاوت Pages Router: از page file، `next/head`، `getStaticProps`/`getServerSideProps` و `notFound: true` استفاده کن. client navigation نیاز direct-document test را حذف نمی‌کند. static export برای route پشتیبانی‌شده HTML می‌سازد ولی server feature ندارد.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «Google JS اجرا می‌کند، پس delivery مهم نیست.»
+- **DEPRECATED:** «Loading skeleton همان main content است.»
+- hash fragment برای view indexable جدا.
+- navigation بدون anchor `href`.
+- canonical/noindex فقط بعد از client fetch.
+- `200` برای error، empty state و entity ناموجود.
+
+## نکته‌های سطح بالا / پروداکشن
+
+مهاجرت را template-by-template انجام بده: اول URL، status، canonical، data source و link discovery را inventory کن. route parity و analytics را حفظ کن. دو سیستم rendering موازی نباید title/canonical متناقض بدهند. JS error، hydration failure، HTML parity و origin latency را monitor کن.
+
+## چطور مطمئن شوی
+
+Deep URL را بدون session قبلی و با JS خاموش مستقیم بگیر. HTML معنی‌دار، anchor crawlable، status، title، canonical و robots را بررسی کن. ID ناموجود، API failure، resource blocked، client transition، browser history و URL Inspection را هم تست کن.

@@ -1,0 +1,108 @@
+---
+title: PBN and link-farm myths
+description: Legitimate private properties and publisher portfolios versus networks whose primary purpose is manipulating ranking signals.
+module: 14-blackhat-myths
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **PBN** (private blog network) is a controlled or rented group of sites used primarily to create ranking links to target sites. A **link farm** is a site or network that produces large volumes of low-value cross-links for the same purpose. These patterns fall under link spam; repurposing expired domains mainly for old authority can also be expired-domain abuse.
+
+A site is not a PBN merely because it is private, shares ownership, uses WordPress Multisite, sits on one CDN, or belongs to a publisher portfolio. The policy line is **link-manipulation purpose**. Real brands may share navigation or cite each other when that helps users. A network becomes abusive when properties or pages exist chiefly to manufacture ranking credit.
+
+This topic covers recognition, governance, and cleanup. It does not provide instructions for hiding network ownership or evading detection.
+
+## Why it matters
+
+Network links are an unstable dependency: they may be ignored, removed, or associated with a manual action. Acquisitions can inherit the liability through old templates, expired-domain redirects, or vendor contracts.
+
+<CorrectExample>
+A company operates a product site, documentation site, and status site. Each has a real audience and distinct purpose. Global navigation clearly identifies the relationship; contextual links appear only when useful.
+
+```tsx
+<nav aria-label="Company services">
+  <a href="https://example.com/">Product</a>
+  <a href="https://docs.example.com/">Documentation</a>
+  <a href="https://status.example.com/">Service status</a>
+</nav>
+```
+
+The sites would still deserve to exist if search engines passed no ranking credit.
+</CorrectExample>
+
+<IncorrectExample why="The acquired domains and articles have no independent audience or purpose; their job is to send exact-match links to a target URL. That is link manipulation.">
+A vendor buys unrelated expired domains, posts thin “reviews,” and inserts the same commercial anchor to one client. Sitewide footer links connect the nodes. The contract promises a number of ranking links, not readership, referral traffic, or editorial review.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Correct canonicals and sitemaps do not legitimize a network designed for links.
+2. Audit theme footers, reusable blocks, author bios, and imported posts for inherited commercial links.
+
+**Rank Math**
+
+1. Do not use Redirections to funnel unrelated expired domains into money pages.
+2. Export redirect and link data during cleanup so removals are reviewable.
+
+**AIOSEO**
+
+1. Multisite SEO settings are appropriate for genuine properties, not evidence that a link network is compliant.
+2. Mark paid placements with `rel="sponsored"`; do not promise ranking credit.
+
+**Feature gap:** No plugin can infer the commercial purpose or ownership graph behind a link. Contracts, invoices, editorial records, host/domain history, and backlink review are required.
+
+## Next.js implementation
+
+Keep links in ordinary, reviewable components and add the appropriate relationship for paid placements:
+
+```tsx
+type PartnerLinkProps = {
+  href: string;
+  label: string;
+  paid: boolean;
+};
+
+export function PartnerLink({ href, label, paid }: PartnerLinkProps) {
+  return (
+    <a href={href} rel={paid ? "sponsored" : undefined}>
+      {label}
+    </a>
+  );
+}
+```
+
+In the App Router, do not generate a sitewide outbound-link graph from a domain list, and do not use `proxy.ts` to show Googlebot different links. Remove abusive links at their source; use `410` for retired network content when no relevant replacement exists.
+
+Pages Router note: the same applies to `_app`, `getStaticProps`, and API-fed footer components. Framework choice does not turn controlled cross-linking into editorial endorsement.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A unique theme and separate IP make a PBN safe.”
+- **DEPRECATED:** “A private site or private network is automatically a PBN.”
+- **DEPRECATED:** “Disavow is a routine insurance policy after every paid-link campaign.”
+- Treating three-way exchanges as a policy loophole.
+- Redirecting every inherited expired domain to the strongest commercial page.
+- Calling a link farm “digital PR” without a real publisher, audience, or editorial decision.
+
+## Senior / production notes
+
+Vendor due diligence should ask what is being purchased. Pay for legitimate creative, research, outreach, or sponsorship—not guaranteed ranking links. Keep live placement URLs, relationship attributes, invoices, and editorial contacts.
+
+For an inherited scheme: stop new placements, inventory links and redirects, remove what you control, request third-party removal where practical, and consider disavow for unresolved artificial links. If a manual action exists, submit a documented reconsideration request after substantive cleanup.
+
+Do not 301 retired network nodes into the target site; that can concentrate the same problem. Do not publish “footprint avoidance” guidance. The durable test is whether each property and link serves people without ranking credit.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Property purpose | Real audience and independent utility | Exists chiefly to link |
+| Placement record | Editorial or disclosed sponsorship | Guaranteed ranking link |
+| Anchor/template crawl | Natural, contextual references | Repeated exact-match footers |
+| Domain history | Relevant continuity | Unrelated expired-domain repurpose |
+| GSC/manual actions | Clean | Unnatural links action |

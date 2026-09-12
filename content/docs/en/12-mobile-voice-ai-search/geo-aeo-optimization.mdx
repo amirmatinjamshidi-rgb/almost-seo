@@ -1,0 +1,123 @@
+---
+title: GEO and AEO optimization
+description: Improve answer and citation eligibility with sound SEO and evidence while separating observable outcomes from unsupported GEO promises.
+module: 12-mobile-voice-ai-search
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Answer engine optimization (AEO)** and **generative engine optimization (GEO)** are industry labels, not official Google or Bing ranking systems with a standard score. They describe work intended to make information understandable, retrievable, and useful in direct or generated answers.
+
+Use two evidence levels:
+
+1. **Observable eligibility:** a system can crawl or otherwise access the URL; the page is indexable where relevant; the answer and supporting evidence are visible; identity, dates, citations, canonicals, and structured data are consistent; and the page appears as a source in a recorded result.
+2. **Unsupported promise:** a formatting trick, word count, schema type, `llms.txt`, prompt sequence, or vendor score guarantees selection, wording, rank, or traffic in an opaque generated answer.
+
+Google says its AI search features need no special AI file or special schema beyond established Search requirements and useful content. Generated systems can answer without citing a site, cite a site without sending a click, or change sources between runs. Optimize what you can verify, not an invented “LLM authority” meter. Start with Google’s [AI features and your website](https://developers.google.com/search/docs/appearance/ai-features) and each product’s current crawler and publisher documentation.
+
+## Why it matters
+
+Generated answers compress the journey and can shift value from a blue-link click to brand exposure, citation, or no observable visit. Teams need pages that are easy to interpret and claims that survive extraction, but they also need honest reporting: citation presence is observable; causation from a particular rewrite usually is not.
+
+<CorrectExample>
+A comparison page states its test date, sample, method, limitations, and measured results. Each conclusion links to the supporting section. The organization and author are identifiable, the page is canonical and crawlable, and the team records dated screenshots when an answer engine cites it—without claiming the format caused the citation.
+</CorrectExample>
+
+<IncorrectExample why="The package turns correlations and opaque product behavior into guaranteed rankings, while mass-producing unsupported claims.">
+```txt
+GEO score: 97/100
+Rule: exactly 42 words per answer
+Add 15 schemas + llms.txt
+Publish 2,000 AI pages
+Guaranteed citations in every AI engine within 7 days
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+1. Publish a clear primary answer, then evidence, scope, definitions, method, limitations, author/organization, and a meaningful reviewed date.
+2. Link claims to primary or authoritative sources. Add original tables, observations, or tests only when they are real and reproducible.
+3. Keep pages indexable and internally linked; maintain canonical, sitemap, and structured data hygiene. Do not manufacture quotation-friendly sentences that overstate the evidence.
+
+**Yoast, Rank Math, and AIOSEO:** use one plugin to manage normal metadata, canonicals, sitemaps, breadcrumbs, and accurate supported schema. Their content/AI scores are not Google AI Overview, Bing, Copilot, ChatGPT, or Perplexity citation scores.
+
+**SEOPress, only where different:** custom schema and metadata fields can support a controlled editorial model, but extra graph volume is not a GEO advantage.
+
+**Feature gap:** plugins do not observe all generated answers, establish causality, verify source quality, or manage claim-level evidence. You need editorial provenance, log/analytics access, controlled monitoring, and legal/privacy review for any prompt testing.
+
+## Code implementation
+
+Render the answer and provenance in the Server Component, and derive JSON-LD from the same record. Escape JSON before placing it in a script:
+
+```tsx
+import type { Metadata } from "next";
+
+const report = {
+  title: "Email deliverability test",
+  reviewed: "2026-09-10",
+  summary: "Across our controlled seed list, configuration A reduced hard bounces.",
+};
+
+export const metadata: Metadata = {
+  title: report.title,
+  description: report.summary,
+};
+
+export default function ReportPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: report.title,
+    dateModified: report.reviewed,
+  };
+
+  return (
+    <article>
+      <h1>{report.title}</h1>
+      <p>{report.summary}</p>
+      <h2>Method and limitations</h2>
+      <p>We tested one seed list; results should not be generalized to every sender.</p>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+    </article>
+  );
+}
+```
+
+Next.js 16.3.5 allows static `metadata` only in a Server Component; JSON-LD remains a rendered script and must match visible content. A schema graph describes the article—it does not request an AI citation.
+
+Pages Router: render the same article, use `next/head` for metadata and the JSON-LD script, and fetch CMS data with `getStaticProps` or `getServerSideProps` as freshness requires.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “GEO replaced SEO.”
+- **DEPRECATED:** “There is one universal LLM ranking.”
+- **DEPRECATED:** “AI Overviews require special AI schema or an AI text file.”
+- **DEPRECATED:** “A citation proves the page rewrite caused it.”
+- Publishing unsourced definitions and circular citations to create fake consensus.
+- Counting a brand mention, linked citation, unlinked source, and referral click as the same KPI.
+- Blocking the crawler needed for the stated surface, then diagnosing the absence as a content problem.
+- Sending automated prompts at a scale that violates terms, distorts personalization, or records sensitive data.
+
+## Senior / production notes
+
+Create a claim inventory: owner, source, source date, confidence, review date, and correction path. Generated systems amplify concise errors as readily as concise truths. For YMYL topics, qualified review and consensus matter more than quotable formatting.
+
+Measure surfaces separately. Record engine/product, locale, account state, prompt, date, citation URL, link presence, answer text, and referral traffic where available. Results are snapshots, not rankings. Use a stable test set and disclose that personalization, experiments, and model updates limit reproducibility.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Technical eligibility | Crawlable/indexable for intended surface | Blocked, canonical conflict, or thin HTML |
+| Claim evidence | Primary source, scope, date, and owner | Unsupported certainty or copied citation |
+| Structured data | One accurate graph matching the page | “AI schema” pile-up |
+| Observation log | Product, prompt, locale, date, URL captured | Undated anecdote |
+| Reporting | Citation, mention, click, and conversion separate | Single invented GEO score |

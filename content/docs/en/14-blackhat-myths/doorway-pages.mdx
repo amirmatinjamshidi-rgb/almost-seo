@@ -1,0 +1,109 @@
+---
+title: Doorway-page myths
+description: Legitimate location and service landing pages versus scaled query funnels with little unique value or evidence.
+module: 14-blackhat-myths
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Doorway abuse** creates sites or pages to rank for many similar queries and funnel visitors through less useful intermediate pages to the same destination. Common patterns include city × service templates, many domains targeting regional variants, and pages that differ only by a keyword while all lead to one checkout or contact page.
+
+Not every location or service landing page is a doorway. A legitimate page represents a real service in that market and contains unique, verifiable substance: availability, staff or branch details, licensing, local constraints, pricing or lead times, completed work, testimonials, inventory, and a way to complete the local task.
+
+The line is not a word count. It is whether the URL has a distinct user job and credible evidence, rather than being a search-result funnel.
+
+## Why it matters
+
+Doorway generators multiply crawl waste, weak pages, analytics noise, and maintenance risk. When they are removed, careless bulk redirects can create a second problem by sending unrelated URLs to one money page.
+
+<CorrectExample>
+`/locations/shiraz/heat-pump-installation` is published because the company actually serves Shiraz. It lists the responsible team, service radius, local permit process, available models, appointment windows, two documented installations, and market-specific contact details. Users can request that service on the page.
+
+A city outside the service area has no landing page. The general installation guide lives once in the resource center.
+</CorrectExample>
+
+<IncorrectExample why="The pages target query variants but provide no distinct service, evidence, or destination; all are thin intermediaries to one lead form.">
+The CMS creates 600 `/plumber/{city}` pages from a CSV. Only the city token changes. There is no branch, technician, availability, project, or local contact. Every call to action redirects to the same national lead-resale form.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Keep genuine location pages indexable and in the sitemap; exclude empty location taxonomies and generator output.
+2. A green content score does not prove a location is real or unique.
+
+**Rank Math**
+
+1. Review Titles & Meta variables and sitemap-enabled custom post types before importing location data.
+2. Redirect removed doorways to the closest relevant page only when it truly satisfies the same intent; otherwise return `410` or `404`.
+
+**AIOSEO**
+
+1. Local SEO fields should reflect actual offices/service areas and consistent business evidence.
+2. Do not clone one schema record across fictional locations.
+
+**SEOPress:** Materially different only where its Local Business or redirection setup owns the location data; evidence and destination relevance remain the requirements.
+
+**Feature gap:** Plugins can control metadata, sitemap inclusion, and redirects, but cannot verify that a team serves a location or that a case study is genuine. CRM/operations data and editorial approval must gate publication.
+
+## Next.js implementation
+
+Generate routes only from approved, evidence-backed service records:
+
+```tsx
+import { notFound } from "next/navigation";
+
+import { getApprovedServices, getService } from "@/lib/services";
+
+export async function generateStaticParams() {
+  const services = await getApprovedServices();
+  return services.map(({ city, service }) => ({ city, service }));
+}
+
+export default async function ServicePage({
+  params,
+}: {
+  params: Promise<{ city: string; service: string }>;
+}) {
+  const { city, service } = await params;
+  const record = await getService(city, service);
+
+  if (!record?.published) notFound();
+  return <main><h1>{record.title}</h1><p>{record.localEvidence}</p></main>;
+}
+```
+
+In the current App Router, dynamic `params` are asynchronous. `generateStaticParams` replaces the Pages Router's `getStaticPaths`; it should read real records, not a generic city list. Consider `dynamicParams = false` only when ungenerated combinations must 404.
+
+Pages Router note: validate records in `getStaticPaths`/`getStaticProps` and use `notFound: true` for unsupported combinations. A `[city]/[service]` route is legitimate only when the underlying page is.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Three hundred unique words make any city page safe.”
+- **DEPRECATED:** “Canonicalizing doorways to the hub neutralizes the abuse.”
+- **DEPRECATED:** “Programmatic SEO is automatically compliant because it uses structured data.”
+- Spinning the same case study across markets.
+- Publishing “near me” pages with no location-specific destination.
+- 301ing every removed city page to the homepage or one national lead form.
+
+## Senior / production notes
+
+Make publication an operational contract: each record needs an active service flag, evidence owner, last verified date, and withdrawal behavior. Automatically unpublish when coverage ends, but review destinations before redirecting.
+
+Use similarity detection as a triage signal, not a verdict. Some legally required details repeat; unique evidence may be concise. Sample first-party proof and confirm it with operations.
+
+For cleanup, stop the generator, classify URLs by user value, consolidate true duplicates, remove unsupported pages, update internal links and sitemaps, and monitor recrawl. Do not fabricate branches, reviews, or projects to make templates look unique, and do not promise a recovery timeline.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Service evidence | Active team, inventory, project, or branch | City token only |
+| User outcome | Task completes on this page | Funnel to same intermediate form |
+| Similarity crawl | Shared facts plus distinct proof | Near-identical body at scale |
+| Route source | Approved operational records | Generic city/service Cartesian product |
+| Redirect review | Relevant one-to-one consolidation | Everything points to homepage |

@@ -1,0 +1,123 @@
+---
+title: بهینه‌سازی GEO و AEO
+description: با SEO سالم و evidence شانس فهم و citation را بهتر کن؛ observation واقعی را از وعدهٔ بی‌مدرک GEO جدا نگه دار.
+module: 12-mobile-voice-ai-search
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**AEO** یا بهینه‌سازی برای answer engine و **GEO** یا بهینه‌سازی برای موتور مولد، اسم‌هایی هستند که صنعت ساخته؛ ranking system رسمی گوگل یا بینگ با score استاندارد نیستند. این دو اسم معمولاً به کارهایی اشاره می‌کنند که اطلاعات را برای فهم، retrieval و استفاده در جواب مستقیم یا generated آماده‌تر می‌کند.
+
+دو سطح evidence را قاطی نکن:
+
+1. **Eligibility قابل مشاهده:** سیستم می‌تواند URL را crawl یا access کند؛ صفحه هرجا لازم است indexable است؛ جواب و مدرکش visible است؛ identity، تاریخ، citation، canonical و structured data با هم می‌خوانند؛ و صفحه در یک نتیجهٔ ثبت‌شده source شده.
+2. **وعدهٔ بی‌پشتوانه:** یک قالب، word count، schema، `llms.txt`، prompt یا score فروشنده انتخاب شدن، متن جواب، rank یا traffic داخل سیستم opaque را تضمین کند.
+
+گوگل می‌گوید featureهای AI در Search نه فایل AI ویژه می‌خواهند، نه schema مخصوص؛ همان پایه‌های Search و محتوای مفید مطرح است. سیستم generated ممکن است بدون citation جواب بدهد، citation بدهد ولی click نیاورد، یا دفعهٔ بعد source دیگری بردارد. چیزی را optimize کن که می‌توانی ببینی و تست کنی، نه «LLM authority» خیالی. از [راهنمای رسمی AI features گوگل](https://developers.google.com/search/docs/appearance/ai-features) و سند crawler/publisher هر محصول شروع کن.
+
+## چرا مهم است
+
+جواب generated مسیر را کوتاه می‌کند و ممکن است ارزش را از blue-link click به mention برند، citation یا حتی هیچ visit قابل‌دیدنی ببرد. پس صفحه باید قابل‌فهم و claim باید بعد از جدا شدن از context هم قابل دفاع باشد. ولی گزارش هم باید صادق بماند: حضور citation را می‌بینیم؛ اینکه دقیقاً فلان بازنویسی علت آن بوده معمولاً قابل اثبات نیست.
+
+<CorrectExample title="درست">
+صفحهٔ مقایسه تاریخ تست، sample، method، محدودیت و نتیجهٔ اندازه‌گیری را می‌گوید. هر conclusion به بخش مدرک خودش وصل است. سازمان و author معلوم‌اند، صفحه canonical و crawlable است و تیم وقتی answer engine به آن citation می‌دهد screenshot تاریخ‌دار ثبت می‌کند؛ اما ادعا نمی‌کند فرمت صفحه علت citation بوده.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="این پکیج correlation و رفتار opaque محصول را ranking تضمینی جا می‌زند و هم‌زمان claim بی‌مدرک را در مقیاس منتشر می‌کند.">
+```txt
+GEO score: 97/100
+قانون: هر جواب دقیقاً ۴۲ کلمه
+۱۵ schema + llms.txt
+انتشار ۲۰۰۰ صفحهٔ AI
+تضمین citation در همهٔ موتورهای AI تا ۷ روز
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+1. اول جواب اصلی را روشن بنویس؛ بعد evidence، scope، definition، method، limitation، author/organization و تاریخ review واقعی را بیاور.
+2. claim را به source دست‌اول یا معتبر وصل کن. table، observation یا test اصل عالی است، به شرط اینکه واقعاً انجام شده و قابل تکرار باشد.
+3. صفحه را indexable و internal-linked نگه دار؛ canonical، sitemap و structured data را تمیز کن. برای quotable شدن، certainty را بیشتر از evidence نکن.
+
+**Yoast، Rank Math و AIOSEO:** یکی را انتخاب کن و metadata، canonical، sitemap، breadcrumb و schema پشتیبانی‌شده را با همان مدیریت کن. content score یا AI score این‌ها score citation در AI Overview، Bing، Copilot، ChatGPT یا Perplexity نیست.
+
+**SEOPress، فقط اگر فرق واقعی دارد:** custom schema و metadata field آن شاید به editorial model کنترل‌شده کمک کند، ولی graph بیشتر مزیت GEO نیست.
+
+**جا خالی واقعی:** پلاگین همهٔ generated answerها را نمی‌بیند، causality را ثابت نمی‌کند، کیفیت source را verify نمی‌کند و claim-level evidence را مدیریت نمی‌کند. provenance تحریریه، log/analytics، monitoring کنترل‌شده و بررسی حقوقی/privacy جدا لازم‌اند.
+
+## پیاده‌سازی کد
+
+جواب و provenance را داخل Server Component نشان بده و JSON-LD را از همان record بساز. قبل از گذاشتن JSON در script آن را escape کن:
+
+```tsx
+import type { Metadata } from "next";
+
+const report = {
+  title: "تست تحویل ایمیل",
+  reviewed: "2026-09-10",
+  summary: "در seed list کنترل‌شدهٔ ما، تنظیم A hard bounce را کمتر کرد.",
+};
+
+export const metadata: Metadata = {
+  title: report.title,
+  description: report.summary,
+};
+
+export default function ReportPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: report.title,
+    dateModified: report.reviewed,
+  };
+
+  return (
+    <article>
+      <h1>{report.title}</h1>
+      <p>{report.summary}</p>
+      <h2>روش و محدودیت</h2>
+      <p>یک seed list را تست کردیم؛ نتیجه را نباید به همهٔ senderها تعمیم داد.</p>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+    </article>
+  );
+}
+```
+
+در Next.js 16.3.5، export استاتیک `metadata` فقط در Server Component پشتیبانی می‌شود. JSON-LD یک script رندرشده است و باید با متن visible بخواند. graph فقط مقاله را توصیف می‌کند؛ درخواست citation از AI نیست.
+
+Pages Router: همان article را render کن، metadata و script را با `next/head` بگذار و بر اساس freshness از `getStaticProps` یا `getServerSideProps` دادهٔ CMS بگیر.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «GEO جای SEO را گرفته.»
+- **DEPRECATED:** «یک ranking جهانی و مشترک برای همهٔ LLMها داریم.»
+- **DEPRECATED:** «AI Overview به AI schema یا فایل AI مخصوص نیاز دارد.»
+- **DEPRECATED:** «citation ثابت می‌کند بازنویسی ما علت انتخاب بوده.»
+- تعریف بی‌source و citation حلقه‌ای برای ساختن consensus جعلی.
+- یکی گرفتن mention، citation لینک‌دار، source بدون لینک و referral click.
+- بستن crawler لازم و بعد تشخیص دادن مشکل محتوا.
+- prompt خودکار در مقیاسی که terms را نقض کند، personalization را خراب کند یا دادهٔ حساس ذخیره کند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+claim inventory بساز: owner، source، تاریخ source، confidence، review date و مسیر correction. سیستم generated خطای کوتاه و تمیز را هم مثل حقیقت کوتاه پخش می‌کند. در YMYL، review متخصص و consensus معتبر از quotable formatting مهم‌تر است.
+
+هر surface را جدا اندازه بگیر. engine/product، locale، وضعیت account، prompt، تاریخ، citation URL، وجود لینک، متن جواب و referral موجود را ثبت کن. این‌ها snapshot هستند، ranking ثابت نه. test set پایدار داشته باش و روشن بگو personalization، experiment و model update تکرارپذیری را محدود می‌کند.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| eligibility فنی | برای surface هدف crawlable/indexable | block، canonical conflict یا HTML نازک |
+| evidence claim | source، scope، date و owner معلوم | certainty بی‌مدرک یا citation کپی |
+| structured data | یک graph دقیق مطابق صفحه | تودهٔ «AI schema» |
+| observation log | product، prompt، locale، date و URL ثبت | anecdote بدون تاریخ |
+| گزارش | citation، mention، click و conversion جدا | یک GEO score ساختگی |

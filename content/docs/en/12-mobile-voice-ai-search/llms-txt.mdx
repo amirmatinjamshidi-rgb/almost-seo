@@ -1,0 +1,107 @@
+---
+title: llms.txt
+description: Treat llms.txt as an optional third-party proposal, not an official Google, Bing, or OpenAI indexing or ranking standard.
+module: 12-mobile-voice-ai-search
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+`llms.txt` is a **[third-party proposal](https://llmstxt.org/)** for a Markdown file, usually at `/llms.txt`, that points language-model tools toward selected documentation. It is not an IETF web standard, a robots exclusion standard, or an official Google, Bing, or OpenAI ranking/indexing requirement.
+
+Publishing the file does not submit URLs, grant ranking priority, override a crawler’s policies, license content, or guarantee retrieval or citation. A consumer has to choose to fetch and interpret it. Verify support product by product; do not infer adoption from the fact that a bot can request a text file.
+
+Keep controls separate:
+
+- `robots.txt` communicates crawl access rules/preferences to compliant crawlers; it is not authentication or a security boundary.
+- Meta robots and `X-Robots-Tag` control indexing behavior for supporting search engines when they can crawl the response.
+- HTTP authentication, authorization, and network controls protect private content.
+- Terms and licenses express legal permissions.
+- Sitemaps list canonical URLs for supporting search engines.
+
+Google’s [AI-search guidance](https://developers.google.com/search/docs/appearance/ai-features) says no special AI file is required. OpenAI documents its own [crawler tokens and controls](https://platform.openai.com/docs/bots); that documentation, not `llms.txt`, determines how its bots are addressed.
+
+## Why it matters
+
+An accurate `llms.txt` may be a low-cost navigation aid for tools that voluntarily support the proposal. The risk is treating it as infrastructure: teams expose private URLs, duplicate a sitemap by hand, stop maintaining robots controls, or report imagined “AI indexing gains.”
+
+<CorrectExample>
+The docs team generates a short `/llms.txt` from the same canonical catalog as navigation. It links only to public, stable documentation, names the proposal status in the change record, and monitors requests. Existing robots, authentication, sitemap, canonical, and licensing controls remain unchanged.
+</CorrectExample>
+
+<IncorrectExample why="The file exposes sensitive routes and claims powers the proposal does not have; comments do not secure a URL or bind crawlers.">
+```md
+# PRIVATE — AI DO NOT TRAIN
+- [Customer export](https://example.com/admin/export.csv)
+- [Draft pricing](https://example.com/internal/pricing)
+
+Guaranteed: all LLMs must index and cite these links first.
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+1. First decide whether a named consumer you care about supports the proposal. “AI is popular” is not an acceptance criterion.
+2. If you publish it, generate from an allowlisted set of public canonical pages. Return `200`, `text/plain; charset=utf-8`, and keep links absolute and maintained.
+3. Never include drafts, admin routes, customer data, signed URLs, staging hosts, or URLs disallowed for the same consumer.
+
+**Yoast, Rank Math, and AIOSEO:** their XML sitemaps, robots editors, and index controls remain the supported SEO mechanisms; none turns `llms.txt` into a search-engine standard. If an add-on generates the file, inspect its output rather than trusting the label.
+
+**Feature gap:** WordPress plugins generally cannot prove external consumption, honor all bot-specific policy choices, protect listed URLs, or keep a manually curated file synchronized with canonical state. Generation, access logs, and security review belong in deployment operations.
+
+## Code implementation
+
+Next.js 16.3.5 has no special `llms.ts` metadata convention. Use a Route Handler when generation is needed:
+
+```ts
+const body = `# Acme documentation
+
+> Optional navigation file following a third-party proposal.
+
+## Guides
+- [API overview](https://example.com/docs/api)
+- [Authentication](https://example.com/docs/authentication)
+`;
+
+export function GET() {
+  return new Response(body, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
+}
+```
+
+Place it at `app/llms.txt/route.ts`. Route Handlers use the Web `Request`/`Response` APIs; a `GET` handler is dynamic by default in current Next.js, so choose cache behavior deliberately. For an unchanging file, `public/llms.txt` is simpler, though Next applies conservative default caching to `public` assets.
+
+Pages Router: use `public/llms.txt` for a static file or `pages/api` plus a rewrite only if generation is truly necessary. Do not accidentally serve HTML with status 200 at `/llms.txt`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “`llms.txt` is the robots.txt standard for AI.”
+- **DEPRECATED:** “Google, Bing, and OpenAI require it for AI indexing.”
+- **DEPRECATED:** “Listing a URL grants permission to train on it.”
+- **DEPRECATED:** “The file guarantees citation priority.”
+- Putting confidential or unpublished URLs in a publicly fetchable list.
+- Hand-maintaining hundreds of links that drift from canonicals and redirects.
+- Using `llms-full.txt` as an uncontrolled duplicate of an entire site.
+- Blocking a bot in robots.txt while expecting that same bot to consume the file.
+
+## Senior / production notes
+
+Record the business hypothesis, named consumers, owner, generation source, and removal condition. Log fetches by verified network identity where possible; user-agent strings are spoofable. A request proves retrieval of the file, not ingestion, training, citation, or ranking impact.
+
+Threat-model prompt injection and data leakage in any machine-oriented aggregate. Public text is still public attack surface. Never weaken authentication because a crawler “needs access,” and never use robots comments as legal or security enforcement.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| HTTP response | `200`, plain UTF-8 text | HTML fallback, redirect loop, or error |
+| Links | Public, canonical, stable, absolute | Draft, signed, blocked, or redirected URLs |
+| Controls | Robots, auth, licenses, sitemap unchanged | `llms.txt` treated as replacement |
+| Support claim | Named product documentation confirms behavior | Vendor blog inference |
+| Impact report | Fetch/citation observations labeled separately | “AI indexed” from one log hit |

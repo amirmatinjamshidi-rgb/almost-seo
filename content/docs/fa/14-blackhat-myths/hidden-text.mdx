@@ -1,0 +1,127 @@
+---
+title: افسانه‌های متن مخفی
+description: متن visually hidden برای دسترس‌پذیری در برابر کلمه و لینک پنهانی که فقط برای موتور جست‌وجو گذاشته شده است.
+module: 14-blackhat-myths
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**سوءاستفاده از متن یا لینک مخفی** یعنی محتوا را طوری بگذاری که آدم‌ها به‌راحتی نبینند و تنها هدفش دستکاری رتبه باشد. متن سفید روی زمینهٔ سفید، opacity یا font-size صفر، متن پشت تصویر، بلوک کلمهٔ بیرون صفحه و لینک روی یک کاراکتر ریز نمونه‌های روشن‌اند.
+
+اما هر چیز ناپیدایی اسپم نیست. label مخصوص screen reader، skip link، منوی responsive، tab، accordion و راهنمای دسترس‌پذیری وقتی به کاربر کمک می‌کنند مشروع‌اند. فرق اصلی در کارکرد و نیت است: متن visually hidden اسم یک کنترل را روشن می‌کند؛ بلوک کلمهٔ مخفی برای موتور جست‌وجو نوشته شده.
+
+محتوای جمع‌شده برای UX خودکار بی‌ارزش یا اسپم نمی‌شود. باید مفید، قابل دسترسی و مرتبط با همان صفحه باشد.
+
+## چرا مهم است
+
+متن مخفی اسپمی ممکن است باعث enforcement شود و خیلی وقت‌ها از theme هک‌شده، widget یا CSS تزریقی می‌آید. از آن طرف، حذف labelهای screen reader برای «احتیاط سئویی» دسترس‌پذیری را خراب می‌کند و هیچ سود سئویی ندارد.
+
+<CorrectExample title="درست">
+دکمهٔ فقط-آیکون اسم قابل فهم دارد و skip link موقع focus دیده می‌شود:
+
+```html
+<a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
+<button type="submit">
+  <svg aria-hidden="true"><!-- search icon --></svg>
+  <span class="sr-only">جست‌وجو در مستندات</span>
+</button>
+```
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link:focus { position: static; width: auto; height: auto; margin: 0; }
+```
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="پاراگراف بیرون صفحه و لینک یک‌پیکسلی هیچ کار UX یا دسترس‌پذیری ندارند؛ فقط عبارت رتبه‌گیر و لینک دستکاری‌شده را پنهان می‌کنند.">
+```html
+<p class="seo-copy">وام ارزان وام فوری شهر۱ شهر۲ شهر۳ بهترین نرخ وام</p>
+<p>گزینه‌ها را مقایسه کن<a class="pixel-link" href="https://network.example">.</a></p>
+```
+
+```css
+.seo-copy { position: absolute; left: -99999px; }
+.pixel-link { font-size: 1px; opacity: 0; }
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. خروجی واقعی theme را ببین؛ تحلیل Yoast همهٔ CSS، widget تزریقی یا template آلوده را نمی‌بیند.
+2. متن مفید accordion را در HTML نگه دار و کنترلش را با کیبورد قابل استفاده کن.
+
+**Rank Math**
+
+1. custom field یا schema field را مخزن عبارت نامرتبطی نکن که در صفحه دیده نمی‌شود.
+2. بعد از آپدیت theme و plugin، لینک‌های footer و reusable block را بازبینی کن.
+
+**AIOSEO**
+
+1. پیشنهاد headline یا keyphrase مجوز ساخت پاراگراف fallback مخفی نیست.
+2. وقتی اسکن امنیتی لینک تزریقی می‌بیند، source و DOM رندرشده را کنار هم بگذار.
+
+**جا خالی واقعی:** این افزونه‌ها نه auditor دسترس‌پذیری‌اند و نه malware scanner. تست کیبورد و screen reader، بازرسی DOM/CSS، file integrity و ابزار امنیتی لازم داری.
+
+## پیاده‌سازی Next.js
+
+utility دسترس‌پذیری را برای label کنترل استفاده کن، نه برای کپی کلمات:
+
+```tsx
+export function SearchButton() {
+  return (
+    <button type="submit">
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m16 16 4 4" />
+      </svg>
+      <span className="sr-only">جست‌وجو در مستندات</span>
+    </button>
+  );
+}
+```
+
+در App Router، Server Component همین HTML معنی‌دار را مستقیم می‌فرستد. با `headers()` بلوک مخفی مخصوص crawler نساز؛ در Next.js 16، `headers()` async است و محتوای bot-targeted مشکل cloaking را هم به hidden text اضافه می‌کند.
+
+یادداشت Pages Router: قاعدهٔ JSX و CSS همان است. در `getServerSideProps` prop مخصوص bot نساز؛ build را با CSS روشن و خاموش، focus کیبورد و accessibility tree تست کن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «هر کلاس `sr-only` پنالتی گوگل است.»
+- **DEPRECATED:** «متن accordion حساب نمی‌شود، پس یک نسخهٔ مخفی هم کپی کن.»
+- **DEPRECATED:** «گوگل CSS یا اسپم مخفی‌شده با JavaScript را رندر نمی‌کند.»
+- مخفی کردن H1 تکراری در breakpoint موبایل به‌جای اصلاح component.
+- استفاده از anchor شفاف برای پاس دادن اعتبار رتبه.
+- حذف label واقعی فرم چون audit خودکار SEO آن را hidden علامت زده.
+
+## نکته‌های سطح بالا / پروداکشن
+
+نیت را کنار implementation ببین. label یک‌پیکسلی برای screen reader می‌تواند کاملاً درست باشد؛ فهرست کلمه‌ای که ظاهراً دیده می‌شود ولی عملاً خوانا نیست هنوز stuffing است. تیم امنیت و accessibility را وارد triage کن.
+
+برای پاکسازی اول مالک را پیدا کن: CMS، theme، tag manager، dependency، تزریق دیتابیس یا حساب هک‌شده. منبع را حذف کن، نه فقط CSS را. اگر نفوذ بوده، credential را عوض و راه ورود را patch کن.
+
+برای skip link، dialog، menu و accordion تست visual regression و accessibility نگه دار. تمیزکاری CSS نباید همهٔ helper labelها را روی صفحه بریزد یا محتوای focus را قایم کند.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| کیبورد/screen reader | label یک کنترل واقعی را نام می‌برد | هیچ کارکردی برای کاربر ندارد |
+| DOM/CSS | متن مخفی کمک UX یا accessibility است | بلوک کلمه بیرون صفحه |
+| audit لینک | هر لینک قابل درک و هدفمند است | لینک شفاف یا ریز پولی |
+| مالکیت کد | component و دلیل مستند است | markup تزریقی ناشناس |
+| GSC/اسکن امنیت | تمیز | شاهد لینک مخفی یا هک |

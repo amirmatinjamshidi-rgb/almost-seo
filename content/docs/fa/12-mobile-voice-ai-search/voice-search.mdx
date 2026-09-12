@@ -1,0 +1,104 @@
+---
+title: جست‌وجوی صوتی
+description: جواب روشن و در دسترس بنویس، بدون اختراع voice score، schema صوتی یا تضمین حضور در assistant.
+module: 12-mobile-voice-ai-search
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Voice search** یک روش ورودی و خروجی است، نه ranking system مستقلی که مستندات رسمی داشته باشد. آدم ممکن است سؤال را به گوشی، browser، ماشین، smart speaker یا assistant بگوید؛ محصول هم شاید نتیجهٔ عادی Search، نتیجهٔ local، یک action یا جواب generated برگرداند.
+
+چیزی به اسم «schema عمومی جست‌وجوی صوتی»، voice SEO score رسمی گوگل/بینگ، یا دستور تضمینی برای خوانده شدن صفحه وجود ندارد. `SpeakableSpecification` در Schema.org هست، اما [feature مستند `speakable` گوگل](https://developers.google.com/search/docs/appearance/structured-data/speakable) محدود/beta بوده و کلید ranking عمومی نیست. هر ادعای markup را با [Search Gallery فعلی گوگل](https://developers.google.com/search/docs/appearance/structured-data/search-gallery) مقایسه کن؛ صرفاً چون تبلیغ پلاگین گفته، روی کل سایت اضافه‌اش نکن.
+
+کار درست روی retrieval اصلی است: intent واقعی را جواب بده، با زبان خود مشتری حرف بزن، جواب کوتاه را نزدیک سؤال مربوط بگذار، factهای local و کسب‌وکار را یکدست نگه دار و صفحه را crawlable و accessible بساز. قبل از markup خاص، eligibility همان محصول، زبان و کشور را در سند رسمی فعلی‌اش چک کن.
+
+## چرا مهم است
+
+پرسش گفتاری خیلی وقت‌ها مکالمه‌ای، محلی یا task-oriented است؛ ولی هر query بلند صوتی نیست و analytics هم معمولاً روش ورود را ثابت نمی‌کند. جواب شفاف و fact دقیق هم‌زمان به typed search، snippet، assistant و ابزار accessibility کمک می‌کند، بدون اینکه یک مزرعهٔ محتوای «voice-only» بسازی.
+
+<CorrectExample title="درست">
+صفحهٔ درمانگاه خیلی روشن جواب می‌دهد «جمعه‌ها باز هستید؟» و ساعت جمعه را نشان می‌دهد، به رزرو وقت لینک می‌کند و همان ساعت در business profile و LocalBusiness data هم ثبت است. جواب چه تایپ شود، چه گفته شود، چه screen reader بخواند مفید است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="صفحه signal صوتی ساختگی می‌سازد، سؤال‌های نازک را تکثیر می‌کند و قطعیتی می‌فروشد که هیچ موتور جست‌وجویی مستند نکرده.">
+```txt
+Voice SEO schema را نصب کن
+۳۰۰ صفحه بساز: «با صدا نزدیک من در {محله}»
+voiceRankingScore: 100
+تضمین رتبه یک Alexa، Siri و Google Assistant
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+1. عبارت مشتری را از تماس support، جست‌وجوی داخلی، queryهای Search Console، یادداشت فروش و سؤال‌های local دربیاور. به هر long-tail برچسب voice نزن.
+2. وقتی واقعاً خواندن را راحت می‌کند heading پرسشی بگذار، بلافاصله جواب بده، بعد nuance را اضافه کن.
+3. نام، آدرس، تلفن، ساعت، قیمت، موجودی و policy را از یک منبع نگهداری‌شده بده. فقط schemaای را استفاده کن که با متن visible دقیقاً جور است.
+
+**Yoast، Rank Math و AIOSEO:** featureهای FAQ، HowTo، Local و schema این‌ها voice eligibility تولید نمی‌کند. FAQ markup فقط وقتی استفاده شود که سؤال واقعاً دیده می‌شود و feature فعلی Search اجازه می‌دهد؛ چراغ سبز پلاگین spoken retrieval را اندازه نمی‌گیرد.
+
+**SEOPress، فقط اگر فرق واقعی دارد:** custom schema آن اجازه می‌دهد propertyهای آزمایشی بیشتری بسازی. این انعطاف مدرک مصرف شدن property توسط assistant نیست.
+
+**جا خالی واقعی:** هیچ‌کدام جواب assistantها را در همهٔ محصول‌ها validate نمی‌کند، نمی‌فهمد query گفته شده یا تایپ، و citation را تضمین نمی‌کند. call tracking، user research، مدیریت local profile و مالکیت fact کارهای جدا هستند.
+
+## پیاده‌سازی کد
+
+جواب جمع‌وجور را با HTML معمولی از سرور render کن؛ داخل JSON-LD یا پشت click قایمش نکن:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "ساعت کاری جمعه",
+  description: "ساعت کاری جمعه و روش رزرو وقت درمانگاه Acme.",
+};
+
+export default function FridayHoursPage() {
+  return (
+    <main>
+      <h1>درمانگاه Acme جمعه باز است؟</h1>
+      <p>
+        بله. درمانگاه جمعه از ۸ تا ۱۶ باز است. ساعت تعطیلات ممکن است فرق کند؛
+        قبل از حرکت تقویم رزرو را ببین.
+      </p>
+      <p>
+        <a href="/appointments">وقت‌های موجود را ببین</a>
+      </p>
+    </main>
+  );
+}
+```
+
+در App Router، Next.js 16.3.5 می‌خواهد metadata استاتیک در Server Component باشد؛ جواب هم در HTML اولیه می‌آید. JSON-LD را فقط وقتی type پشتیبانی‌شده و درست داری اضافه کن و visible hours و schema را از یک source بساز.
+
+Pages Router: component را زیر `pages/` بگذار و title/description را با `next/head` بده. انتخاب router دیده‌شدن صوتی نمی‌سازد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «Voice search الگوریتم ranking جدا و score منتشرشده دارد.»
+- **DEPRECATED:** «FAQ schema جواب صوتی را تضمین می‌کند.»
+- **DEPRECATED:** «همهٔ queryهای صوتی با چه، کی، کجا، چرا و چطور شروع می‌شوند.»
+- **DEPRECATED:** «متن را به یک grade level دلخواه برسان تا assistant انتخابت کند.»
+- ساخت یک URL نازک برای هر مدل گفتن یک سؤال.
+- چپاندن «نزدیک من» در متن به‌جای relevance محلی واقعی.
+- افزودن `speakable` بدون بررسی product، زبان، کشور و publisher requirement فعلی.
+- شمردن featured snippet به‌عنوان اثبات اینکه query صوتی بوده.
+
+## نکته‌های سطح بالا / پروداکشن
+
+قبل از گزارش، outcome را تعریف کن: تماس، direction، task کامل‌شده، click عادی یا cited answer. Search Console و web analytics query و visit می‌دهند، ولی معمولاً dimension قابل‌اتکایی برای «voice input» ندارند. این محدودیت را بنویس؛ query بلند را KPI صوتی جا نزن.
+
+Fact کسب‌وکار owner مشخص و تاریخ review/expiry می‌خواهد. جواب خوش‌فرم با ساعت تعطیلات قدیمی از بی‌جوابی بدتر است. accessibility را تست کن: heading، اسم لینک، مخفف حساس به تلفظ و visible text برای آدم‌های بیشتری از markup حدسی مهم‌اند.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| جواب visible | مستقیم، به‌روز و در صورت نیاز مشروط | مقدمهٔ keywordی یا جواب مخفی |
+| یکدستی source | صفحه، profile، schema و booking یکی است | ساعت یا تلفن متناقض |
+| markup | type پشتیبانی‌شده مطابق متن | property صوتی ساختگی یا FAQ مخفی |
+| spot check | observation ناپایدار با تاریخ ثبت شده | ranking تضمینی گزارش شده |
+| اندازه‌گیری | outcome و محدودیت attribution روشن | query بلند مساوی voice فرض شده |

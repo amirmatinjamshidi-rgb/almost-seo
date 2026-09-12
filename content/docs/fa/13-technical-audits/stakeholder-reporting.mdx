@@ -1,0 +1,160 @@
+---
+title: گزارش‌دهی ممیزی برای ذی‌نفع‌ها
+description: finding تکنیکال را با evidence، impact، confidence، owner، effort و acceptance test به تصمیم قابل اجرا تبدیل کن.
+module: 13-technical-audits
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+گزارش stakeholder باید تصمیم را آسان کند. خواننده باید بفهمد چه چیزی دیده شده، احتمالاً روی چه چیزی اثر دارد، تشخیص چقدر مطمئن است، چه کسی باید اقدام کند، هزینهٔ کار در چه حد است و پایان کار چطور ثابت می‌شود. این‌ها را داخل یک «site health» یا «SEO score» اختصاصی له نکن.
+
+برای هر finding یک قرارداد ثابت داشته باش:
+
+1. **Evidence:** پاسخ زمان‌دار، خروجی render، log/query، config یا تست قابل تکرار.
+2. **Impact:** کاربر، template، رفتار search، فرایند کسب‌وکار و downside درگیر؛ اگر اندازه‌گیری نداری range یا band کیفی بده.
+3. **Confidence:** کم، متوسط یا زیاد، همراه دلیل. confidence دربارهٔ قدرت مدرک است، نه severity.
+4. **Owner:** یک role/team پاسخ‌گو، همراه dependency و decision maker.
+5. **Effort:** band مورد توافق تیم که implementation، QA، rollout و monitoring را دارد؛ ساعت از خودت نساز.
+6. **Acceptance test:** state قابل مشاهده، sample، environment و time window لازم برای closure.
+
+diagnosis و recommendation را جدا کن. «canonical در نمونهٔ productهای locale با URL خود صفحه فرق دارد» evidence است. «احتمالاً head builder از locale پیش‌فرض استفاده می‌کند» تا وقتی source یا runtime proof نداری hypothesis است. «builder را اصلاح و همهٔ localeها را regression-test کن» recommendation است.
+
+هر audience view خودش را از همان register می‌خواهد:
+
+- مدیر ارشد: ریسک مادی، تصمیم، owner، trend و dependency مسدود.
+- Product و engineering: reproduction، scope، source owner، rollback و acceptance.
+- Content و تیم منطقه‌ای: template درگیر، اثر editorial و workaround امن.
+- Analyst: تعریف metric، breakpoint، confidence و محدودیت measurement.
+
+## چرا مهم است
+
+vanity score تیم را تشویق می‌کند warningهای آسان را ببندد و defect مهم باز بماند. ادعای مبهم «traffic loss» اعتماد را خراب می‌کند و dump فنی زحمت تفسیر را گردن خواننده می‌اندازد. finding ساختاریافته هم عدم‌قطعیت را نگه می‌دارد، هم تصمیم بعدی را روشن می‌کند.
+
+<CorrectExample title="درست">
+Evidence: HTML production در حالت logged-out روی template محصول فارسی canonical انگلیسی می‌دهد؛ نمونه با timestamp ثبت شده و sitemap locale و hreflang دوطرفه به URL فارسی اشاره می‌کنند. Impact: signalهای consolidation روی template پشتیبان درآمد با هم تعارض دارند؛ از دادهٔ موجود نمی‌شود افت دقیق search را اندازه گرفت. Confidence: برای وجود defect بالا، برای impact افزایشی متوسط. Owner: storefront platform؛ dependency: localization. Effort: متوسط طبق rubric خود تیم. Acceptance: بعد rollout نمونهٔ تعریف‌شده 200 باشد، فقط یک self-canonical و hreflang دوطرفه بدهد و sample انگلیسی هم regression نداشته باشد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="score هم materiality را قایم کرده هم uncertainty را؛ ادعای revenue causal measurement ندارد و هیچ‌کس نمی‌داند چه کسی باید چه کاری کند و pass یعنی چه.">
+«SEO health از سبز به زرد رفت. همهٔ errorهای critical را فوری درست کنید؛ با حلشان بخش بزرگی از organic revenue برمی‌گردد.» slide فقط screenshot crawler دارد؛ URL، response، تاریخ، owner، effort rubric، dependency و acceptance test ندارد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+خروجی عمومی و owner واقعی را گزارش کن، نه فقط screenshot dashboard پلاگین. نسخهٔ وردپرس، theme/plugin فعال، وضعیت cache/CDN، URLهای نماینده و logged-out بودن evidence را ثبت کن.
+
+**Yoast SEO**
+
+1. setting مرتبط Search Appearance/schema/sitemap را export یا ثبت کن و کنارش evidence واقعی frontend بگذار.
+2. پیشنهاد چراغ راهنمایی را فقط وقتی finding کن که به risk قابل تکرار برای user/search وصل شود.
+3. owner را درست به theme، editorial، platform یا plugin بده؛ «مشکل Yoast» root cause نیست.
+
+**Rank Math**
+
+1. view مربوط به 404 Monitor، Redirections، schema یا analytics را با date/scope cite کن و بعد با response/log/source verify کن.
+2. SEO score را impact گزارش نکن و widget analytics را بدون تعریف source استفاده نکن.
+3. اگر feature به plan/module خاصی وابسته است، dependency را بنویس.
+
+**AIOSEO**
+
+1. TruSEO و Search Statistics را supporting view بدان، نه health measure جهانی.
+2. config را به tag رندرشده، sitemap entry، redirect response یا source record تحت مالکیتش وصل کن.
+3. اگر config جدید baseline را پاک می‌کند، export تاریخی را نگه دار.
+
+**SEOPress، فقط وقتی واقعاً دخیل است:** وقتی مالک خروجی گزارش‌شده است یا observation را داده، وارد گزارشش کن. analytics، redirect، schema و monitoring آن هم هنوز scope، source و verification در production می‌خواهند.
+
+**جا خالی واقعی:** plugin سئو priority سازمان، impact causal کسب‌وکار، effort engineering، owner پاسخ‌گو، ریسک rollback یا pass شدن acceptance در CDN و application را نمی‌داند. finding register را مستقل از plugin فعال نگه دار.
+
+## پیاده‌سازی کد
+
+fieldهای گزارش را explicit مدل کن و سمت سرور render کن. این صفحهٔ App Router پنهان‌کردن owner یا acceptance را سخت‌تر می‌کند:
+
+```tsx
+// app/internal/seo-report/page.tsx
+type Finding = {
+  id: string;
+  title: string;
+  evidence: string[];
+  impact: string;
+  confidence: "low" | "medium" | "high";
+  owner: string;
+  effort: "small" | "medium" | "large";
+  acceptanceTest: string;
+  status: "open" | "blocked" | "verifying" | "closed";
+};
+
+const findings: Finding[] = [
+  {
+    id: "SEO-014",
+    title: "Locale canonical mismatch",
+    evidence: ["Production response captured 2026-09-08", "Locale sitemap snapshot"],
+    impact: "Conflicting consolidation signals on the Persian product template; exact loss unknown.",
+    confidence: "high",
+    owner: "Storefront platform",
+    effort: "medium",
+    acceptanceTest: "Defined locale sample returns 200 with one self-canonical and reciprocal hreflang.",
+    status: "open",
+  },
+];
+
+export default function SeoReportPage() {
+  return (
+    <main>
+      <h1>Technical SEO decision register</h1>
+      {findings.map((finding) => (
+        <article key={finding.id}>
+          <h2>{finding.id}: {finding.title}</h2>
+          <p><strong>Impact:</strong> {finding.impact}</p>
+          <p><strong>Confidence:</strong> {finding.confidence}</p>
+          <p><strong>Owner:</strong> {finding.owner}</p>
+          <p><strong>Effort:</strong> {finding.effort}</p>
+          <p><strong>Acceptance:</strong> {finding.acceptanceTest}</p>
+          <p><strong>Status:</strong> {finding.status}</p>
+          <ul>{finding.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+        </article>
+      ))}
+    </main>
+  );
+}
+```
+
+route را در server boundary authorize کن، evidence محرمانه را داخل HTML عمومی نگذار و record را از source حاکمیت‌شده بخوان؛ data واقعی production را hard-code نکن. در کد واقعی برای status یک workflow مشخص و validation transition بساز. finding فقط با deploy به `closed` نمی‌رود؛ باید acceptance پاس شود.
+
+یادداشت Pages Router: type و component گزارش را در `pages/internal/seo-report.tsx` reuse کن، data مجاز را با `getServerSideProps` بگیر و caching پاسخ محرمانه را ببند. migration روتر نباید دو finding register مستقل بسازد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «یک SEO health score ریسک کسب‌وکار را نشان می‌دهد.»
+- **DEPRECATED:** «هر error crawler حیاتی است و هر warning باید به مدیرعامل برسد.»
+- **DEPRECATED:** «تغییر rank یا traffic ثابت می‌کند آخرین release سئو علتش بوده.»
+- **DEPRECATED:** «بستن engineering ticket یعنی مشکل search حل شده.»
+- قاطی‌کردن severity و confidence داخل یک رنگ.
+- ادعای revenue loss از traffic مدل‌شده، CTR عمومی یا attribution بی‌سند.
+- درصد بدون numerator، denominator، eligible population و sample method.
+- نداشتن owner یا دادن همهٔ findingها به «development».
+- مخفی‌کردن dependency، rollback risk، محدودیت privacy/security یا evidence متناقض.
+- مقایسهٔ periodها بدون annotation برای release، seasonality، consent، tracking و demand.
+
+## نکته‌های سطح بالا / پروداکشن
+
+schema گزارش، rubric severity، rubric confidence و effort band را قبل از ممیزی تعریف کن و تغییر تعریف را version کن. یک finding ID را بین slide، ticket، evidence، deploy و verification نگه دار تا status در ابزارها drift نکند.
+
+trend را با finding مادی و exposure گزارش کن، نه تعداد خام warning. حالت‌های opened، mitigated، accepted، blocked و verified را جدا نشان بده. accepted risk یعنی defect رفع نشده؛ بنویس چه کسی، چرا و تا چه زمانی پذیرفته و چه trigger دوباره بازش می‌کند.
+
+برای impact اول سراغ first-party measure با scope مستند برو. اگر attribution ضعیف است صاف بگو. به‌جای certainty ساختگی از «ممکن است اثر بگذارد»، «همراه بوده» یا «قابل کمّی‌سازی نیست» استفاده کن. جزئیات امنیت، PII، raw server log و نکتهٔ تجاری حساس پشت لینک least-privilege بماند، نه داخل executive deck.
+
+بعد از deploy حلقه را ببند: release ID، زمان deploy، targeted check، regression sample، monitoring window، نتیجه و verifier را ثبت کن. برای signal کند مثل recrawl یا field CWV، **implementation accepted** را از **outcome monitoring** جدا کن تا closure مبهم نشود.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Evidence | زمان‌دار، قابل تکرار، scoped و لینک‌شده | فقط screenshot dashboard |
+| Impact | process/template و محدودیت روشن | traffic یا revenue خیالی |
+| Confidence | مستقل و همراه دلیل | قایم داخل severity color |
+| Ownership | یک owner پاسخ‌گو + dependency | «تیم SEO/dev» |
+| Effort | band مشترک شامل QA و rollout | ساعت بی‌پشتوانه |
+| Acceptance | state، sample، environment و window روشن | «fix را deploy کن» |
+| Reporting | همهٔ audienceها از یک register | slide و ticket متناقض |

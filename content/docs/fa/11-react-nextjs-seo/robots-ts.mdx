@@ -1,0 +1,88 @@
+---
+title: robots.ts در Next.js
+description: robots.txt امن را با Next.js 16 بساز و crawl control را از index control و access control جدا نگه دار.
+module: 11-react-nextjs-seo
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+`app/robots.ts` یک metadata route در App Router است و `MetadataRoute.Robots` می‌دهد. کارش کنترل مسیر crawl است؛ نه data security است و نه روش مطمئن حذف URL از Search. URL مسدودشده ممکن است بدون snippet شناخته یا نمایش داده شود. برای محتوای private از authentication و برای صفحهٔ public که نباید index شود از `noindex` قابل‌crawl استفاده کن.
+
+Next.js 16.3 فیلد typed به نام `other` دارد تا directive غیراستاندارد هر crawler را verbatim بنویسد. فقط با سند رسمی همان crawler استفاده‌اش کن.
+
+## چرا مهم است
+
+یک خط اشتباه می‌تواند کل production را block کند. اگر صفحه‌ای را که `noindex` دارد Disallow کنی، crawler شاید اصلاً directive را نبیند. block کردن JS/CSS لازم هم rendering را خراب می‌کند.
+
+<CorrectExample title="درست">
+Production routeهای عمومی را allow می‌کند، مسیرهای کم‌ارزش داخلی را disallow می‌کند و sitemap absolute دارد. account با authentication محافظت می‌شود. preview deployment هم از مسیر deployment محدود است و لینک عمومی ندارد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="robots.txt عمومی است، authentication نیست و `Noindex` داخل آن برای Google پشتیبانی نمی‌شود.">
+```txt
+User-agent: *
+Disallow: /private-customer-records/
+Noindex: /
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```ts
+// app/robots.ts
+import type { MetadataRoute } from "next";
+
+const ORIGIN = "https://example.com";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/internal-search/"],
+    },
+    sitemap: `${ORIGIN}/sitemap.xml`,
+    host: ORIGIN,
+  };
+}
+```
+
+این special route معمولاً cache می‌شود مگر از request-time API یا dynamic config استفاده کند. rule عمومی را از Host header نساز.
+
+برای چند bot، `rules` می‌تواند array باشد:
+
+```ts
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      { userAgent: "*", allow: "/", disallow: "/internal-search/" },
+      { userAgent: "ExampleBot", disallow: "/" },
+    ],
+    sitemap: "https://example.com/sitemap.xml",
+  };
+}
+```
+
+تفاوت Pages Router: فایل ثابت را در `public/robots.txt` بگذار یا route به نام `pages/robots.txt.ts` با `text/plain` بساز. هم‌زمان دو نسخهٔ رقیب ship نکن.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «`noindex` را داخل robots.txt بگذار.»
+- **DEPRECATED:** «Disallow یعنی URL مخفی و امن است.»
+- block کردن صفحه و انتظار دیدن meta noindex.
+- block کور `_next/static`، script، style و image لازم.
+- رفتن rule مربوط به preview روی production.
+- directive غیراستاندارد بدون سند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+Robots policy را deploy-critical حساب کن. assertion بگذار که production بی‌اجازه `Disallow: /` ندهد. تمام hostname/protocolها را fetch کن. rate limiting و bot abuse را در infrastructure حل کن، نه با دستور داوطلبانهٔ robots.
+
+## چطور مطمئن شوی
+
+`/robots.txt` را در هر environment به‌صورت plain text بگیر. URLهای نمونه، sitemap و meta noindex را جدا تست کن. route خصوصی حتی برای clientی که robots را نادیده می‌گیرد باید access را رد کند.

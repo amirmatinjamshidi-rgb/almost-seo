@@ -1,0 +1,97 @@
+---
+title: Redirect و rewrite در Next.js config
+description: redirect دائمی/موقت و rewrite شفاف را بدون loop، chain یا canonical اشتباه انتخاب کن.
+module: 11-react-nextjs-seo
+topic_order: 10
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Redirect آدرس قابل‌مشاهده را عوض می‌کند و response از خانوادهٔ 3xx می‌دهد. Rewrite محتوای destination دیگری را زیر همان URL requestشده serve می‌کند. در `next.config.ts`، مقدار `permanent: true` status 308 و `false` status 307 می‌دهد و method را حفظ می‌کند.
+
+App Router تابع `redirect()` برای حرکت موقت و `permanentRedirect()` برای انتقال دائمی دارد. routing شرطی قبل از render فقط وقتی به `proxy.ts` برود که config یا API سطح route کافی نیست.
+
+## چرا مهم است
+
+Permanent redirect یک signal canonicalization است؛ rewrite نیست. Rewrite می‌تواند دو URL public برای یک محتوا بسازد مگر canonical، internal link و sitemap تکلیف URL اصلی را روشن کنند. chain request اضافه و loop صفحهٔ غیرقابل‌استفاده می‌سازد.
+
+<CorrectExample title="درست">
+Slug قدیمی محصول با یک 308 مستقیم به replacement دقیق می‌رود. internal link، canonical، sitemap و JSON-LD همگی destination را استفاده می‌کنند. maintenance موقت 307 دارد و بعد حذف می‌شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Rewrite، destination را پنهان و هر دو URL را زنده نگه می‌دارد؛ فرستادن همهٔ صفحه‌های حذف‌شده به home هم intent را از بین می‌برد و می‌تواند soft 404 شود.">
+```ts
+async rewrites() {
+  return [{ source: "/old/:path*", destination: "/" }];
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/guides/:slug",
+        destination: "/docs/:slug",
+        permanent: true,
+      },
+      {
+        source: "/campaign",
+        destination: "/campaign-paused",
+        permanent: false,
+      },
+    ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: "/support/:path*",
+          destination: "https://help.example.com/:path*",
+        },
+      ],
+      fallback: [],
+    };
+  },
+};
+
+export default nextConfig;
+```
+
+ترتیب مهم است: header و redirect در config قبل از Proxy اجرا می‌شوند؛ بعد Proxy و سپس `beforeFiles`/filesystem می‌آید. source pattern و انتقال query را تست کن.
+
+```tsx
+import { permanentRedirect } from "next/navigation";
+
+export default async function LegacyProduct() {
+  permanentRedirect("/products/new-slug");
+}
+```
+
+تفاوت Pages Router: config مشترک است و `getStaticProps`/`getServerSideProps` هم redirect برمی‌گردانند. config redirect روی client navigation در Pages Router ممکن است بدون Proxy matching اعمال نشود؛ internal link قدیمی را حذف کن.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** «Rewrite مثل 301/308 signal را منتقل می‌کند.»
+- **DEPRECATED:** «`window.location` معادل server redirect است.» Google server-side را ترجیح می‌دهد.
+- انتقال همهٔ removed pageها به home.
+- redirect chain، cycle و loop.
+- باقی ماندن URL قدیمی در sitemap/navigation.
+- permanent کردن experiment برگشت‌پذیر.
+
+## نکته‌های سطح بالا / پروداکشن
+
+Redirect map را version کن و owner، دلیل، تاریخ و permanence داشته باش. قبل deploy cycle و destination خراب را detect کن. Bloom filter در scale فقط pre-check است و false positive دارد. query را فقط وقتی نگه دار که معنایش در destination هنوز معتبر است.
+
+## چطور مطمئن شوی
+
+Source را بدون follow بگیر و status/`Location` دقیق را assert کن. یک بار follow باید به `200` و محتوای درست برسد. chain، loop، destination خراب، URL redirected در sitemap و internal link قدیمی را crawl کن. Rewrite نباید alias duplicate و indexable بی‌برنامه بسازد.

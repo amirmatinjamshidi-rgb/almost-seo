@@ -1,0 +1,9 @@
+{
+  "title": "Technical audits",
+  "defaultOpen": true,
+  "pages": [
+    "full-audit-checklist",
+    "competitive-gap-analysis",
+    "stakeholder-reporting"
+  ]
+}

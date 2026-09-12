@@ -1,0 +1,98 @@
+---
+title: next/image and Core Web Vitals
+description: Use the Next.js 16 Image component to reserve layout, deliver responsive bytes, and prioritize only the real LCP image.
+module: 11-react-nextjs-seo
+topic_order: 8
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+`next/image` extends `<img>` with sizing, responsive source generation, optimization, and loading controls. Intrinsic `width` and `height` reserve aspect ratio; `fill` requires a positioned, sized parent. Responsive images need an accurate `sizes` value.
+
+In Next.js 16, `priority` is deprecated in favor of `preload`. The docs recommend `loading="eager"` or `fetchPriority="high"` in most cases; use `preload` only when the image is clearly the LCP element and do not combine it with `loading` or `fetchPriority`.
+
+## Why it matters
+
+An oversized hero can delay LCP; missing dimensions can cause CLS; too many high-priority requests compete for bandwidth. Image optimization cannot compensate for a slow origin, wrong source crop, inaccurate `sizes`, or a late client-only render.
+
+<CorrectExample>
+The hero is present in server-rendered HTML, has known dimensions, responsive CSS and `sizes`, descriptive alt text, and one deliberate high-priority hint based on field and lab evidence.
+</CorrectExample>
+
+<IncorrectExample why="Missing `sizes` can make a fill image look viewport-wide to the browser, while preloading every card steals bandwidth from the actual LCP resource.">
+```tsx
+{products.map((product) => (
+  <Image key={product.id} src={product.image} fill preload alt="" />
+))}
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/products/[slug]/page.tsx
+import Image from "next/image";
+
+export default function ProductHero() {
+  return (
+    <section>
+      <Image
+        src="https://images.example.com/catalog/hero.jpg"
+        alt="Blue trail shoe viewed from the side"
+        width={1600}
+        height={900}
+        sizes="(max-width: 768px) 100vw, 70vw"
+        fetchPriority="high"
+        style={{ width: "100%", height: "auto" }}
+      />
+      <h1>Trail shoe</h1>
+    </section>
+  );
+}
+```
+
+Configure narrow remote access:
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.example.com",
+        pathname: "/catalog/**",
+        search: "",
+      },
+    ],
+    qualities: [50, 75],
+  },
+};
+
+export default nextConfig;
+```
+
+Next.js 16 requires an allowed quality list and deprecates broad `images.domains` in favor of `remotePatterns`. Remote images still need dimensions or `fill`. `alt=""` is correct only for decorative images.
+
+Pages Router difference: the current `next/image` component and configuration are shared. Very old `next/legacy/image` props such as `layout`, `objectFit`, and `priority` should not be copied into Next.js 16 code.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** `priority` in Next.js 16; use the current loading controls.
+- **DEPRECATED:** `images.domains`; use strict `remotePatterns`.
+- **DEPRECATED:** `layout="responsive"` and component `objectFit` props from legacy image.
+- Preloading multiple possible LCP images.
+- Omitting `sizes` on responsive/fill images.
+- Using generic alt text stuffed with keywords.
+
+## Senior / production notes
+
+Measure image candidates by template and viewport with field CWV plus lab diagnostics. Forward the `Accept` header through a self-hosted CDN and include it in cache variation when serving negotiated formats. Restrict remote sources to reduce optimization abuse and SSRF exposure. Version upstream images because optimized cache invalidation is not automatic.
+
+## How to verify
+
+Inspect rendered `srcset`, `sizes`, intrinsic dimensions, selected resource width, transfer bytes, request priority, and LCP attribution. Test mobile and desktop, cold and warm cache, slow network, and layout shifts. Confirm image optimization rejects unapproved origins and qualities.

@@ -29,7 +29,16 @@
   - algorithm-history, quality-rater-guidelines-eeat, ymyl-standards (en+fa)
 - [x] Module 10 — WordPress SEO (9/9 topics, 2026-09-12)
   - plugin-comparison-table, permalink-structure, caching-and-cwv, image-optimization-plugins, cdn-setup, gutenberg-vs-builders, woocommerce-seo, multisite-seo, migration-without-losing-rankings (en+fa)
-- [ ] Module 11 — React/Next.js SEO (0/12 topics)
-- [ ] Module 12 — Mobile/voice/AI (0/4 topics)
-- [ ] Module 13 — Technical audits (0/3 topics)
-- [ ] Module 14 — Blackhat myths (0/5 topics)
+- [x] Module 11 — React/Next.js SEO (12/12 topics, 2026-09-12)
+  - rendering-strategy-matrix, metadata-api, dynamic-sitemap, robots-ts, og-twitter-cards, dynamic-og-images, jsonld-in-react, next-image-cwv, i18n-hreflang-nextjs, redirects-rewrites-config, middleware-cloaking-risk, spa-seo-fixes (en+fa)
+- [x] Module 12 — Mobile/voice/AI (4/4 topics, 2026-09-12)
+  - mobile-ux-indexing, voice-search, geo-aeo-optimization, llms-txt (en+fa)
+- [x] Module 13 — Technical audits (3/3 topics, 2026-09-12)
+  - full-audit-checklist, competitive-gap-analysis, stakeholder-reporting (en+fa)
+- [x] Module 14 — Blackhat myths (5/5 topics, 2026-09-12)
+  - keyword-stuffing, cloaking, hidden-text, pbns-link-farms, doorway-pages (en+fa)
+- [x] Final QA — sitemap/hreflang, link check, Lighthouse (2026-09-12)
+  - `pnpm build` 216/216
+  - sitemap 210 locs, 103 en docs + 103 fa docs, all 200; sample hreflang en/fa/x-default + canonical
+  - Lighthouse mobile: `/en` P93 A100 SEO100; `/en/docs` P90 A100 SEO100; foundations topic P90 A100 SEO100
+  - Performance below 95 target: LCP ~3.3–3.6s and unused JS from Fumadocs on throttled mobile

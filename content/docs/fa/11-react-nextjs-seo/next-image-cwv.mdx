@@ -1,0 +1,96 @@
+---
+title: next/image و Core Web Vitals
+description: با Image نسخهٔ Next.js 16 فضا را reserve کن، byte responsive بده و فقط LCP واقعی را زودتر بارگیری کن.
+module: 11-react-nextjs-seo
+topic_order: 8
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+`next/image` عنصر `<img>` را با sizing، responsive source، optimization و loading control کامل می‌کند. `width` و `height` intrinsic نسبت تصویر را reserve می‌کنند؛ `fill` parent با position و اندازهٔ مشخص می‌خواهد. تصویر responsive هم `sizes` دقیق لازم دارد.
+
+در Next.js 16، prop قدیمی `priority` به نفع `preload` deprecated شده. مستندات برای بیشتر حالت‌ها `loading="eager"` یا `fetchPriority="high"` را پیشنهاد می‌کنند؛ `preload` فقط وقتی تصویر قطعاً LCP است و نباید با `loading` یا `fetchPriority` ترکیب شود.
+
+## چرا مهم است
+
+Hero بزرگ LCP را دیر می‌کند؛ dimension نامشخص CLS می‌سازد؛ high-priority زیاد bandwidth را از resource اصلی می‌دزدد. Image optimization نمی‌تواند origin کند، crop غلط، `sizes` اشتباه یا render دیرهنگام client را جبران کند.
+
+<CorrectExample title="درست">
+Hero داخل HTML server-rendered است، dimension و `sizes` درست، alt مفید و فقط یک loading hint بر اساس field/lab evidence دارد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="بدون `sizes` مرورگر ممکن است fill image را 100vw فرض کند؛ preload همهٔ cardها هم با LCP واقعی رقابت می‌کند.">
+```tsx
+{products.map((product) => (
+  <Image key={product.id} src={product.image} fill preload alt="" />
+))}
+```
+</IncorrectExample>
+
+## پیاده‌سازی کد
+
+```tsx
+// app/products/[slug]/page.tsx
+import Image from "next/image";
+
+export default function ProductHero() {
+  return (
+    <section>
+      <Image
+        src="https://images.example.com/catalog/hero.jpg"
+        alt="کفش آبی تریل از نمای کنار"
+        width={1600}
+        height={900}
+        sizes="(max-width: 768px) 100vw, 70vw"
+        fetchPriority="high"
+        style={{ width: "100%", height: "auto" }}
+      />
+      <h1>کفش تریل</h1>
+    </section>
+  );
+}
+```
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.example.com",
+        pathname: "/catalog/**",
+        search: "",
+      },
+    ],
+    qualities: [50, 75],
+  },
+};
+
+export default nextConfig;
+```
+
+Next.js 16 quality allowlist می‌خواهد و `images.domains` broad را deprecated کرده. تصویر remote هنوز dimension یا `fill` لازم دارد. `alt=""` فقط برای تصویر تزئینی درست است.
+
+تفاوت Pages Router: component فعلی `next/image` و config مشترک‌اند. propهای `next/legacy/image` مثل `layout`، `objectFit` و `priority` را در کد Next 16 کپی نکن.
+
+## اشتباه‌های رایج و افسانه‌های DEPRECATED
+
+- **DEPRECATED:** `priority` در Next.js 16.
+- **DEPRECATED:** `images.domains`؛ `remotePatterns` دقیق بده.
+- **DEPRECATED:** `layout="responsive"` و prop قدیمی `objectFit`.
+- preload چند candidate احتمالی LCP.
+- حذف `sizes` از fill/responsive image.
+- alt عمومی و keyword-stuffed.
+
+## نکته‌های سطح بالا / پروداکشن
+
+در هر template و viewport با field CWV و lab diagnosis اندازه بگیر. در self-hosting، header `Accept` را از CDN عبور بده و cache را درست vary کن. remote source را محدود کن تا abuse و SSRF کم شود. برای asset upstream تغییرکرده version داشته باش.
+
+## چطور مطمئن شوی
+
+`srcset`، `sizes`، dimension، resource انتخاب‌شده، bytes، request priority و LCP attribution را ببین. mobile/desktop، cold/warm cache و slow network را تست کن. origin و quality غیرمجاز باید توسط optimizer رد شوند.

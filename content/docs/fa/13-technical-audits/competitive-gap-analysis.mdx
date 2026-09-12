@@ -1,0 +1,154 @@
+---
+title: تحلیل شکاف رقابتی سئو
+description: قابلیت‌های رقبا را با شواهد مقایسه کن، بدون کپی‌کاری، traffic خیالی یا جا زدن همبستگی به‌جای علت.
+module: 13-technical-audits
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+تحلیل شکاف رقابتی یعنی توانایی خودت برای جواب‌دادن به یک نیاز جست‌وجو را با گزینه‌های دیگری که کاربر واقعاً می‌بیند مقایسه کنی. قرار نیست لیست keywordهای دامنهٔ دیگر را کپی کنی، صفحه‌هایش را clone کنی یا برای analytics خصوصی‌اش عدد بسازی. واحد درست تحلیل یک **query set، intent، audience، locale و قابلیت صفحه** است.
+
+رقیب را با مدرک انتخاب کن:
+
+- **رقیب Search** در query set و locale تعریف‌شده مرتب دیده می‌شود.
+- **رقیب کسب‌وکار** محصول مشابه می‌فروشد، ولی شاید در Search رقیب تو نباشد.
+- **ناشر، marketplace، forum و منبع رسمی** ممکن است همان intent را با مدل دیگری جواب بدهند.
+- گاهی صفحه‌های خودت هم رقیب همدیگرند و باید وارد تحلیل شوند.
+
+برای هر gap تاریخ observation، فرض device/location، نتیجهٔ sample، URL رقیب، نزدیک‌ترین صفحهٔ خودت و تفاوت capability را ثبت کن. dimensionهای مفید شامل پوشش intent، معماری اطلاعات، evidence اصیل، فرایند freshness، مسیر internal link، rendering/indexability، نمایش SERP، eligibility اسکیما، trust proof، تحویل بین‌المللی و ادامهٔ conversion هستند.
+
+هر gap یک opportunity نیست. بپرس آیا با audience و product تو جور است، آیا واقعاً value متفاوتی می‌سازی، آیا آن result type قابل رقابت است و آیا نگهداری asset می‌ارزد. این چهار چیز را قاطی نکن:
+
+1. **Fact دیده‌شده:** الان در صفحه یا result چه چیزی می‌بینی؟
+2. **تفسیر:** چرا شاید این capability intent را بهتر جواب دهد؟
+3. **مجهول:** traffic، conversion، هزینهٔ تولید و وزن الگوریتمی که نمی‌بینی.
+4. **تصمیم:** test، build، improve، monitor یا decline.
+
+## چرا مهم است
+
+خروجی ابزار رقبا precision تقلبی می‌سازد. عدد visibility و traffic ابزار ثالث مدل‌شده است، نه analytics شرکت رقیب. rank هم نمی‌گوید سیستم دقیقاً چرا آن نتیجه را انتخاب کرده. اگر فقط ظاهر صفحه را کپی کنی، ضعف‌هایش را هم می‌آوری، ممکن است حق مالکیت فکری را زیر پا بگذاری و دلیل انتخاب برند خودت را از بین ببری.
+
+<CorrectExample title="درست">
+برای یک مجموعه query مقایسه‌ای فارسی با تاریخ مشخص، تیم نتیجهٔ mobile را از location اعلام‌شده sample می‌گیرد. سه result type تکرار می‌شوند: category، مقایسهٔ editorial و صفحهٔ سازنده. تیم ثبت می‌کند category خودش معیار تصمیم‌گیری ندارد و فقط به محصول link می‌دهد؛ در چند نتیجهٔ رقیب filter، روش تست، نقطه‌ضعف و guide کمکی در HTML قابل crawl دیده می‌شود. opportunity به‌شکل یک سیستم تصمیم‌گیری اصیل با دادهٔ first-party، pilot، owner و acceptance test تعریف می‌شود. traffic و conversion رقیب «نامعلوم» می‌ماند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="traffic مدل‌شده به‌عنوان fact فروخته شده، correlation به causality تبدیل شده و کپی heading و متن هم ریسک حقوقی و هم ریسک کیفیت و تمایز دارد.">
+یک export برای traffic رقیب عدد تخمینی می‌دهد؛ تیم آن را در conversion rate فرضی ضرب می‌کند و اسمش را «revenue در دسترس» می‌گذارد. بعد به نویسنده می‌گوید heading، word count، FAQ و schema همهٔ URLهای ranking را کپی کند و فقط جمله‌ها را کمی عوض کند.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+قبل از خرید ابزار بیشتر، قابلیت‌های **خودت** را در وردپرس inventory کن: post type، taxonomy، template، field نویسنده/بازبین، مالک schema، module لینک داخلی، mapping زبان و workflow آپدیت editorial. محتوای رقیب را scrape نکن و داخل CMS نریز.
+
+**Yoast SEO**
+
+1. با search appearance و sitemap بفهم چه content typeهایی از خودت indexable هستند و gap معماری خودت کجاست.
+2. focus keyphrase و readability را کمک ویرایشی بدان، نه evidence بازار رقابتی.
+3. title رقیب را فقط چون snippet قشنگی دارد کپی نکن.
+
+**Rank Math**
+
+1. Content AI و rank tracking در configuration مناسب برای ایده‌پردازی کمک می‌کنند، ولی query، locale، device، date و source را خودت verify کن.
+2. schema template و internal link را به‌عنوان capability تحت کنترل خودت ببین؛ اضافه‌کردن هر schema دیده‌شده روی رقیب eligibility نمی‌سازد.
+3. volume و traffic مدل‌شده را همیشه estimate label بزن.
+
+**AIOSEO**
+
+1. Search Statistics و TruSEO در setup واجدشرایط می‌توانند coverage محتوای خودت را نشان دهند.
+2. پیشنهاد competitor analysis را hypothesis بدان و result و destination فعلی را دستی ببین.
+3. research اصیل، source و editorial owner را بیرون از score پلاگین نگه دار.
+
+**SEOPress، فقط وقتی واقعاً دخیل است:** اگر Insights/rank tracking یا metadata/schema آن بخشی از workflow evidence است، واردش کن و geography، freshness و محدودیت provider را بنویس. فقط برای تقلید رقیب plugin تازه نصب نکن.
+
+**جا خالی واقعی:** plugin سئو به analytics، سود، conversion، هزینهٔ editorial، قرارداد link یا علت الگوریتمی رقیب دسترسی ندارد. تشخیص قانونی، مفید یا متمایزبودن محتوای کپی‌شده را هم انجام نمی‌دهد. observation تأییدشده، first-party data، تحقیق مشتری و قضاوت editorial لازم‌اند.
+
+## پیاده‌سازی کد
+
+opportunity register را با data سمت سرور نگه دار و unknown را واضح render کن. این صفحهٔ App Router نه رقیب را scrape می‌کند و نه متنش را کپی:
+
+```tsx
+// app/seo-opportunities/page.tsx
+type Opportunity = {
+  capability: string;
+  observation: string;
+  sourceUrl: string;
+  observedAt: string;
+  confidence: "low" | "medium" | "high";
+  decision: "test" | "build" | "monitor" | "decline";
+  unknowns: string[];
+};
+
+const opportunities: Opportunity[] = [
+  {
+    capability: "Buyer decision criteria",
+    observation: "Repeatedly visible on sampled comparison results; absent from our nearest page.",
+    sourceUrl: "https://competitor.example/comparison",
+    observedAt: "2026-09-08",
+    confidence: "medium",
+    decision: "test",
+    unknowns: ["Competitor traffic", "Conversion impact", "Ranking-system weight"],
+  },
+];
+
+export default function SeoOpportunitiesPage() {
+  return (
+    <main>
+      <h1>Search capability opportunities</h1>
+      {opportunities.map((item) => (
+        <article key={`${item.sourceUrl}-${item.capability}`}>
+          <h2>{item.capability}</h2>
+          <p>{item.observation}</p>
+          <dl>
+            <dt>Observed</dt><dd>{item.observedAt}</dd>
+            <dt>Confidence</dt><dd>{item.confidence}</dd>
+            <dt>Decision</dt><dd>{item.decision}</dd>
+            <dt>Unknowns</dt><dd>{item.unknowns.join(", ")}</dd>
+          </dl>
+          <a href={item.sourceUrl} rel="nofollow">Review cited observation</a>
+        </article>
+      ))}
+    </main>
+  );
+}
+```
+
+URL بیرونی را قبل از render validate کن، escaping را به React بسپار، اگر strategy محرمانه است access را محدود کن و body کپی‌شده یا PII ذخیره نکن. link citation فقط provenance مدرک است؛ endorsement یا ترفند link building نیست.
+
+یادداشت Pages Router: همان type و component را از `pages/seo-opportunities.tsx` render کن. برای رکورد محرمانه و تازه `getServerSideProps` و برای snapshot بازبینی‌شده `getStaticProps` مناسب است. تحقیق رقبا را به client-side scraping منتقل نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «keyword tool ترافیک و درآمد دقیق رقیب را نشان می‌دهد.»
+- **DEPRECATED:** «اگر همهٔ top resultها کاری می‌کنند، پس ranking factor قطعی است.»
+- **DEPRECATED:** «اگر از همه طولانی‌تر بنویسی خودکار می‌بری.»
+- **DEPRECATED:** «اگر متن کپی را به‌اندازه کافی تغییر بدهی strategy اصیل می‌شود.»
+- مرتبط فرض‌کردن هر keyword مشترک با product و audience.
+- مقایسهٔ country، language، device، date یا personalized state متفاوت بدون label.
+- ندیدن SERP feature و result type که اندازهٔ opportunity را عوض می‌کند.
+- کپی image، table، test، review، heading یا wording اختصاصی.
+- ساختن انبوه gap page بدون owner، differentiation یا maintenance plan.
+- causal خواندن rank change وقتی content، link، product، seasonality و SERP هم عوض شده‌اند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+query panel تکرارپذیر بساز، ولی انتظار نتیجهٔ ثابت نداشته باش. query set و sampling method را version کن و «share of voice» را حقیقت همیشگی نفروش. اگر collection خودکار داری، terms provider، robots control، rate limit، privacy و legal review را رعایت کن. screenshot و extract باید حداقلی و retention آن محدود باشد.
+
+به‌جای clone gap، **capability gap** را اولویت بده. capability دفاع‌پذیر می‌تواند inventory دست‌اول، calculator با دادهٔ خودت، review متخصص، policy روشن‌تر، موجودی محلی، مقایسهٔ accessible یا task flow بهتر باشد. قبل از approval دقیق بنویس چه value منحصربه‌فردی می‌سازی.
+
+تصمیم portfolio بگیر: user value موردانتظار، strategic fit، confidence مدرک، effort band، dependency، maintenance و downside. «Decline» جواب معتبر است؛ مثلاً وقتی منبع رسمی مالک intent است، economics نمی‌صرفد یا سازمان نمی‌تواند evidence قابل اعتماد تولید کند.
+
+اول روی یک template یا query cluster محدود pilot کن. baseline و acceptance را قبل از launch بنویس. visibility یکی از outcomeهاست، اما user success، qualified conversion، کیفیت محتوا و operational cost را هم ببین. جای measurement گمشده عدد نساز.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| مجموعهٔ رقیب | search/business با query و locale label شده | دامنهٔ معروف بر اساس حدس |
+| Observation | URL، تاریخ، device/location و sample ثبت شده | export بی‌تاریخ |
+| عدم‌قطعیت | estimate و unknown واضح | traffic مدل‌شده به اسم analytics |
+| اصالت | value متفاوت و evidence دست‌اول | بازنویسی صفحهٔ رقیب |
+| تصمیم | fit، effort، owner، maintenance و acceptance | هر gap یعنی یک page |
+| ارزیابی | pilot محدود، baseline و چند outcome | rank به‌عنوان تنها proof |

@@ -1,0 +1,154 @@
+---
+title: Competitive SEO gap analysis
+description: Compare search capabilities and evidence without copying competitors, inventing traffic, or mistaking visible tactics for causes.
+module: 13-technical-audits
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A competitive gap analysis compares your ability to satisfy a search need with the observable capabilities of relevant alternatives. It is not a list of keywords another domain ranks for, a mandate to clone pages, or an estimate of private traffic. The useful unit is a **query set, intent, audience, locale, and page capability**.
+
+Choose competitors by evidence:
+
+- **Search competitors** repeatedly appear for the defined query set and locale.
+- **Business competitors** sell a comparable solution but may not compete in Search.
+- **Publisher, marketplace, forum, and official-source competitors** may satisfy the same intent with a different model.
+- **Your own pages** can compete with each other and belong in the analysis.
+
+For each gap, preserve the observation date, query/device/location assumptions, sampled result, competitor URL, your nearest equivalent, and the capability difference. Useful dimensions include intent coverage, information architecture, original evidence, freshness process, internal-link pathways, rendering/indexability, SERP presentation, structured-data eligibility, trust proof, international delivery, and conversion continuity.
+
+A gap is not automatically an opportunity. Ask whether it fits your audience and product, whether you can add differentiated value, whether the result type is realistically addressable, and whether maintaining the asset is worth the cost. Separate:
+
+1. **Observed fact:** what the page or search result currently shows.
+2. **Interpretation:** why that capability may help satisfy intent.
+3. **Unknown:** traffic, conversion, production cost, and algorithmic weight you cannot see.
+4. **Decision:** test, build, improve, monitor, or decline.
+
+## Why it matters
+
+Competitor exports create false precision. Third-party visibility and traffic values are modeled estimates, not another company’s analytics. Rankings also do not reveal why a system selected a result. Copying the visible page can reproduce its weaknesses, violate intellectual property, and erase your reason to exist.
+
+<CorrectExample>
+For a dated set of Persian comparison queries, the team samples mobile results from one declared location. Three result types recur: category pages, editorial comparisons, and manufacturer pages. The team records that its own category pages lack decision criteria and link only to products, while several competing pages expose filters, testing methods, drawbacks, and supporting guides in crawlable HTML. The opportunity is framed as an original buyer-decision system using first-party product data, with a pilot, owner, and acceptance tests. Competitor traffic and conversion remain “unknown.”
+</CorrectExample>
+
+<IncorrectExample why="Modeled traffic is presented as fact, correlation is turned into causality, and copying headings and prose creates legal, quality, and differentiation risk.">
+An export supplies a modeled competitor-traffic figure, so the team multiplies it by an assumed conversion rate and calls the result “available revenue.” Writers are told to copy every ranking URL’s headings, word count, FAQs, and schema, then make each sentence slightly different.
+</IncorrectExample>
+
+## WordPress implementation
+
+Use WordPress to inventory **your** capabilities before buying more tooling: post types, taxonomies, templates, author/reviewer fields, schema ownership, internal-link modules, language mapping, and editorial update workflow. Do not scrape competitor content into the CMS.
+
+**Yoast SEO**
+
+1. Use search appearance and sitemap outputs to map your indexable content types and identify capability gaps in your own architecture.
+2. Treat focus keyphrases and readability indicators as editing aids, not competitive market evidence.
+3. Do not reproduce a competitor’s title merely because a snippet preview looks attractive.
+
+**Rank Math**
+
+1. Content AI and rank tracking can support ideation where configured, but verify query, locale, device, date, and source before using an observation.
+2. Review schema templates and internal links as capabilities you control; adding every schema type seen on a competitor does not create eligibility.
+3. Keep modeled keyword volumes and traffic estimates labeled as estimates.
+
+**AIOSEO**
+
+1. Search Statistics and TruSEO can help inspect your own content coverage in eligible configurations.
+2. Use competitor analysis prompts as hypotheses only; manually inspect the current result and destination.
+3. Preserve original research, source, and editorial ownership fields outside a plugin score.
+
+**SEOPress, when material:** include it if its Insights/rank-tracking or metadata/schema features are part of the evidence workflow. Record geography, freshness, and provider limitations. There is no reason to add it solely to imitate a competitor.
+
+**Feature gap:** SEO plugins cannot see competitor analytics, profit, conversion, editorial cost, link contracts, or ranking-system causality. They also cannot determine whether copied content is lawful, useful, or differentiated. Use approved search observations, first-party data, customer research, and editorial judgment.
+
+## Code implementation
+
+Keep an evidence-backed opportunity register in server-owned data and render uncertainty explicitly. This App Router page does not fetch or copy competitor pages:
+
+```tsx
+// app/seo-opportunities/page.tsx
+type Opportunity = {
+  capability: string;
+  observation: string;
+  sourceUrl: string;
+  observedAt: string;
+  confidence: "low" | "medium" | "high";
+  decision: "test" | "build" | "monitor" | "decline";
+  unknowns: string[];
+};
+
+const opportunities: Opportunity[] = [
+  {
+    capability: "Buyer decision criteria",
+    observation: "Repeatedly visible on sampled comparison results; absent from our nearest page.",
+    sourceUrl: "https://competitor.example/comparison",
+    observedAt: "2026-09-08",
+    confidence: "medium",
+    decision: "test",
+    unknowns: ["Competitor traffic", "Conversion impact", "Ranking-system weight"],
+  },
+];
+
+export default function SeoOpportunitiesPage() {
+  return (
+    <main>
+      <h1>Search capability opportunities</h1>
+      {opportunities.map((item) => (
+        <article key={`${item.sourceUrl}-${item.capability}`}>
+          <h2>{item.capability}</h2>
+          <p>{item.observation}</p>
+          <dl>
+            <dt>Observed</dt><dd>{item.observedAt}</dd>
+            <dt>Confidence</dt><dd>{item.confidence}</dd>
+            <dt>Decision</dt><dd>{item.decision}</dd>
+            <dt>Unknowns</dt><dd>{item.unknowns.join(", ")}</dd>
+          </dl>
+          <a href={item.sourceUrl} rel="nofollow">Review cited observation</a>
+        </article>
+      ))}
+    </main>
+  );
+}
+```
+
+Validate externally supplied URLs before rendering, escape all content through React, restrict the register to approved users if strategy is confidential, and never store copied page bodies or personal data. A link citation is evidence provenance, not an endorsement and not a signal-manipulation tactic.
+
+Pages Router note: render the same typed component from `pages/seo-opportunities.tsx` and load governed records with `getServerSideProps` for access-controlled freshness or `getStaticProps` for a reviewed snapshot. Do not move competitive research into client-side scraping.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A keyword tool reveals a competitor’s exact traffic and revenue.”
+- **DEPRECATED:** “If top results all use a tactic, that tactic is a proven ranking factor.”
+- **DEPRECATED:** “Longer than every competitor automatically wins.”
+- **DEPRECATED:** “Changing copied text enough makes the strategy original.”
+- Treating every overlapping keyword as relevant to the product and audience.
+- Comparing different countries, languages, devices, dates, or personalized states without labeling them.
+- Ignoring SERP features and result types that change the addressable opportunity.
+- Copying proprietary images, tables, tests, reviews, headings, or wording.
+- Building hundreds of gap pages without an owner, differentiation, or maintenance plan.
+- Calling a rank change causal when content, links, product, seasonality, and SERP composition also changed.
+
+## Senior / production notes
+
+Create a repeatable query panel, but expect results to change. Version the query set and sampling method; do not promise a stable “share of voice” truth. Where automated collection is used, respect provider terms, robots controls, rate limits, privacy, and legal review. Screenshots and extracts should be minimal and retained only as long as needed.
+
+Prioritize **capability gaps**, not clone gaps. A defensible capability could be first-party inventory, a calculator using your own data, expert review, clearer policy, local availability, accessible comparison, or a better task flow. State what will be uniquely useful before approving production.
+
+Use a portfolio decision: expected user value, strategic fit, evidence confidence, effort band, dependency, maintenance burden, and downside. Keep “decline” as a valid outcome when an official source owns the intent, the economics are poor, or your organization cannot produce trustworthy evidence.
+
+Pilot on a bounded template or query cluster. Record the baseline and acceptance conditions before launch. Search visibility can be one outcome, but include user success, qualified conversion, content quality, and operational cost. Do not fill missing measurements with invented numbers.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Competitor set | Search and business competitors labeled by query/locale | Famous domains chosen by intuition |
+| Observation | URL, date, device/location assumptions, sample preserved | Undated tool export |
+| Uncertainty | Estimates and unknowns clearly labeled | Modeled traffic stated as analytics fact |
+| Originality | Distinct audience value and first-party evidence | Rewritten competitor page |
+| Decision | Strategic fit, effort, owner, maintenance, acceptance test | Every gap becomes a page |
+| Evaluation | Bounded pilot with baseline and multiple outcomes | Rank movement claimed as sole proof |

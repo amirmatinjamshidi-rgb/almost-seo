@@ -1,0 +1,94 @@
+---
+title: International SEO and hreflang in Next.js
+description: Implement locale routes, reciprocal hreflang, canonicals, and language-safe redirects in Next.js 16.
+module: 11-react-nextjs-seo
+topic_order: 9
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+App Router internationalization commonly uses `app/[lang]` and a root `proxy.ts` for optional locale detection. `hreflang` maps equivalent localized URLs; every version must list itself and reciprocal alternatives with fully qualified URLs. Use valid language codes and optional region codes, plus `x-default` for a genuine fallback or selector.
+
+Each localized page should normally self-canonicalize. Do not canonicalize all translations to one language.
+
+## Why it matters
+
+Locale routing, content language, canonicalization, and alternates are separate systems. Automatic redirects based only on headers can trap crawlers or override a user’s chosen URL. Broken return links or nonexistent translations make mappings unreliable.
+
+<CorrectExample>
+`/en/products/shoe` and `/fa/products/shoe` both return indexable localized HTML, self-canonicalize, and emit the same reciprocal `en`, `fa`, and `x-default` set. Users can switch languages with crawlable links.
+</CorrectExample>
+
+<IncorrectExample why="Canonicalizing Persian to English asks for consolidation while hreflang says they are alternate indexable pages; unconditional locale redirects also make stable crawling difficult.">
+```html
+<link rel="canonical" href="https://example.com/en/products/shoe" />
+<link rel="alternate" hreflang="fa" href="/fa/products/shoe" />
+```
+</IncorrectExample>
+
+## Code implementation
+
+```tsx
+// app/[lang]/products/[slug]/page.tsx
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+const locales = ["en", "fa"] as const;
+type Locale = (typeof locales)[number];
+
+function isLocale(value: string): value is Locale {
+  return locales.some((locale) => locale === value);
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[lang]/products/[slug]">): Promise<Metadata> {
+  const { lang, slug } = await params;
+  if (!isLocale(lang)) notFound();
+
+  const origin = "https://example.com";
+  return {
+    alternates: {
+      canonical: `${origin}/${lang}/products/${slug}`,
+      languages: {
+        en: `${origin}/en/products/${slug}`,
+        fa: `${origin}/fa/products/${slug}`,
+        "x-default": `${origin}/products/${slug}`,
+      },
+    },
+  };
+}
+
+export default async function Page({
+  params,
+}: PageProps<"/[lang]/products/[slug]">) {
+  const { lang } = await params;
+  if (!isLocale(lang)) notFound();
+  return <main>{/* localized product */}</main>;
+}
+```
+
+Generate static locale params where appropriate and set `<html lang>` in `app/[lang]/layout.tsx`. Use `proxy.ts`, not the deprecated `middleware.ts`, only for unprefixed entry routing; preserve explicit locale paths and exclude `_next`, APIs, and metadata files.
+
+Pages Router difference: built-in `i18n` config can provide locale routing and `router.locale`, but it does not automatically create a correct hreflang graph. Emit alternates with `next/head`. App Router does not use Pages Router `i18n` routing configuration as its primary locale model.
+
+## Common mistakes and DEPRECATED myths
+
+- **DEPRECATED:** “The `lang` attribute replaces hreflang.”
+- **DEPRECATED:** “App Router automatically outputs hreflang.”
+- Using country-only or invalid codes such as `UK`.
+- Missing self-references or reciprocal return links.
+- Listing a translation that redirects, 404s, or remains untranslated.
+- Redirecting every bot/request by `Accept-Language` even on explicit locale URLs.
+
+## Senior / production notes
+
+Store translation relationships by stable content ID, not by guessing matching slugs. Publish alternates atomically or omit unavailable versions. Choose one maintained hreflang channel—HTML or sitemap is often enough—because duplicate implementations drift. Preserve user locale choices without changing the content served at one canonical URL by user agent.
+
+Official reference: [Google localized versions guidance](https://developers.google.com/search/docs/specialty/international/localized-versions).
+
+## How to verify
+
+Crawl every locale pair and assert `200`, localized main content, self-canonical, valid reciprocal alternates, and matching `x-default`. Test direct URL loads with different headers and cookies. Confirm language switch links are real anchors and invalid locales return 404 rather than fallback-language `200`.

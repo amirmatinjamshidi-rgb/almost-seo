@@ -1,0 +1,108 @@
+---
+title: تجربهٔ موبایل و ایندکس
+description: یک تجربهٔ کامل و واکنش‌گرا بساز؛ mobile-first indexing تمام شده، اما ایندکس یا رتبهٔ موبایل جدا نداریم.
+module: 12-mobile-voice-ai-search
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+گوگل مهاجرت به **mobile-first indexing** را در سال ۲۰۲۳ تمام کرد. یعنی Googlebot Smartphone معمولاً نسخهٔ موبایل URL را می‌خزد و همان نمایش، مبنای اصلی ایندکس است. معنی‌اش این نیست که یک «ایندکس موبایل» یا «رتبهٔ موبایل» جدا داریم؛ toggle جادویی داخل پلاگین سئو هم وجود ندارد.
+
+قاعدهٔ سرراست، parity است: یک URL واکنش‌گرا داشته باش که محتوای اصلی، heading، لینک، تصویر و alt، structured data، metadata و robots directive آن در صفحهٔ باریک و عریض هم‌معنی باشد. چیدمان می‌تواند عوض شود؛ واقعیت و مسیر دسترسی نباید غیب شود.
+
+UX موبایل فقط ایندکس نیست. متن خوانا، layout باثبات، کنترل قابل لمس، interaction سریع و overlay غیرمزاحم به آدم واقعی کمک می‌کند. Core Web Vitals فقط بخشی از تجربه را اندازه می‌گیرد؛ نه نمرهٔ Lighthouse کل تشخیص ranking است، نه برچسب «mobile friendly». مرجع را از [راهنمای mobile-first گوگل](https://developers.google.com/search/docs/crawling-indexing/mobile/mobile-sites-mobile-first-indexing) و [راهنمای page experience](https://developers.google.com/search/docs/appearance/page-experience) بگیر.
+
+## چرا مهم است
+
+اگر HTML موبایل نسخهٔ لاغر صفحه باشد، Search برای فهم صفحه عمدتاً همان نسخه را دارد. حذف توضیح محصول، لینک داخلی، alt تصویر یا ناهماهنگی `noindex` مستقیماً discovery و interpretation را خراب می‌کند. جدا از آن، صفحهٔ کند و بددست حتی وقتی ایندکس است کاربر را فراری می‌دهد.
+
+<CorrectExample title="درست">
+همان URL محصول، نام، قیمت، موجودی، مشخصات، review، canonical و Product markup را برای همهٔ viewportها از سرور می‌دهد. CSS گرید دسکتاپ را تک‌ستونه می‌کند. مشخصات داخل disclosure جمع می‌شود، ولی متن همچنان در HTML هست.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="پاسخ گوشی اصل صفحه را پس می‌گیرد؛ در نتیجه crawler اصلی محتوای کمتر و مسیر discovery کمتری از کاربر دسکتاپ می‌بیند.">
+```txt
+Desktop UA: راهنمای کامل + related links + Product JSON-LD
+Mobile UA: یک teaser نودکلمه‌ای + overlay «اپ را نصب کن»
+Mobile meta robots: noindex
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+1. قالب responsive و یک canonical URL داشته باش. اگر `m.example.com`، template وابسته به UA یا AMP اضافه داری، با migration تست‌شده بازنشسته‌اش کن.
+2. source موبایل و دسکتاپ را برای متن اصلی، menu، pagination، media، canonical، robots، hreflang و schema مقایسه کن.
+3. گلوگاه واقعی را درست کن: ابعاد media را رزرو کن، asset مربوط به LCP را سبک کن، کار render-blocking اضافه را بردار و tap target را قابل‌استفاده نگه دار. برای سبز شدن نمره، محتوای مفید را حذف نکن.
+
+**Yoast، Rank Math و AIOSEO:** هر سه canonical، robots، sitemap، breadcrumb و schema می‌سازند؛ هیچ‌کدام قالب را responsive یا parity را تضمین نمی‌کند. شرط‌های template و variantهای cache نباید خروجی پلاگین را بر اساس user agent عوض کنند.
+
+**جا خالی واقعی:** هیچ پلاگین سئویی parity رندر موبایل/دسکتاپ، overlay مزاحم، دسترسی nav و responsiveness کاربر واقعی را end-to-end ممیزی نمی‌کند. این قسمت دست theme، cache/CDN، consent manager و تیم front-end است.
+
+## پیاده‌سازی کد
+
+Next.js 16.3.5 به‌صورت پیش‌فرض viewport واکنش‌گرا می‌دهد. فقط وقتی می‌خواهی policy را صریح کنی exportش کن و محتوای اصلی را در Server Component نگه دار:
+
+```tsx
+import Image from "next/image";
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+export default function ProductPage() {
+  return (
+    <main>
+      <h1>دوربین طبیعت X2</h1>
+      <Image
+        src="/products/x2.jpg"
+        alt="دوربین طبیعت X2 نصب‌شده روی درخت"
+        width={1200}
+        height={800}
+        sizes="(max-width: 768px) 100vw, 50vw"
+        preload
+      />
+      <p>دوربین مقاوم به آب‌وهوا با شش ماه ضمانت میدانی.</p>
+      <details>
+        <summary>مشخصات</summary>
+        <p>بدنهٔ IP66، باتری تعویض‌پذیر و ثبت تصویر شب.</p>
+      </details>
+    </main>
+  );
+}
+```
+
+در Next 16، `next/image` به `alt` درست نیاز دارد، با dimension نسبت تصویر را رزرو می‌کند و با `sizes` جلوی دانلود بی‌خودی فایل بزرگ روی موبایل را می‌گیرد. `preload` جای prop منسوخ `priority` آمده؛ فقط برای LCP واقعی بالای fold مصرفش کن.
+
+Pages Router: همان component و `next/image` را استفاده کن؛ viewport سفارشی را فقط اگر لازم است رفتار پیش‌فرض را override کنی در `_document.tsx` بگذار. در هیچ routerی محتوای اصلی را با `window.innerWidth` یا UA شرطی نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «گوگل ایندکس موبایل و رتبهٔ موبایل جدا دارد.»
+- **DEPRECATED:** «mobile-first indexing را در Yoast روشن کن.»
+- **DEPRECATED:** «AMP برای رتبهٔ موبایل اجباری است.»
+- **DEPRECATED:** «هرچه در accordion بسته باشد نادیده گرفته می‌شود.» مشکل حذف از HTML است، نه disclosure سالم.
+- حذف nav داخلی در موبایل بدون مسیر crawlable جایگزین.
+- دیر آوردن hero و eager کردن همهٔ عکس‌های پایین صفحه.
+- قبول کردن Lighthouse lab به‌جای دادهٔ واقعی کاربر.
+- بستن CSS، JavaScript یا تصویری که برای رندر لازم است.
+
+## نکته‌های سطح بالا / پروداکشن
+
+Parity را روی edge واقعی CDN تست کن، نه فقط React لوکال. cache key وابسته به UA، personalization، consent، experiment و bot protection می‌توانند سند دیگری به Googlebot Smartphone بدهند. متن و لینک ضروری در HTML اولیه باشد؛ interaction را روی آن enhance کن.
+
+RUM را بر اساس template و device class بشکن. median کل سایت ممکن است product template کند یا percentile 75 بد را قایم کند. UX موبایل، crawlability و indexing سیستم‌های مرتبط‌اند، ولی مدرک هرکدام فرق دارد؛ همه را یک «نمرهٔ سئوی موبایل» نکن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| URL Inspection | HTML موبایل محتوای کامل دارد | teaser، asset بسته یا بخش غایب |
+| diff موبایل/دسکتاپ | محتوا، metadata، لینک و schema هم‌معنی | canonical، robots یا fact وابسته به UA |
+| interaction | clipping نیست؛ menu و disclosure کار می‌کند | app wall، overlay یا menu خراب |
+| تصویر | dimension، `sizes` و LCP درست | layout shift یا دانلود بزرگ |
+| دادهٔ میدانی | trend هر template/device توضیح دارد | sign-off فقط با Lighthouse |
