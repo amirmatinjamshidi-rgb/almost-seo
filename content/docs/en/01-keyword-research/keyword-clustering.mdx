@@ -1,0 +1,127 @@
+---
+title: Keyword clustering
+description: Group queries that deserve one URL — same intent, same SERP — instead of a page per synonym.
+module: 01-keyword-research
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **cluster** is a set of queries served by **one document** (plus, sometimes, a hub of related documents). Two queries belong together when they share intent and the SERP looks like the same result should win: overlapping titles, same format, same entities.
+
+Ways people cluster (use more than one):
+
+- **SERP overlap** — same winners on page one. Strongest practical test.
+- **Intent** — both are “how to noindex a PDF,” not one how-to and one tool.
+- **Entity / parent topic** — children of `robots.txt` (syntax, vs meta robots, crawl-delay myth).
+- **Language variants** — formal vs colloquial Persian that want the same article.
+
+A **topic cluster** in content strategy (Module 06) is the publishing pattern: pillar + supporting articles + internal links. Keyword clustering is the research step that decides *how many* URLs that pattern needs.
+
+Do not cluster by “same first word” or by embedding similarity alone. Models glue unrelated intents; SERPs split them.
+
+## Why it matters
+
+Without clusters you ship cannibalization (next topic) or a 10,000-URL mess. With clusters you brief writers on **one primary query + natural variants**, not a density list.
+
+<CorrectExample>
+One URL: `/docs/robots-txt`
+
+Queries in the cluster: `robots.txt`, `robots txt syntax`, `disallow googlebot`, `crawl-delay google` (answered as a myth section, not a second URL).
+
+```html
+<h1>robots.txt</h1>
+<h2>Disallow vs noindex</h2>
+<h2>Crawl-delay</h2>
+```
+
+A separate URL only if the SERP for `x-robots-tag pdf` is a different document type (it often is — keep it separate or a clear section with a jump link).
+</CorrectExample>
+
+<IncorrectExample why="Synonym pages split signals. Embedding-only clusters merge ‘buy’ and ‘what is’ because the words sit nearby.">
+```txt
+/robots-txt
+/robots-txt-file
+/what-is-robots-txt
+/google-robots-txt
+```
+
+Four outlines, one SERP.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. One focus keyphrase per cluster URL. Related keyphrases (Premium) are optional reminders, not extra posts.
+2. Do not auto-generate “related posts” that link three cannibal URLs to each other as a “cluster.”
+
+**Rank Math**
+
+1. Rank Math primary + secondary keywords: still **one URL**. Secondary is not a new permalink.
+2. Bulk SEO titles that stamp each tag archive with a unique “cluster” will index junk.
+
+**AIOSEO**
+
+1. Same: additional keyphrases ≠ additional URLs.
+2. If you already published duplicates, pick a canonical winner and 301 (Module 03) rather than “merge in the plugin” without redirects.
+
+**Feature gap:** No plugin clusters by SERP overlap. SEOPress / Rank Math / Yoast store phrases. The clustering tool is a sheet + SERP checks, or a crawler of *your* titles.
+
+## Code implementation
+
+```ts
+type Cluster = {
+  slug: string;
+  primary: string;
+  variants: string[];
+  intent: "informational" | "commercial" | "transactional";
+};
+
+export const clusters: Cluster[] = [
+  {
+    slug: "robots-txt",
+    primary: "robots.txt",
+    variants: ["robots txt syntax", "disallow googlebot"],
+    intent: "informational",
+  },
+];
+
+export function pathForQuery(q: string, list: Cluster[]) {
+  const hit = list.find(
+    (c) => c.primary === q || c.variants.includes(q),
+  );
+  return hit ? `/docs/${hit.slug}` : null;
+}
+```
+
+App Router: `generateStaticParams` from `clusters`. Pages Router: same. Do not `generateStaticParams` from `variants` as separate slugs.
+
+Titles can mention a variant in a heading; the canonical and the path stay the cluster slug.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** One URL per keyword as “best practice.”
+- **DEPRECATED:** Latent semantic indexing (LSI) keyword lists as Google’s clustering API. Google has said it does not use LSI.
+- Clustering only inside one language and forgetting `fa` / `en` are different clusters (hreflang pairs, not duplicates).
+- Merging YMYL medical and commercial queries because a model said they are close.
+- 50-article “cluster” with no distinct H1s.
+
+## Senior / production notes
+
+Re-cluster after you see GSC: queries that hit the wrong URL are a split. Queries that all hit one URL are a cluster you already have — do not split it to “optimize.”
+
+For ecommerce, a SKU and a category are different clusters even if they share tokens (`espresso machine` vs a model number).
+
+Automation: SERP overlap jobs in CI are fine. Publishing from the job without an editor is how you ship 400 near-duplicates.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| SERP overlap sample | Same winners | Different formats |
+| Site | One live URL per cluster | Synonym URLs competing |
+| GSC | Queries collapse onto the hub | Spread across clones |
+| Brief | Primary + variants listed | “Use all 40 keywords in H2s” |

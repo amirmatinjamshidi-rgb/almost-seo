@@ -1,0 +1,122 @@
+---
+title: Breadcrumb
+description: رد دیدنی قابل crawl که با IA می‌خواند — markup از نوع BreadcrumbList فقط اگر رد روی صفحه باشد.
+module: 02-on-page-seo
+topic_order: 13
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Breadcrumb** نشان می‌دهد URL کجای سلسله‌مراتب است: خانه ← سئوی آن‌پیج ← Breadcrumb. به کاربر کمک می‌کند، لینک داخلی به hub والد را افشا می‌کند، و وقتی به‌صورت `BreadcrumbList` markup شود می‌تواند rich result خرده نان بدهد.
+
+باید با **واقعیت بخواند**: هر خرده‌نان URL زنده قابل crawl است (جز صفحهٔ جاری که ممکن است متن ساده باشد). پوشه‌ای که 404 است اختراع نکن. با nav اصلی نقض نکن.
+
+JSON-LD `BreadcrumbList` مجاز است **اگر** همان رد دیدنی باشد. breadcrumb فقط-markup گمراه‌کننده است.
+
+موقعیت ۱ معمولاً خانه یا hub بخش واقعی است، نه والد جعلی stuffed کلمه.
+
+## چرا مهم است
+
+ردی که با IA می‌خواند hub را تقویت می‌کند (معماری ماژول ۰۳). ردی که روی هر پست می‌گوید `Best SEO Tehran` stuffing است. لینک خرده‌نان شکسته در crawl هر مقاله 404 می‌سازد.
+
+<CorrectExample title="درست">
+```html
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/en/docs">Docs</a></li>
+    <li><a href="/en/docs/02-on-page-seo">On-page SEO</a></li>
+    <li aria-current="page">Breadcrumbs</li>
+  </ol>
+</nav>
+```
+
+والد `200`. صفحهٔ جاری حلقه به خودش نیست مگر بخواهی. schema همین فهرست را آینه می‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="والد جعلی و رد فقط-JSON-LD دروغ می‌گوید. خرده‌نان کلمه روی هر URL stuffing است.">
+```html
+<nav>
+  <a href="/best-seo">Best SEO</a> /
+  <a href="/best-seo-tehran">Best SEO Tehran</a> /
+  Breadcrumbs
+</nav>
+```
+
+آن والدها doorwayاند. یا: `BreadcrumbList` در JSON-LD بدون nav دیدنی.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast ← Search Appearance ← Breadcrumbs. روشن کن و ویجت/template tag را در قالب بگذار. taxonomy برای پست: دسته به‌عنوان والد فقط اگر آن آرشیو hub واقعی است.
+2. Yoast، BreadcrumbList می‌دهد. پلاگین breadcrumb اضافه خاموش کن.
+
+**Rank Math**
+
+1. Rank Math ← General Settings ← Breadcrumbs. همان: یک emitter.
+2. جداکنندهٔ سفارشی ظاهری است. والد «جعلی» سفارشی نه.
+
+**AIOSEO**
+
+1. breadcrumb در AIOSEO. تأیید کن در سورس فهرست یواست را تکرار نمی‌کند.
+2. ووکامرس: فروشگاه ← دسته ← محصول باید آرشیو واقعی باشد.
+
+**جا خالی واقعی:** هر چهار تا می‌توانند breadcrumb + schema بدهند. دو تا همزمان = دو فهرست. breadcrumb در SEOPress خوب است. breadcrumb قالب + پلاگین شلوغی معمول است.
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+
+const crumbs = [
+  { href: "/en/docs", name: "Docs" },
+  { href: "/en/docs/02-on-page-seo", name: "On-page SEO" },
+];
+
+export function Breadcrumbs({ current }: { current: string }) {
+  return (
+    <nav aria-label="Breadcrumb">
+      <ol>
+        {crumbs.map((c) => (
+          <li key={c.href}>
+            <Link href={c.href}>{c.name}</Link>
+          </li>
+        ))}
+        <li aria-current="page">{current}</li>
+      </ol>
+    </nav>
+  );
+}
+```
+
+App Router: Fumadocs از قبل رد داک می‌دهد — دومی اختراع نکن. Pages Router: همان فهرست در layout. JSON-LD از همان آرایهٔ `crumbs`.
+
+`aria-current="page"` روی آخرین آیتم. لینک خرده‌نان را `nofollow` نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** breadcrumb به‌تنهایی به‌عنوان فاکتور بزرگ رتبه.
+- **DEPRECATED:** والد خرده‌نان stuffed کلمه.
+- schema بدون رد دیدنی.
+- خرده‌نان به والد `noindex` یا 404.
+- فقط هوم‌پیج به‌عنوان خرده‌نان روی IA شش‌سطحی (کاربر هنوز hub بخش می‌خواهد).
+
+## نکته‌های سطح بالا / پروداکشن
+
+خرده‌نان را از **همان درخت** سایدبار بساز (این سایت: پوشهٔ `02-on-page-seo`). وقتی موضوع را جابه‌جا می‌کنی، خرده‌نان، داخلی، و ریدایرکت با هم می‌روند.
+
+ظاهر rich result اختیاری است. UX شکسته نه.
+
+RTL: ترتیب دیداری با `dir=rtl` برمی‌گردد؛ ترتیب فهرست در HTML ریشه ← برگ می‌ماند.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| کلیک هر خرده‌نان | hub با 200 | 404 / والد stuffed |
+| دیدنی در مقابل JSON-LD | همان اسم/URL | فقط markup |
+| view-source | یک رد | قالب + پلاگین تکراری |
+| Rich Results Test | اگر استفاده می‌شود BreadcrumbList معتبر | خطا / فهرست اضافه |

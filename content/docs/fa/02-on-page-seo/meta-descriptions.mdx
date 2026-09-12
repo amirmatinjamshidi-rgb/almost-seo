@@ -1,0 +1,97 @@
+---
+title: meta description
+description: پیچ SERP که با آن رتبه نمی‌گیری — یکتا، صادق، و آماده که گوگل عوضش کند.
+module: 02-on-page-seo
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**meta description** (`<meta name="description">`) اسنیپت پیش‌فرض است. در سیستم مستند گوگل **فاکتور رتبه نیست.** گوگل اغلب از جملهٔ روی صفحه که بهتر با کوئری می‌خواند بازنویسی می‌کند.
+
+باز هم یکی بنویس: یکتا per URL، دقیق، با دلیل کلیک. بدون stuffing کلمه. بدون «به وب‌سایت ما خوش آمدید.» طول محدودیت نمایش است (حدود دو جمله)، تابع نمره نیست.
+
+description خالی: گوگل اسنیپت می‌سازد. description تکراری: بی‌دقت به‌نظر می‌رسی و اغلب باز هم بازنویسی می‌شود.
+
+## چرا مهم است
+
+CTR روی URLی که از قبل رتبه دارد می‌تواند با پیچ بهتر اسنیپت تکان بخورد. description گمراه‌کننده (طعمه، ستارهٔ جعلی، «رسمی» وقتی نیستی) اعتماد را می‌سوزاند و می‌تواند اسپمی به‌نظر برسد.
+
+<CorrectExample title="درست">
+```html
+<meta
+  name="description"
+  content="What robots.txt can and cannot do: allow, disallow, sitemap pointers, and the staging Disallow that hides a whole host."
+/>
+```
+
+با صفحه می‌خواند. به‌عنوان اسنیپت fallback کار می‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Stuffing رتبه نمی‌دهد. فوریت جعلی و فهرست کلمه بازنویسی می‌شود یا شبیه آگهی است.">
+```html
+<meta name="description" content="robots.txt robots txt robot.txt SEO crawl budget buy cheap #1 official 2026!!!" />
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. meta description per پست. قالب `%%excerpt%%` اگر excerpt واقعی باشد fallback خوب است.
+2. نوار «OK/too long» یواست UX است، گوگل نیست.
+
+**Rank Math**
+
+1. Rank Math برای description جاافتاده اخطار می‌دهد. اول URL پول‌ساز را پر کن، نه هر تگ.
+2. description خودکار از پاراگراف اول خوب است اگر آن پاراگراف dump کلمه نباشد.
+
+**AIOSEO**
+
+1. همان. description «smart» سایت‌واید که همان شعار را پیشوند می‌کند خاموش کن.
+2. ووکامرس: توضیح محصول یکتا، نه `Buy {title} cheap`.
+
+**جا خالی واقعی:** هر چهار پلاگین فیلد را ویرایش می‌کنند. هیچ‌کدام بازنویسی گوگل را نمی‌ایستاند. ادیتور description گروهی در SEOPress هست — راحت همان جمله را ۴۰۰ بار پیست می‌کنی.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "robots.txt",
+  description:
+    "What robots.txt can and cannot do: allow, disallow, sitemap pointers, and the staging Disallow that hides a whole host.",
+};
+```
+
+`generateMetadata` در App Router. در TS رشتهٔ عادی است. Pages Router: تگ meta در `next/head`. HTML اول باید داشته باشد — نه `useEffect` کلاینت.
+
+`openGraph.description` را همگام نگه دار مگر دلیل جدایی داری.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** meta description به‌عنوان فاکتور رتبه.
+- **DEPRECATED:** تعداد کاراکتر دقیق به‌عنوان ورودی الگوریتم.
+- کپی title داخل description.
+- description stuffed روی صفحهٔ تگ نازک.
+- وعدهٔ قیمت یا موجودی که صفحه نشان نمی‌دهد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+روی URLهایی که از قبل impression دارند (GSC) اولویت بده. انتشار داک را روی description خالی قفل نکن.
+
+برای فارسی، پیچ را به زبان محاورهٔ طبیعی بنویس؛ اگر روی `/fa/` هستی جملهٔ انگلیسی را calque نکن.
+
+اسنیپت را با کوئری واقعی ببین، نه فقط کوئری برند هوم‌پیج.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| crawl | description یکتا روی URL پول‌ساز | یکسان سایت‌واید |
+| SERP | پیچ صادق یا بازنویسی معقول | طعمه / stuffing |
+| سورس | یک meta description | پلاگین + قالب تکراری |
+| CTR در GSC | بعد از توییک کپی، همان URL را نگاه کن | انتظار جهش موقعیت فقط از description |

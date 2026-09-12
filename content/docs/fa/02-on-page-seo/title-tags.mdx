@@ -1,0 +1,94 @@
+---
+title: تگ title
+description: title در HTML فیلد اصلی جور شدن با کوئری و برچسب SERP است — per URL یکتا، صادق با نیت، نه فهرست stuffed کلمه.
+module: 02-on-page-seo
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**title** (`<title>` در `<head>`، در Next.js همان `metadata.title`) از قوی‌ترین hintهای آن‌پیج است که سند چیست. گوگل ممکن است در SERP **بازنویسی** کند (از H1، برند، sitelink، یا کوئری). باز هم یکی خوب بنویس: یکتا، خوانا، مطابق نیت، برند معمولاً اگر هست آخر.
+
+سقف رسمی «۵۵ کاراکتر» نیست. عرض پیکسل و رفتار بازنویسی مهم است. شغل را جلو بگذار (`robots.txt`، نه `Welcome | Cheap | Best | 2026 | Official`). یک ایدهٔ اصلی per URL (خوشهٔ ماژول ۰۱). title تکراری روی صدها قالب بوی کیفیت است.
+
+`og:title` می‌تواند فرق کند وقتی کارت سوشال قلاب دیگری می‌خواهد؛ title HTML همان پیش‌فرض رو به سرچ می‌ماند.
+
+## چرا مهم است
+
+title مبهم یا تکراری یعنی آرشیو راهنما را می‌برد، یا گوگل H2 تصادفی را برچسب SERP می‌کند. title ارزان درست می‌شود و اهرم بالا است.
+
+<CorrectExample title="درست">
+```html
+<title>robots.txt — allow, disallow, and sitemap pointers</title>
+```
+
+نسبت به داک‌های دیگر یکتا. نیت = فرمت فایل informational. برند اختیاری اگر hostname از قبل دیده می‌شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Stuffing و کلون باعث می‌شود گوگل بازنویسی کند و شبیه doorway شوی.">
+```html
+<title>robots.txt | robots txt | robot.txt file SEO crawl budget Googlebot Best 2026</title>
+```
+
+همان الگو روی ۴۰ title «شهر»: `Best SEO in {City} | Agency`.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Search Appearance ← قالب‌ها: `%%title%% %%sep%% %%sitename%%` خوب است. روی داک evergreen فقط برای تازه‌نما `%%currentyear%%` نگذار.
+2. SEO title per پست قالب را override می‌کند. بعد از 301 ادغام cannibal، title جا مانده را درست کن.
+
+**Rank Math**
+
+1. متغیر title در Rank Math. `%focuskw%` در هر title همان duplicate stuffed است.
+2. Preview تخمین است، title نهایی گوگل نیست.
+
+**AIOSEO**
+
+1. همان قالب‌ها. «smart tag» که کلمهٔ اضافه سایت‌واید تزریق می‌کند خاموش کن.
+2. title پیوست (`Image name | Site`) را چک کن — اگر attachment ایندکس‌پذیر باشد اغلب آشغال است.
+
+**جا خالی واقعی:** Rank Math/AIOSEO توکن بیشتری نشان می‌دهند. Yoast محافظه‌کار است. title در SEOPress هم قالب‌محور است. هیچ‌کدام جلوی دو پست با title یکسان را نمی‌گیرند.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "robots.txt — allow, disallow, and sitemap pointers",
+};
+```
+
+App Router: `title.template` در layout لوکیل (`%s | SEO Encyclopedia`) به‌علاوهٔ `title` per صفحه. Pages Router: `next/head` یا `next-seo`. title را فقط در `useEffect` نگذار.
+
+برای مسیر `[slug]`، `generateMetadata` باید title واقعی موضوع را بکشد، نه `slug.replace(/-/g, " ")`.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** قانون دقیق ۵۵–۶۰ کاراکتر به‌عنوان فاکتور رتبه.
+- **DEPRECATED:** stuffing کلمه-اول به‌عنوان «خواندن title توسط گوگل.»
+- title یکسان روی pagination (`Guide | Page 2` جا افتاده، یا همان صفحهٔ ۱).
+- ALL CAPS و فهرست کلمه با پایپ.
+- عوض کردن title هفتگی برای «ریست رتبه.»
+
+## نکته‌های سطح بالا / پروداکشن
+
+GSC را ببین: کوئری‌هایی که title نمایش‌داده‌شده بازنویسی‌ای است که دوست نداری. هم‌ترازی H1/title را درست کن، نه کلمهٔ بیشتر.
+
+برند آخر برای SERP محصول وقتی برند کوئری نیست؛ برند-اول برای صفحهٔ ناوبری (`Example Labs login`).
+
+i18n: title یکتا per لوکیل، نه dump ترجمه‌شدهٔ کلمه. title فارسی می‌تواند کاراکتر بیشتری داشته باشد؛ باز برای آدم بنویس.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| crawl عنوان‌ها | روی URL ایندکس‌پذیر یکتا | کلون قالب سایت‌واید |
+| SERP | خوانا، مطابق نیت | stuffing / mismatch |
+| view-source | یک `<title>` | قالب + پلاگین تکراری |
+| GSC | title با خوشه می‌خواند | آرشیو کوئری را می‌برد |

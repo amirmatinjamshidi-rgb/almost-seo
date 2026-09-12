@@ -1,0 +1,94 @@
+---
+title: Title tags
+description: The HTML title is a primary query-matching and SERP-label field — unique per URL, intent-true, not a stuffed keyword list.
+module: 02-on-page-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+The **title** (`<title>` in `<head>`, exposed as `metadata.title` in Next.js) is one of the strongest on-page hints for what the document is. Google may **rewrite** it in the SERP (from the H1, brand, sitelinks, or query). You still write a good one: unique, readable, matched to intent, with the brand usually at the end if at all.
+
+There is no official “55 character limit.” Pixel width and rewrite behavior matter. Front-load the job (`robots.txt`, not `Welcome | Cheap | Best | 2026 | Official`). One primary idea per URL (Module 01 clusters). Duplicate titles across hundreds of templates are a quality smell.
+
+`og:title` can differ when the social card needs a different hook; the HTML title remains the search-facing default.
+
+## Why it matters
+
+A vague or duplicated title is how archives outrank the guide, or how Google picks a random H2 as the SERP label. Titles are cheap to fix and high leverage.
+
+<CorrectExample>
+```html
+<title>robots.txt — allow, disallow, and sitemap pointers</title>
+```
+
+Unique vs other docs. Intent = informational file format. Brand optional if the hostname already shows.
+</CorrectExample>
+
+<IncorrectExample why="Stuffing and clones make Google rewrite you anyway and look like doorways.">
+```html
+<title>robots.txt | robots txt | robot.txt file SEO crawl budget Googlebot Best 2026</title>
+```
+
+Same pattern on 40 “city” titles: `Best SEO in {City} | Agency`.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Search Appearance → templates: `%%title%% %%sep%% %%sitename%%` is fine. Do not add `%%currentyear%%` on evergreen docs just to look fresh.
+2. Per-post SEO title overrides the template. After a merge/cannibalization 301, fix leftover titles.
+
+**Rank Math**
+
+1. Rank Math title variables. `%focuskw%` in every title is how you ship stuffed duplicates.
+2. Preview is an estimate, not Google’s final SERP title.
+
+**AIOSEO**
+
+1. Same templates. Disable “smart tags” that inject extra keywords globally.
+2. Check attachment titles (`Image name | Site`) — often junk if attachments are indexable.
+
+**Feature gap:** Rank Math/AIOSEO expose more tokens. Yoast is conservative. SEOPress titles are template-driven too. None stop two posts from sharing a title.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "robots.txt — allow, disallow, and sitemap pointers",
+};
+```
+
+App Router: `title.template` in the locale layout (`%s | SEO Encyclopedia`) plus per-page `title`. Pages Router: `next/head` or `next-seo`. Do not set title only in `useEffect`.
+
+For `[slug]` routes, `generateMetadata` must pull the real topic title, not `slug.replace(/-/g, " ")`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Exact 55–60 character rule as a ranking factor.
+- **DEPRECATED:** Keyword-first stuffing as “how Google reads titles.”
+- Identical titles on pagination (`Guide | Page 2` missing, or the same as page 1).
+- ALL CAPS and pipe-separated keyword lists.
+- Changing titles weekly to “reset” rankings.
+
+## Senior / production notes
+
+Monitor GSC: queries where the displayed title is a rewrite you hate. Fix H1/title alignment rather than adding more keywords.
+
+Brand at the end for product SERPs where the brand is not the query; brand-first for navigational pages (`Example Labs login`).
+
+i18n: unique titles per locale, not a translated keyword dump. Persian titles can be longer in characters; still write for humans.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Crawl titles | Unique on indexable URLs | Sitewide template clones |
+| SERP | Readable, on-intent | Stuffing / mismatch |
+| View-source | One `<title>` | Theme + plugin duplicates |
+| GSC | Title matches the cluster | Archives winning the query |

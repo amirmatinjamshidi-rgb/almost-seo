@@ -1,0 +1,117 @@
+---
+title: Schema and JSON-LD
+description: Structured data as a hint — one honest graph, visible content, types that match the page, validated in Google’s tools.
+module: 02-on-page-seo
+topic_order: 9
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Structured data** (JSON-LD preferred) tells machines the type of thing on the page: `Article`, `TechArticle`, `Product`, `FAQPage`, `LocalBusiness`, `BreadcrumbList`, `Organization`, `WebSite`. Google documents which types can trigger **rich results**. Markup is a **hint**. It does not create rankings by itself.
+
+Honesty rules:
+
+- Every property you mark up is **visible** (or a standard identifier like SKU).
+- `@type` matches the page. A docs URL is not a `Product` with fake offers.
+- **One primary graph** per URL. Three plugins emitting Article + WebPage + FAQ + Product is noise or spam.
+- `aggregateRating` / reviews only with real visible reviews (Module 05).
+- JSON-LD in the first HTML, not injected after click.
+
+This encyclopedia injects `TechArticle` / `WebSite` via `JsonLd`. Local types belong on location pages (Module 05).
+
+## Why it matters
+
+Valid, matching markup can unlock rich results. Invalid or spammy markup gets ignored or can associate the site with misleading structured data policies.
+
+<CorrectExample>
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Title tags",
+  "dateModified": "2026-09-01",
+  "url": "https://www.example.com/en/docs/02-on-page-seo/title-tags"
+}
+</script>
+```
+
+Headline matches the H1. No fake rating.
+</CorrectExample>
+
+<IncorrectExample why="Invisible FAQ, fake offers, and five competing graphs are misleading markup.">
+```json
+{
+  "@type": ["Product", "FAQPage", "Article"],
+  "offers": { "price": "0", "availability": "InStock" },
+  "aggregateRating": { "ratingValue": "5", "reviewCount": "9999" }
+}
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast outputs Organization/WebSite/Article by default. Disable types you do not need.
+2. Do not stack Rank Math schema on top of Yoast.
+
+**Rank Math**
+
+1. Rank Math Schema: pick one type per template. Custom JSON-LD in the editor for exceptions.
+2. “Rich Snippet” defaults on posts: audit Product/Recipe on a company blog.
+
+**AIOSEO**
+
+1. AIOSEO schema graphs. Same one-emitter rule.
+2. Local + Article + FAQ on a thin post: strip it down.
+
+**Feature gap:** Rank Math’s type list is the largest and easiest to misuse. Yoast is smaller. SEOPress custom schema is powerful. Google’s Rich Results Test / Schema Markup Validator are the judges.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Title tags",
+};
+
+export const article = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: "Title tags",
+  url: "https://www.example.com/en/docs/02-on-page-seo/title-tags",
+};
+```
+
+App Router: pass into `JsonLd`. Pages Router: `next/head` script. Do not duplicate the same graph in MDX **and** the layout.
+
+`generateMetadata` does not replace JSON-LD; it handles title/description/canonical.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “More schema types = more rank.”
+- **DEPRECATED:** Microdata as required (JSON-LD is the current default recommendation).
+- Fake `speakable` / `Course` / `JobPosting` on unrelated pages.
+- Marking up out-of-stock as `InStock`.
+- Copy-pasting a competitor’s JSON-LD including their `@id`.
+
+## Senior / production notes
+
+Graph hygiene: `@id` per entity, `isPartOf` / `publisher` pointing at Organization. Keep a single `lib/schema.ts` so footer NAP and JSON-LD cannot drift.
+
+CI: optional check that `headline` === H1. Validate a sample of templates after plugin updates.
+
+When Google drops a rich-result type, remove the markup in the same release rather than leaving dead graphs.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Rich Results Test | Eligible types you intended | Errors, spammy extras |
+| View-source | One graph | 3 plugins × 3 types |
+| Visible vs marked | Match | Ratings/FAQs only in JSON |
+| URL Inspection | Same as test | CDN serving stale JSON-LD |

@@ -1,4 +1,12 @@
 {
   "title": "Docs",
-  "pages": ["index", "00-foundations", "03-technical-seo", "04-off-page-seo", "05-local-seo"]
+  "pages": [
+    "index",
+    "00-foundations",
+    "01-keyword-research",
+    "02-on-page-seo",
+    "03-technical-seo",
+    "04-off-page-seo",
+    "05-local-seo"
+  ]
 }

@@ -1,0 +1,114 @@
+---
+title: hreflang on the page
+description: Reciprocal alternate annotations in HTML — same as the sitemap, never pointing at 404s, never a substitute for unique translations.
+module: 02-on-page-seo
+topic_order: 12
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**hreflang** on-page is the HTML (or HTTP header) form of the locale cluster. Architecture choices (subdirectory vs ccTLD) live in Module 03. Here: the tags on *this* URL.
+
+Requirements:
+
+- Each locale URL lists **all** alternates including itself, plus `x-default` if you use one.
+- **Reciprocal:** `en` points at `fa`, `fa` points at `en`.
+- Canonical in each locale is **self**, not the other language.
+- Codes: `en`, `fa`, or `en-US` / `fa-IR` — not `fa-FA`.
+- HTML `lang` and `dir` match (`fa` + `rtl` on this site).
+
+You may also emit the same set in the sitemap (this project does). Do not contradict HTML vs sitemap vs HTTP headers.
+
+hreflang does not rank you. It clusters alternates so the right URL can show. Machine-translated thin copies still fail quality.
+
+## Why it matters
+
+One-way tags are dropped. Canonical-all-to-en makes the Persian URL a duplicate. Users get the wrong language; GSC fills with “no return tag.”
+
+<CorrectExample>
+```html
+<link rel="canonical" href="https://www.example.com/fa/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="en" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="fa" href="https://www.example.com/fa/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="x-default" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+```
+
+Language switcher is an `<a href>` to the sibling, not JS-only.
+</CorrectExample>
+
+<IncorrectExample why="Missing return tags and canonical-to-en on the fa URL invalidate the cluster.">
+```html
+<!-- on /fa/... only -->
+<link rel="canonical" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="en" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast Premium + WPML/Polylang: confirm view-source on **both** languages.
+2. Do not run a second hreflang plugin.
+
+**Rank Math**
+
+1. Rank Math hreflang in the editor / sitemap. Conflicts with WPML if both fire.
+2. `x-default` must 200.
+
+**AIOSEO**
+
+1. Same conflict risk. `og:locale` should match the page.
+2. Do not hreflang to untranslated stubs.
+
+**Feature gap:** One emitter. SEOPress + Polylang is a valid pair. Test with `curl` both locales (Module 03).
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+const path = "/docs/02-on-page-seo/hreflang-onpage";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: `https://www.example.com/fa${path}`,
+    languages: {
+      en: `https://www.example.com/en${path}`,
+      fa: `https://www.example.com/fa${path}`,
+      "x-default": `https://www.example.com/en${path}`,
+    },
+  },
+};
+```
+
+App Router `[lang]` layout sets `html lang` / `dir`. This site: `hideLocale: "never"`. Pages Router: locale in `getStaticPaths`. Missing translation: omit the pair, do not point at 404.
+
+Do not geo-302 Googlebot (Module 03).
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** hreflang as a ranking boost.
+- **DEPRECATED:** `fa-FA` as a code.
+- Linking hreflang to a URL that `noindex`s.
+- Language switcher with no crawlable `href`.
+- English copy under `/fa/` as “translation.”
+
+## Senior / production notes
+
+Filename parity (`hreflang-onpage.mdx` in both trees) is what keeps pairs honest. A publish checklist: both files exist or the alternate is removed.
+
+GSC International / hreflang reports: “no return tag” is the first fire to put out.
+
+`x-default` on this site is `en`, not `/` as a third English copy.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source both locales | Reciprocal + self | One-way |
+| Canonical | Self per locale | All to `en` |
+| Switcher | `<a href>` | JS-only |
+| GSC | No flood of return-tag errors | Every URL flagged |

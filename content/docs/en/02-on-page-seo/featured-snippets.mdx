@@ -1,0 +1,106 @@
+---
+title: Featured snippets
+description: How to be extractable — clear questions, short answers, lists and tables — without stuffing FAQs or guaranteeing position zero.
+module: 02-on-page-seo
+topic_order: 8
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **featured snippet** is a SERP feature: Google shows an extracted passage, list, or table from a page that already ranks. You cannot “submit” one. Eligibility usually requires ranking on page one for that query, plus extractable structure.
+
+Patterns that help extraction (not promises):
+
+- A clear heading that matches the question.
+- A **short, self-contained answer** immediately after, then detail.
+- Lists and tables for steps and comparisons (this encyclopedia’s verify tables).
+- FAQ schema only when those Q&As are **visible** on the page. Hidden FAQ JSON-LD is a spam pattern Google has targeted.
+
+Snippets appear, move, and vanish. AI Overviews and other features also reuse passages. Write for the user first.
+
+## Why it matters
+
+A snippet can steal the click or send a qualified one. Chasing “position zero” with 40 hidden FAQs is how you get ignored or manual-adjacent spam issues.
+
+<CorrectExample>
+```html
+<h2>Does robots.txt remove a URL from the index?</h2>
+<p>
+  No. Disallow blocks crawling. Use noindex on a URL Googlebot can fetch.
+</p>
+```
+
+Visible, accurate, then the rest of the section.
+</CorrectExample>
+
+<IncorrectExample why="Invisible FAQ schema and keyword-stuffed one-sentence ‘answers’ for every synonym are snippet spam, not help.">
+```html
+<script type="application/ld+json">
+{"@type":"FAQPage","mainEntity":[ /* 80 questions not on the page */ ]}
+</script>
+<p style="display:none">robots.txt seo crawl budget best answer</p>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast FAQ / How-to blocks: use only if the block is visible. They emit schema.
+2. Do not add a Yoast FAQ widget in the sidebar with 20 sitewide questions.
+
+**Rank Math**
+
+1. Rank Math FAQ schema / ACF blocks: same visibility rule.
+2. Rank Math will happily attach FAQPage to every post. Don’t.
+
+**AIOSEO**
+
+1. AIOSEO FAQ / schema. Same.
+2. “Enhanced rich snippets” that dump FAQ on templates: audit the graph.
+
+**Feature gap:** Rank Math and AIOSEO make FAQ schema too easy. Yoast blocks are more explicit. SEOPress FAQ schema exists too. Google’s rich-result docs beat plugin marketing.
+
+## Code implementation
+
+```tsx
+export function SnippetAnswer({ q, a }: { q: string; a: string }) {
+  return (
+    <section>
+      <h2>{q}</h2>
+      <p>{a}</p>
+    </section>
+  );
+}
+```
+
+App Router: answers in HTML. If you emit `FAQPage` JSON-LD, it must mirror visible Q&A 1:1. Pages Router: same. No `display:none` answer banks.
+
+Do not build a `/snippets/[keyword]` mill.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Featured snippet as a guaranteed “position 0 ranking factor you optimize weekly.”
+- **DEPRECATED:** Hidden text to win snippets.
+- FAQ schema on every commercial landing page.
+- Copying a competitor’s snippet word-for-word.
+- Assuming tables always win lists or the reverse — SERP-dependent.
+
+## Senior / production notes
+
+Track snippet presence in a rank tracker if you must; treat loss as “SERP feature changed,” not an emergency rewrite. Improving the passage that GSC already associates with the query is enough.
+
+For YMYL, a wrong snippet is a trust incident. Prefer cautious, sourced first sentences.
+
+This site’s `<CorrectExample>` / tables are extractable on purpose. Do not wrap the only answer in a canvas or image.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Live SERP | Passage matches visible HTML | Hidden / mismatched schema |
+| Rich Results Test | FAQ only if visible | FAQPage errors / extras |
+| GSC | Performance on the query | Expecting a snippet report as a ranking lever |
+| On-page | Question + answer in HTML | Answer only in JSON-LD |

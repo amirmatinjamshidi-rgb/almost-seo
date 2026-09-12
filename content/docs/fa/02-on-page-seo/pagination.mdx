@@ -1,0 +1,117 @@
+---
+title: صفحه‌بندی
+description: صفحهٔ ۲+ وقتی فهرست یکتاست URL واقعی است — لینک قابل crawl، بدون جادوی رتبهٔ rel=next جعلی، بدون HTML فقط-infinite-scroll.
+module: 02-on-page-seo
+topic_order: 11
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Pagination** فهرست بلند (دسته، ایندکس بلاگ، نتایج سرچی که اصرار داری ایندکس شود) را به `/page/2`، `?page=2`، یا UI «بار بیشتر» تکه می‌کند.
+
+گوگل **سال‌هاست `rel=next/prev` را به‌عنوان سیگنال ایندکس انداخته.** آن تگ‌ها UX اختیاری برای دیگران‌اند؛ سیستم رتبه نیستند. هر URL صفحه‌بندی‌شده سند خودش است. اگر صفحهٔ ۲ آیتم یکتا دارد، می‌تواند ایندکس شود. اگر کلون صفحهٔ ۱ است، duplicate است.
+
+الگوها:
+
+- **View-all** در مقابل صفحه‌بندی: یک فهرست ایندکس‌پذیر بردار. هر دو را ایندکس نکن.
+- **Infinite scroll / Load more:** خزنده هنوز `href` قابل crawl به صفحهٔ ۲+ یا فهرست واقعی سرور-رندر می‌خواهد. «بار بیشتر» فقط-JS بدون URL صفحه آیتم را مخفی می‌کند (JS SEO ماژول ۰۳).
+- Canonical: صفحهٔ ۲ اگر یکتاست **self-canonical**. Canonical به صفحهٔ ۱ فقط وقتی صفحهٔ ۲ duplicate است (نادر؛ معمولاً باگ).
+- `noindex,follow` روی pagination انتخاب بعضی آرشیو نازک است؛ آن آیتم‌ها را هم از لندینگ بودن می‌اندازد. بدان کدام را می‌خواهی.
+
+با `?session=` یا پارامتر sort به‌عنوان بعد اضافه بدون سیاست facet صفحه‌بندی نکن.
+
+## چرا مهم است
+
+محصول و پستی که پشت «بار بیشتر» غیرقابل crawl گیر است هیچ‌وقت کشف نمی‌شود. فولکلور `rel=next` وقت پیاده‌سازی را می‌سوزاند. canonical کردن همهٔ صفحات به صفحهٔ ۱ می‌تواند آیتم یکتا را مخفی کند.
+
+<CorrectExample title="درست">
+```html
+<nav aria-label="Pagination">
+  <a href="/guides">1</a>
+  <a href="/guides/page/2">2</a>
+</nav>
+```
+
+صفحهٔ ۲ پست متفاوت دارد، self-canonical، در HTML. sitemap ممکن است فقط صفحهٔ ۱ (hub) را لیست کند اگر نمی‌خواهی صفحهٔ ۲ لندینگ باشد — بعد روی صفحهٔ ۲ یکدست `noindex,follow`.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="دکمه بدون href و canonical-به-صفحه-۱ روی فهرست یکتا کاتالوگ را مخفی یا duplicate می‌کند.">
+```html
+<button onclick="loadMore()">Load more</button>
+<link rel="canonical" href="https://www.example.com/guides" />
+<!-- this is page 2 with different products -->
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast دیگر به next/prev تکیه نمی‌کند. title سئوی آرشیو را چک کن: `Page 2` اگر ایندکس می‌شود نباید title دقیق صفحهٔ ۱ را شریک شود.
+2. اگر pagination دسته را noindex می‌کنی، عمداً در Search Appearance / قالب باشد.
+
+**Rank Math**
+
+1. toggle canonical pagination در Rank Math: دو بار بخوان. «canonical به صفحهٔ اول» روی فهرست محصول یکتا همان footgun است.
+2. title Rank Math برای `%%page%%` روی آرشیو.
+
+**AIOSEO**
+
+1. همان گزینهٔ canonical-به-اول در بعضی نسخه‌ها — view-source روی `/page/2` را ببین.
+2. پلاگین view-all تکراری را خاموش کن.
+
+**جا خالی واقعی:** canonical pagination در Rank Math/AIOSEO از یواست آسان‌تر غلط تنظیم می‌شود. SEOPress شبیه. pagination فروشگاه ووکامرس باید قابل crawl بماند.
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const { page } = await searchParams;
+  const n = page ?? "1";
+  const path = n === "1" ? "/guides" : `/guides/page/${n}`;
+  return { alternates: { canonical: `https://www.example.com${path}` } };
+}
+
+export function Pager({ page }: { page: number }) {
+  return (
+    <nav>
+      {page > 1 && <Link href={`/guides/page/${page - 1}`}>Previous</Link>}
+      <Link href={`/guides/page/${page + 1}`}>Next</Link>
+    </nav>
+  );
+}
+```
+
+App Router: `generateStaticParams` یا شمارهٔ صفحهٔ سرور-رندر. Pages Router: `getServerSideProps` با `?page=` **یا** صفحهٔ path-based — یکی بردار. infinite-scroll بدون href پیجر در HTML نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** `rel=next/prev` به‌عنوان سیستم pagination گوگل.
+- **DEPRECATED:** همیشه URL صفحه‌بندی‌شده را به صفحهٔ ۱ canonical کن.
+- `noindex` صفحهٔ ۲+ و همچنین برداشتن لینک داخلی به محصولاتی که فقط آنجا لیست شده‌اند.
+- pagination سرچ سایت ایندکس‌شده (`/search?q=&page=2`) به‌عنوان محتوا.
+- title صفحهٔ ۲ یکسان با صفحهٔ ۱ وقتی هر دو ایندکس‌اند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+per قالب تصمیم بگیر: ایندکس بلاگ صفحهٔ ۲+ اغلب ارزش کم (noindex یا رها). دستهٔ فروشگاه صفحهٔ ۲+ اغلب باید crawl شود تا SKU فقط-آنجا پیدا شود. بعد آن SKU باید در sitemap / فیلتر hub هم بیاید.
+
+ضربهٔ Googlebot روی `/page/2` را لاگ کن. صفر ضربه + محصول جاافتاده = پیجر غیرقابل crawl.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source صفحهٔ ۲ | آیتم یکتا، پیجر `a href` واقعی | خالی، فقط دکمه |
+| Canonical | اگر یکتاست self | به اشتباه به صفحهٔ ۱ |
+| crawl | محصول پیدا می‌شود | فقط SKU صفحهٔ ۱ |
+| Title | اگر ایندکس است جدا | کلون صفحهٔ ۱ |

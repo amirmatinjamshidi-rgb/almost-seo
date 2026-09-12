@@ -1,0 +1,118 @@
+---
+title: نیت سرچ
+description: کوئری می‌خواهد چه کار کند — informational، navigational، commercial، transactional — و چرا SERP همان spec است.
+module: 01-keyword-research
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Search intent** شغلی است که کوئری برای یک نتیجه استخدام می‌کند. سیستم رتبهٔ گوگل می‌کوشد همان شغل را جور کند. سطل‌هایی که هنوز می‌ارزند:
+
+- **Informational** — یاد بگیر، مفهومی مقایسه کن، تشخیص بده. راهنما، داک، explainer.
+- **Navigational** — برس به برند، لاگین، یا URL آشنا. معمولاً هوم‌پیج رسمی می‌برد.
+- **Commercial investigation** — قبل از پول شورت‌لیست. جمع‌بندی، جدول مشخصات، صفحهٔ «در مقابل.»
+- **Transactional** — کار را بکن: بخر، رزرو، اشتراک، دانلود.
+
+SERP مخلوط وجود دارد (یک کوئری شاپینگ، ویدیو و راهنما نشان می‌دهد). **SERP زنده spec است**، نه ستون اسپردشیتی که اختراع کردی. اگر صفحهٔ یک لیست محصول است، مقالهٔ ۴۰۰۰ کلمه‌ای سند غلط است حتی اگر «کلمه را دارد.»
+
+نیت با modifier عوض می‌شود (`buy`، `نزدیک من`، `چطور`، `login`، یک سال) و با لوکیل. کوئری فارسی و انگلیسی برای «همان» موضوع اغلب قالب متفاوت می‌خواهند.
+
+## چرا مهم است
+
+کار رتبه روی قالب غلط، crawl و نوشتن هدررفته است. URL تراکنشی با H1 اطلاعاتی کاربر و سیستم را گیج می‌کند. نیت بریف است؛ کلمه برچسب روی بریف.
+
+<CorrectExample title="درست">
+کوئری: `espresso machine for small cafe`. SERP راهنمای خرید و دستهٔ محصول است.
+
+```html
+<h1>Espresso machines for a small café</h1>
+<p>What to spec (boiler, group, plumbed-in), then models we actually run.</p>
+```
+
+URL راهنمای commercial است با مسیر به صفحهٔ محصول. Title و H1 با شغل می‌خوانند، نه شعار هوم‌پیج.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="SERP ناوبری/برند جمع‌بندی افیلیت تو را نمی‌خواهد. با سایت رسمی می‌جنگی و شبیه doorway می‌شوی.">
+کوئری: `example labs login`
+
+```html
+<h1>Example Labs Login — Best SEO Login Tips 2026</h1>
+<p>Buy our course, then we mention login in paragraph nine.</p>
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. «چراغ راهنمایی» یواست نیت را تشخیص نمی‌دهد. هر post type را به یک شغل نگاشت کن: محصول = transactional، بلاگ how-to = informational.
+2. قالب Search Appearance نباید هر آرشیو را `Best {keyword} {year}` کند اگر SERP برند است.
+
+**Rank Math**
+
+1. focus keyword در Rank Math رشته است، نه نیت. روی mismatch نمرهٔ سبز ندو.
+2. preview اسنیپت را با SERP واقعی بسنج، نه با نمرهٔ Rank Math.
+
+**AIOSEO**
+
+1. TruSEO در AIOSEO هم توکن نمره می‌دهد. وقتی قالب SERP مخالف است نادیده بگیر.
+2. توضیح دسته: دستهٔ commercial کپی یکتا می‌خواهد؛ تگ اطلاعاتی اگر وبلاگ را duplicate می‌کند اغلب باید `noindex` بماند (ماژول ۰۳).
+
+**جا خالی واقعی:** هیچ‌کدام از Yoast / Rank Math / AIOSEO / SEOPress SERP زنده را نمی‌گیرند. کار نیت Search + شیت است، بعد CMS. تحلیل محتوا در SEOPress همان کلاس چک‌کنندهٔ توکن است.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+type Intent = "informational" | "navigational" | "commercial" | "transactional";
+
+export function metadataForIntent(intent: Intent, title: string): Metadata {
+  switch (intent) {
+    case "transactional":
+      return { title, robots: { index: true, follow: true } };
+    case "informational":
+      return { title, robots: { index: true, follow: true } };
+    case "commercial":
+      return { title, robots: { index: true, follow: true } };
+    case "navigational":
+      return { title, robots: { index: true, follow: true } };
+    default: {
+      const _exhaustive: never = intent;
+      return _exhaustive;
+    }
+  }
+}
+```
+
+App Router: **قالب** (PDP، راهنما، لاگین) را در مسیر بردار، نه تابع چگالی کلمه. Pages Router: همان. `page.tsx` بلاگ نباید برای کوئری informational، H1 را باکس خرید کند.
+
+اگر حضور لوکال نداری، ۲۰۰ لندینگ شهر از روی ابزار کلمه نساز (ماژول ۰۵ / doorway).
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** هر کوئری فقط «informational در مقابل transactional» است — commercial investigation سطل جامانده‌ای است که کوئری `best X` را می‌خورد.
+- **DEPRECATED:** چپاندن `buy` در H1 تا «تراکنشی شود.»
+- یک URL برای رتبه گرفتن همزمان در `login` و `pricing` و `what is`.
+- نادیده گرفتن People Also Ask / بحث‌ها به‌عنوان سرنخ نیت (سرنخ‌اند، نه حکم FAQ stuffing).
+- حساب کردن AI Overview به‌عنوان نوع نیت جدید. فیچر SERP است روی همان شغل‌ها.
+
+## نکته‌های سطح بالا / پروداکشن
+
+در سطح **خوشه** طبقه کن (موضوع بعد)، نه per مترادف. بعد از عوض شدن قالب بزرگ، SERP را دوباره ببین؛ نیت جابه‌جا می‌شود (کوئری برند می‌تواند یونیت شاپینگ بگیرد).
+
+برای YMYL، نیت informational هنوز تخصص قابل شناسایی می‌خواهد (E-E-A-T ماژول ۰۴). «بیمه چیست» نازک از خروجی ابزار، سند غلط است حتی اگر SERP informational باشد.
+
+گزارش query ← لندینگ در GSC: اگر مقالهٔ informational کوئری تراکنشی را با bounce بالا درو می‌کند، صفحه شغل غلط را جذب می‌کند. title را درست کن یا URL را بشکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| قالب ۱۰ تای اول SERP | قالب تو می‌خواند | مقاله در مقابل گرید محصول |
+| Title / H1 | شغل را می‌گوید | فهرست کلمه، بدون شغل |
+| کوئری GSC روی آن URL | همان خانوادهٔ نیت | ناوبری برند روی URL افیلیت |
+| CTA روی صفحه | می‌خواند (بخوان در مقابل بخر در مقابل برو) | باکس خرید روی تعریف |

@@ -1,0 +1,110 @@
+---
+title: Heading hierarchy
+description: One H1 for the job, then H2/H3 as an outline — not a keyword ladder or a design-only font size.
+module: 02-on-page-seo
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Headings (`h1`–`h6`) are the **outline** of the document. They help users, accessibility tree, and extraction (sitess, featured snippets, jump links). They are not a ranking cheat code.
+
+Rules that still hold:
+
+- **One H1** that states the document’s job, usually aligned with the title.
+- **H2/H3** nest logically. Do not skip from `h1` to `h4` because the theme’s CSS looked nicer.
+- Do not use headings for logo, nav, or “Related posts.”
+- Screen readers and `h` outline tools should match what a human would call the structure.
+
+Multiple `h1`s in HTML5 are valid in a spec sense and still a mess in templates (theme + builder + plugin). Prefer one.
+
+## Why it matters
+
+A missing H1, or an H1 that says `Home`, makes the title do all the work. Heading stuffing (`h2` = every synonym) is the on-page cousin of keyword stuffing.
+
+<CorrectExample>
+```html
+<h1>robots.txt</h1>
+<h2>What it can do</h2>
+<h2>What it cannot do</h2>
+<h3>noindex still needs a fetch</h3>
+<h2>WordPress</h2>
+```
+
+Outline matches the sections. CSS size is independent — do not fake an `h1` with a styled `div`.
+</CorrectExample>
+
+<IncorrectExample why="Six H1s and synonym H2s are stuffing. A visual-only ‘heading’ that is a div is invisible to the outline.">
+```html
+<h1>robots.txt</h1>
+<h1>robots txt</h1>
+<h1>SEO</h1>
+<h2>crawl budget googlebot disallow sitemap xml</h2>
+<div class="text-5xl">What it can do</div>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast flags missing H1 / multiple H1 in the readability-ish checks depending on version — still verify in the rendered HTML (theme wrappers add extras).
+2. The post title is often the H1. Do not add another H1 in the first Gutenberg block.
+
+**Rank Math**
+
+1. Rank Math content analysis loves keywords in headings. Do not satisfy the gauge with a synonym ladder.
+2. TOC plugins that turn every bold line into an `h2` will wreck the outline.
+
+**AIOSEO**
+
+1. Same. Check the live page, not the editor canvas only (some builders wrap the title).
+2. WooCommerce: product title as H1; reviews should not inject a second H1.
+
+**Feature gap:** Page builders (Elementor etc.) are the usual H1 factories. SEOPress/Yoast/Rank Math/AIOSEO analyze the post content, not always the header template.
+
+## Code implementation
+
+```tsx
+export default function Page() {
+  return (
+    <article>
+      <h1>robots.txt</h1>
+      <h2>What it can do</h2>
+      <p>…</p>
+      <h2>What it cannot do</h2>
+    </article>
+  );
+}
+```
+
+App Router: layout logo should be a link, not an `h1`, except perhaps on the true homepage. Pages Router: `_document` must not wrap every page with an extra `h1`.
+
+MDX in this encyclopedia already maps markdown `#` to headings — one `#` title in frontmatter + body `##` is the pattern.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Keywords in H2 are a top ranking factor.”
+- **DEPRECATED:** Exactly one H1 as a documented Google ranking requirement (still do it for sanity).
+- Using `h2` for footer link lists.
+- Matching heading text to title character-for-character and then stuffing both.
+- Hiding headings with CSS (`display:none` keyword lists).
+
+## Senior / production notes
+
+Design system: `h1`–`h3` styles in CSS; authors pick the rank by meaning. If the brand wants a huge kicker, that is a `p` or `span`, not an `h1`.
+
+For long docs, a TOC should reflect the real `h2`/`h3` tree (as Fumadocs does), not a second outline.
+
+Persian: heading order is the same; `dir=rtl` does not change rank semantics.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source / a11y tree | One H1, nested H2/H3 | Logo H1 + article H1 + builder H1 |
+| Outline | Readable as a table of contents | Synonym list |
+| CSS | Headings are real tags | Giant divs |
+| GSC | — | Not a GSC report; use crawl |

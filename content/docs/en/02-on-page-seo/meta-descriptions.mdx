@@ -1,0 +1,97 @@
+---
+title: Meta descriptions
+description: A SERP pitch you do not rank with — unique, honest, and ready for Google to replace.
+module: 02-on-page-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+The **meta description** (`<meta name="description">`) is a default snippet. It is **not** a ranking factor in Google’s documented systems. Google often rewrites it from on-page sentences that better match the query.
+
+Write one anyway: unique per URL, accurate, with a reason to click. No keyword stuffing. No “Welcome to our website.” Length is a display constraint (roughly a couple of sentences), not a scoring function.
+
+Empty description: Google will generate a snippet. Duplicate descriptions: you look careless and often get rewrites anyway.
+
+## Why it matters
+
+CTR on already-ranking URLs can move when the snippet is a better pitch. A misleading description (bait, fake stars, “official” when you are not) burns trust and can look spammy.
+
+<CorrectExample>
+```html
+<meta
+  name="description"
+  content="What robots.txt can and cannot do: allow, disallow, sitemap pointers, and the staging Disallow that hides a whole host."
+/>
+```
+
+Matches the page. Works as a fallback snippet.
+</CorrectExample>
+
+<IncorrectExample why="Stuffing does not rank you. Fake urgency and keyword lists get rewritten or look like ads.">
+```html
+<meta name="description" content="robots.txt robots txt robot.txt SEO crawl budget buy cheap #1 official 2026!!!" />
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Per-post meta description. Template `%%excerpt%%` is a decent fallback if excerpts are real.
+2. Yoast’s “OK/too long” bar is UX, not Google.
+
+**Rank Math**
+
+1. Rank Math will warn on missing descriptions. Fill money URLs first, not every tag.
+2. Auto-generated descriptions from the first paragraph are fine if that paragraph is not a keyword dump.
+
+**AIOSEO**
+
+1. Same. Disable sitewide “smart” descriptions that prepend the same slogan.
+2. WooCommerce: unique product descriptions, not `Buy {title} cheap`.
+
+**Feature gap:** All four plugins edit the field. None can stop Google’s rewrite. SEOPress has bulk description editors — easy to paste the same sentence 400 times.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "robots.txt",
+  description:
+    "What robots.txt can and cannot do: allow, disallow, sitemap pointers, and the staging Disallow that hides a whole host.",
+};
+```
+
+App Router `generateMetadata`. Quote YAML/JS strings that contain colons if you put them in frontmatter; in TS this is a normal string. Pages Router: `next/head` meta tag. First HTML must include it — not a client `useEffect`.
+
+Keep `openGraph.description` in sync unless you have a reason to diverge.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Meta description as a ranking factor.
+- **DEPRECATED:** Exact character counts as an algorithm input.
+- Duplicating the title into the description.
+- Keyword-stuffed descriptions on thin tag pages.
+- Promising a price or stock the page does not show.
+
+## Senior / production notes
+
+Prioritize descriptions on URLs that already get impressions (GSC). Do not block publishing a doc on an empty description.
+
+For Persian, write the pitch in natural spoken-style language; do not calque the English sentence if you are on `/fa/`.
+
+Test how the snippet looks with the actual query, not only the homepage brand query.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Crawl | Unique descriptions on money URLs | Sitewide identical |
+| SERP | Honest pitch or sensible rewrite | Bait / stuffing |
+| Source | One meta description | Plugin + theme duplicates |
+| GSC CTR | After a copy tweak, watch the URL | Expecting position jumps from description only |

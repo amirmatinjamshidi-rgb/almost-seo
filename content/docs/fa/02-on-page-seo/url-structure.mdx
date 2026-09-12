@@ -1,0 +1,97 @@
+---
+title: ساختار URL
+description: مسیر پایدار خوانا که با IA می‌خواند — slug اسکی، یک هاست، بدون session ID، بدون بازنویسی سالانه.
+module: 02-on-page-seo
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**URL** شناسه است. آدم پیست می‌کند، خزنده کشف می‌کند، لینک رویش جمع می‌شود. عوض کردنش مهاجرت است (ریدایرکت ماژول ۰۳).
+
+پیش‌فرض خوب:
+
+- HTTPS، هاست ترجیحی (`www` یا apex)، سیاست اسلش انتهایی یکدست.
+- **slug خوانا** از موضوع (`/docs/robots-txt`)، نه `/p?id=12`.
+- پیشوند لوکیل اگر چندزبانه هستی (`/en/…`، `/fa/…`) — الگوی همین سایت.
+- حروف کوچک، خط تیره، ASCII برای مسیر وقتی می‌شود. فارسی در مسیر مجاز است ولی برای ابزار دردسر است؛ خیلی سایت‌های FA اسلاگ انگلیسی و title فارسی نگه می‌دارند (همین دانشنامه).
+- بدون session ID، tracking به‌عنوان تنها فرق، یا `?sort=` به‌عنوان URL ایندکس‌پذیر.
+
+پوشه باید با hub بخواند (`/guides/espresso-machines/...`). مسیر تاریخ عمیق (`/2026/09/12/post`) وقتی بازآرایی می‌کنی churn می‌آورد.
+
+## چرا مهم است
+
+URL زشت و ناپایدار لینک را نشت می‌دهد و canonical را گیج می‌کند. slug stuffed (`/best-seo-tehran-cheap-agency`) شبیه doorway ۲۰۱۲ است و عوض کردنش جهنم است.
+
+<CorrectExample title="درست">
+```txt
+https://www.example.com/en/docs/02-on-page-seo/url-structure
+```
+
+filename پایدار، پیشوند لوکیل، HTTPS، با nav می‌خواند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="پارامتر، slug stuffed، و کپی سالانه سیگنال را دوپاره می‌کند و هر ژانویه می‌پوسد.">
+```txt
+http://example.com/Page.aspx?id=12&session=abc
+https://www.example.com/best-url-structure-seo-canonical-slug-2026
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. هستهٔ WP: Settings ← Permalinks. معمولاً `/%postname%/`. عوض کردنش بعداً نقشهٔ ریدایرکت می‌خواهد.
+2. Yoast طرح permalink بد را درست نمی‌کند. کلمهٔ ایست در slug را دستی بردار؛ حذف تهاجمی خودکار که برخورد می‌سازد راه ننداز.
+
+**Rank Math**
+
+1. Rank Math ← General Settings ← Links: «strip category» / حذف stop word. راحت URL ورودی را می‌شکند — اول 301.
+2. اگر در وحشی URL mixed-case داری بدون ریدایرکت، all-lowercase را روشن نکن.
+
+**AIOSEO**
+
+1. همان: permalink مال هستهٔ WP است. AIOSEO طرح `%category%/%postname%` را وقتی صاف می‌کنی بدون ریدایرکت نجات نمی‌دهد.
+2. URL پیوست: اگر `/image/` کلون پست می‌سازد خاموش کن.
+
+**جا خالی واقعی:** ابزار slug در Rank Math از همه تهاجمی‌تر است. Yoast ساکت‌تر است. SEOPress از permalink هسته پیروی می‌کند. هیچ‌کس IA خوب برایت اختراع نمی‌کند.
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+
+<Link href="/en/docs/02-on-page-seo/url-structure">URL structure</Link>
+```
+
+مسیر فایل App Router = مسیر عمومی (`app/[lang]/docs/[[...slug]]`). `trailingSlash` در `next.config` باید با canonical و sitemap بخواند. Pages Router: `as` rewrite که فایل واقعی نیست فضای URL دوم می‌شود — پرهیز کن.
+
+هرگز `?utm=` را در `href` داخلی نگذار. آگهی می‌تواند UTM بگذارد؛ canonical می‌کند (موضوع canonical).
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** URL exact-match به‌عنوان اهرم بزرگ رتبه.
+- **DEPRECATED:** «کوتاه‌تر همیشه بهتر رتبه می‌گیرد.» خوانا و پایدار از ریز بهتر است.
+- مسیر uppercase که کنار lowercase هم 200 می‌دهد.
+- re-slug با هر عوض title (`url-structure-updated-final-v3`).
+- ID در مسیر *و* slug که هر دو 200اند (`/12-robots` و `/robots-txt`).
+
+## نکته‌های سطح بالا / پروداکشن
+
+سیاست slug در git: kebab-case انگلیسی، یکسان در درخت `en`/`fa` تا جفت hreflang هیچ‌وقت 404 نشود. اگر اسلاگ فارسی می‌خواهی، جدول نگاشت دوم لازم است — گران.
+
+وقتی باید slug را عوض کنی: 301، داخلی، sitemap، GSC. مهاجرت ماژول ۰۳ حساب کن، نه «ویرایش سریع.»
+
+query string: فقط وقتی لندینگ واقعی است ایندکس‌پذیر (facet ماژول ۰۳ / ۰۷).
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| نمونه URL پول‌ساز | خوانا، HTTPS، پایدار | ID، session، stuffed |
+| اسلش انتهایی | یک فرم canonical | هر دو 200 |
+| داخلی | بدون UTM | `?utm_source=nav` سایت‌واید |
+| جفت FA/EN | همان slug بعد از لوکیل | یک طرف 404 |

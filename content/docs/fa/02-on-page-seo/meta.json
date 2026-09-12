@@ -1,0 +1,19 @@
+{
+  "title": "سئوی آن‌پیج",
+  "defaultOpen": true,
+  "pages": [
+    "title-tags",
+    "meta-descriptions",
+    "heading-hierarchy",
+    "url-structure",
+    "internal-linking",
+    "image-seo",
+    "content-depth-eeat",
+    "featured-snippets",
+    "schema-jsonld",
+    "canonical-tags",
+    "pagination",
+    "hreflang-onpage",
+    "breadcrumbs"
+  ]
+}

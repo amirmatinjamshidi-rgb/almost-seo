@@ -1,0 +1,107 @@
+---
+title: سئوی تصویر
+description: متن alt برای آدم و تصویر در گوگل — فایل واقعی، ابعاد، فرمت مدرن، و filename که `IMG_4032` نیست.
+module: 02-on-page-seo
+topic_order: 6
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+تصویر محتواست. **SEO** اینجا یعنی: فایل قابل crawl، **alt** صادق، URL پایدار، وزن عاقلانه (CWV / LCP — ماژول ۰۳)، و sitemap تصویر اختیاری اگر تصویر درجه یک است.
+
+`alt` تصویر را برای کسی که نمی‌بیند توصیف می‌کند. اگر تزئینی است، `alt=""` خالی درست است. اگر اسکرین‌شات فایل `robots.txt` است، همان را بگو. stuffing کلمه در `alt` نزدیک hidden-text است.
+
+Google Images از فایل، متن اطراف، title و صفحه استفاده می‌کند. تصویر یکتا از عکس استوک مشترک ۱۰٬۰۰۰ پست بهتر است. `loading="lazy"` روی هیروی LCP به LCP آسیب می‌زند (ماژول ۰۳).
+
+پس‌زمینهٔ SVG/CSS اغلب به‌عنوان «تصویر» در Image Search نامرئی است. `<img>` یا `next/image` واقعی با `src`.
+
+## چرا مهم است
+
+alt جاافتاده باگ a11y است و توصیف از دست می‌رود. PNG چهار مگ به‌عنوان هیرو LCP را می‌ترکاند. URL پیوست تکراری در وردپرس پست را کلون می‌کند.
+
+<CorrectExample title="درست">
+```html
+<img
+  src="/images/robots-txt-example.avif"
+  width="1200"
+  height="630"
+  alt="Example robots.txt with Googlebot Allow and Disallow rules"
+/>
+```
+
+فایل فشرده، ابعاد گذاشته، alt یک جمله است، نه فهرست کلمه.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="تصویر معنادار خالی a11y را می‌بازد. alt stuffed و فایل بی‌نام بزرگ crawl و LCP را می‌سوزاند.">
+```html
+<img src="IMG_4032.PNG" alt="robots.txt robots txt SEO crawl budget Googlebot best">
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast alt پیوست را از کتابخانهٔ رسانه می‌خواند. آنجا پر کن. صفحهٔ attachment را ایندکس نکن مگر گالری واقعی است (Search Appearance ← Media).
+2. تصویر Open Graph: 1200×630 واقعی، نه آواتار ۱۵۰ px.
+
+**Rank Math**
+
+1. sitemap تصویر / پیشنهاد alt در Rank Math: پیشنهاد جایگزین نگاه به عکس نیست.
+2. اتوماسیون «alt از filename» فایل `robots-txt-seo-googlebot.png` را به alt stuffed تبدیل می‌کند.
+
+**AIOSEO**
+
+1. سئوی تصویر / sitemap در AIOSEO. آیکون تزئینی را exclude کن.
+2. ووکامرس: alt تصویر محصول = آنچه در قاب است، نه `buy cheap {city}`.
+
+**جا خالی واقعی:** Rank Math/AIOSEO/SEOPress sitemap تصویر و alt گروهی را هل می‌دهند. Yoast آرام‌تر است. bulk-از-filename footgun رایج است.
+
+## پیاده‌سازی کد
+
+```tsx
+import Image from "next/image";
+
+export function Hero() {
+  return (
+    <Image
+      src="/images/robots-txt-example.avif"
+      alt="Example robots.txt with Googlebot Allow and Disallow rules"
+      width={1200}
+      height={630}
+      priority
+    />
+  );
+}
+```
+
+App Router: `priority` فقط روی تصویر LCP. `remotePatterns` فقط HTTPS. Pages Router: همان `next/image`. آیکون تزئینی: `alt=""` یا CSS.
+
+روی صفحهٔ HTTPS منبع `http://` را `next/image` نکن (mixed content ماژول ۰۳).
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** filename/alt stuffed به‌عنوان cheat رتبهٔ Images.
+- **DEPRECATED:** «همهٔ تصویر باید alt بلند داشته باشد.» alt خالی تزئینی درست است.
+- lazy-load هیرو.
+- ایندکس کلون `/attachment/img/` مقاله.
+- hotlink CDN تصادفی که به Googlebot 403 می‌دهد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+پایپلاین: آپلود ← فشرده ← filename یکتا ← alt در CMS ← ابعاد. طراح که `export-final-v7.png` را بدون alt در `/public` می‌ریزد پسرفت معمول است.
+
+برای نمودار، کپشن کوتاه در HTML به‌علاوهٔ alt. برای چارت، داده باید به‌صورت متن یا جدول هم باشد (a11y + استخراج).
+
+تصویر OG (`opengraph-image` / مسیر `og` همین سایت) کارت سوشال است، جایگزین شکل داخل مقاله نیست.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| Lighthouse / a11y | تصویر معنادار alt دارد | جاافتاده / stuffed |
+| Network | فرمت مدرن، بایت معقول | هیروی PNG چهار مگ |
+| GSC | — | گزارش تصویر اختیاری؛ باز 404 تصویر را ببین |
+| WP | پیوست noindex یا خاموش | کلون attachment رتبه می‌گیرد |

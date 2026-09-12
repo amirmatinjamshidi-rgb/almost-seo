@@ -1,0 +1,114 @@
+---
+title: hreflang روی صفحه
+description: حاشیهٔ alternate متقابل در HTML — همان sitemap، هرگز به 404، هرگز جایگزین ترجمهٔ یکتا نیست.
+module: 02-on-page-seo
+topic_order: 12
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**hreflang** آن‌پیج فرم HTML (یا هدر HTTP) خوشهٔ لوکیل است. انتخاب معماری (زیرشاخه در مقابل ccTLD) در ماژول ۰۳ است. اینجا: تگ روی *همین* URL.
+
+الزام:
+
+- هر URL لوکیل **همه** alternate را از جمله خودش لیست می‌کند، به‌علاوهٔ `x-default` اگر استفاده می‌کنی.
+- **متقابل:** `en` به `fa` اشاره می‌کند، `fa` به `en`.
+- canonical در هر لوکیل **self** است، نه زبان دیگر.
+- کد: `en`، `fa`، یا `en-US` / `fa-IR` — نه `fa-FA`.
+- `lang` و `dir` در HTML می‌خوانند (`fa` + `rtl` روی این سایت).
+
+می‌توانی همان مجموعه را در sitemap هم بدهی (همین پروژه می‌دهد). HTML در مقابل sitemap در مقابل هدر HTTP را نقض نکن.
+
+hreflang رتبه نمی‌دهد. alternate را خوشه می‌کند تا URL درست نشان داده شود. کپی نازک ماشین‌ترجمه‌شده باز کیفیت را می‌بازد.
+
+## چرا مهم است
+
+تگ یک‌طرفه انداخته می‌شود. canonical-همه-به-en URL فارسی را duplicate می‌کند. کاربر زبان غلط می‌گیرد؛ GSC پر «no return tag» می‌شود.
+
+<CorrectExample title="درست">
+```html
+<link rel="canonical" href="https://www.example.com/fa/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="en" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="fa" href="https://www.example.com/fa/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="x-default" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+```
+
+سوییچر زبان `<a href>` به خواهر است، نه فقط JS.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="نبود تگ برگشت و canonical-به-en روی URL فا خوشه را باطل می‌کند.">
+```html
+<!-- on /fa/... only -->
+<link rel="canonical" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+<link rel="alternate" hreflang="en" href="https://www.example.com/en/docs/02-on-page-seo/hreflang-onpage" />
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast Premium + WPML/Polylang: view-source را روی **هر دو** زبان تأیید کن.
+2. پلاگین hreflang دوم راه ننداز.
+
+**Rank Math**
+
+1. hreflang Rank Math در ادیتور / sitemap. اگر هر دو شلیک کنند با WPML تضاد دارد.
+2. `x-default` باید 200 باشد.
+
+**AIOSEO**
+
+1. همان ریسک تضاد. `og:locale` باید با صفحه بخواند.
+2. به stub ترجمه‌نشده hreflang نزن.
+
+**جا خالی واقعی:** یک emitter. SEOPress + Polylang جفت معتبر است. هر دو لوکیل را با `curl` تست کن (ماژول ۰۳).
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+const path = "/docs/02-on-page-seo/hreflang-onpage";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: `https://www.example.com/fa${path}`,
+    languages: {
+      en: `https://www.example.com/en${path}`,
+      fa: `https://www.example.com/fa${path}`,
+      "x-default": `https://www.example.com/en${path}`,
+    },
+  },
+};
+```
+
+Layout `[lang]` در App Router مقدار `html lang` / `dir` را می‌گذارد. این سایت: `hideLocale: "never"`. Pages Router: locale در `getStaticPaths`. ترجمهٔ غایب: جفت را حذف کن، به 404 اشاره نکن.
+
+Googlebot را geo-302 نکن (ماژول ۰۳).
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** hreflang به‌عنوان جهش رتبه.
+- **DEPRECATED:** `fa-FA` به‌عنوان کد.
+- hreflang به URL که `noindex` است.
+- سوییچر زبان بدون `href` قابل crawl.
+- کپی انگلیسی زیر `/fa/` به‌عنوان «ترجمه.»
+
+## نکته‌های سطح بالا / پروداکشن
+
+برابری filename (`hreflang-onpage.mdx` در هر دو درخت) جفت را صادق نگه می‌دارد. چک‌لیست انتشار: هر دو فایل هستند یا alternate حذف شده.
+
+گزارش International / hreflang در GSC: «no return tag» اول آتشی است که خاموش می‌کنی.
+
+`x-default` این سایت `en` است، نه `/` به‌عنوان کپی سوم انگلیسی.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source هر دو لوکیل | متقابل + self | یک‌طرفه |
+| Canonical | self per لوکیل | همه به `en` |
+| سوییچر | `<a href>` | فقط JS |
+| GSC | سیل خطای return-tag نیست | هر URL فلگ شده |

@@ -1,0 +1,111 @@
+---
+title: Keyword cannibalization
+description: When two of your URLs compete for the same query — how to see it in GSC, and whether to merge, differentiate, or canonical.
+module: 01-keyword-research
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Cannibalization** means multiple URLs on **your host** are relevant for the same query, so Google splits impressions, picks an unstable winner, or ranks a weaker template (tag archive vs guide).
+
+It is not “two pages that share a word.” A product and a repair guide can both mention `espresso machine` with different intents. Cannibalization is **same intent, multiple candidates**.
+
+Typical sources: republished blog vs evergreen guide, pagination/sort URLs, WordPress tags, `?utm=` copies, two locales without hreflang, leftover HTTP, and “new post for 2026” while `/guides/x` still lives.
+
+Fix in this order: **differentiate** (if both jobs are real) → **consolidate** (301 the weaker to the winner, update internals) → **canonical / noindex** only when the extra URL must stay live (filters, print). Canonical is a hint; 301 is for URLs that should die.
+
+## Why it matters
+
+You already paid for two documents. Users land on the stale one. GSC looks like “we rank #8 and #12” for the same query — that is often one cluster with two URLs, not a need for more links.
+
+<CorrectExample>
+GSC: query `robots.txt` hits `/blog/robots-intro` and `/docs/robots-txt`. Winner should be docs.
+
+```http
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/docs/robots-txt
+```
+
+Internal nav and sitemap drop the blog URL. Docs H1 stays `robots.txt`. Blog post becomes a short pointer only if you 301; do not leave both 200.
+</CorrectExample>
+
+<IncorrectExample why="Leaving both 200 with self-canonicals ‘to keep traffic’ keeps the split. A new 2026 rewrite without a 301 from the old slug doubles it.">
+```txt
+/guides/espresso-machines
+/guides/espresso-machines-2026
+/blog/best-espresso-machines
+```
+
+All indexable, all targeting `best espresso machines`.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast cannot detect cannibalization. Use GSC (Queries → Pages) or a rank tracker grouped by query.
+2. After merge: Yoast canonical on the winner = self. Redirect plugin / Premium redirects for the loser. Remove the loser from the sitemap (noindex types off).
+
+**Rank Math**
+
+1. Rank Math redirections: 301 the loser. Do not 302.
+2. If two posts have the same focus keyword, that is a smell, not proof — check the SERP/GSC.
+
+**AIOSEO**
+
+1. AIOSEO redirects: same 301. Delete vs 301: deleted permalinks 404 until you add the redirect — add it first.
+2. Category vs post targeting the same term: pick one as the hub (usually the guide/post), do not noindex the post.
+
+**Feature gap:** Rank Math’s “content AI” will happily write a second post for the same focus keyword. Yoast/AIOSEO/SEOPress will not stop you either. Detection is GSC, not the plugin.
+
+## Code implementation
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/blog/robots-intro",
+        destination: "/docs/robots-txt",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+App Router: after redirect, delete or unpublish the old route so you do not keep a 200 on a second path. Pages Router: same. Do not rely on `rel=canonical` alone when the old slug should disappear.
+
+Log GSC page URL for a query before and after. If Google keeps the loser, check internals still pointing at it and sitemap.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Google hates two pages that share a stem; never mention the keyword twice on the site.”
+- **DEPRECATED:** `noindex` the extra URL but keep linking to it as the main nav item.
+- Canonical from winner to loser by mistake.
+- Merging two different intents into one bloated URL because a dashboard said “cannibalized.”
+- New dated posts (`-2026`) as a refresh strategy without retiring the old slug.
+
+## Senior / production notes
+
+Triage spreadsheet: query, URL A, URL B, clicks, template, decision (keep both / 301 / noindex). Weekly during migrations; monthly on large blogs.
+
+Facets: many “cannibal” SKUs are duplicate parameters (Module 03). Fix at the template, not with 10,000 posts.
+
+hreflang: `/en/` and `/fa/` targeting the same concept is **not** cannibalization if annotations are reciprocal. It is if both locales are English copies.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC query → pages | One primary URL | Two URLs swapping |
+| `curl -I` loser | 301 to winner | 200 both |
+| Sitemap | Only winner | Both listed |
+| Rank tracker | Stable URL | Flip-flopping slug |

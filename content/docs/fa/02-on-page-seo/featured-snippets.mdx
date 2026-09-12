@@ -1,0 +1,106 @@
+---
+title: featured snippet
+description: چطور extractable باشی — سؤال روشن، جواب کوتاه، فهرست و جدول — بدون stuffing FAQ یا تضمین موقعیت صفر.
+module: 02-on-page-seo
+topic_order: 8
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Featured snippet** فیچر SERP است: گوگل گذر، فهرست یا جدولی از صفحه‌ای که از قبل برای آن کوئری رتبه دارد استخراج می‌کند. نمی‌توانی یکی را «submit» کنی. صلاحیت معمولاً رتبه در صفحهٔ یک برای آن کوئری می‌خواهد، به‌علاوهٔ ساختار extractable.
+
+الگویی که به استخراج کمک می‌کند (وعده نیست):
+
+- heading روشن که با سؤال می‌خواند.
+- **جواب کوتاه خودکفا** بلافاصله بعد، سپس جزئیات.
+- فهرست و جدول برای قدم و مقایسه (جدول verify همین دانشنامه).
+- schema FAQ فقط وقتی آن Q&A روی صفحه **دیدنی** است. JSON-LD FAQ مخفی الگویی است که گوگل هدف گرفته.
+
+اسنیپت می‌آید، جابه‌جا می‌شود، محو می‌شود. AI Overview و فیچر دیگر هم گذر را دوباره استفاده می‌کنند. اول برای کاربر بنویس.
+
+## چرا مهم است
+
+اسنیپت می‌تواند کلیک را بدزدد یا یکی qualified بفرستد. دویدن دنبال «موقعیت صفر» با ۴۰ FAQ مخفی همان نادیده‌گرفتن یا مسئلهٔ اسپم نزدیک اقدام دستی است.
+
+<CorrectExample title="درست">
+```html
+<h2>Does robots.txt remove a URL from the index?</h2>
+<p>
+  No. Disallow blocks crawling. Use noindex on a URL Googlebot can fetch.
+</p>
+```
+
+دیدنی، دقیق، بعد بقیهٔ بخش.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="schema FAQ نامرئی و «جواب» یک‌جمله‌ای stuffed برای هر مترادف اسپم اسنیپت است، کمک نه.">
+```html
+<script type="application/ld+json">
+{"@type":"FAQPage","mainEntity":[ /* 80 questions not on the page */ ]}
+</script>
+<p style="display:none">robots.txt seo crawl budget best answer</p>
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. بلوک FAQ / How-to یواست: فقط اگر بلوک دیدنی است. schema می‌دهند.
+2. ویجت FAQ یواست در سایدبار با ۲۰ سؤال سایت‌واید نگذار.
+
+**Rank Math**
+
+1. schema FAQ / بلوک ACF در Rank Math: همان قانون دیدنی بودن.
+2. Rank Math با خوشحالی FAQPage را به هر پست می‌چسباند. نکن.
+
+**AIOSEO**
+
+1. FAQ / schema در AIOSEO. همان.
+2. «enhanced rich snippets» که FAQ روی قالب می‌ریزد: گراف را audit کن.
+
+**جا خالی واقعی:** Rank Math و AIOSEO schema FAQ را بیش از حد آسان می‌کنند. بلوک یواست صریح‌تر است. schema FAQ در SEOPress هم هست. داک rich-result گوگل از مارکتینگ پلاگین بهتر است.
+
+## پیاده‌سازی کد
+
+```tsx
+export function SnippetAnswer({ q, a }: { q: string; a: string }) {
+  return (
+    <section>
+      <h2>{q}</h2>
+      <p>{a}</p>
+    </section>
+  );
+}
+```
+
+App Router: جواب در HTML. اگر JSON-LD `FAQPage` می‌دهی، باید Q&A دیدنی را 1:1 آینه کند. Pages Router: همان. بانک جواب با `display:none` نه.
+
+کارخانهٔ `/snippets/[keyword]` نساز.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** featured snippet به‌عنوان «فاکتور رتبهٔ موقعیت ۰ که هفتگی بهینه می‌کنی» تضمینی.
+- **DEPRECATED:** متن مخفی برای بردن اسنیپت.
+- schema FAQ روی هر لندینگ commercial.
+- کپی واژه‌به‌واژهٔ اسنیپت رقیب.
+- فرض که جدول همیشه فهرست را می‌برد یا برعکس — به SERP بستگی دارد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+اگر باید، حضور اسنیپت را در رتبه‌گیر دنبال کن؛ از دست رفتن را «فیچر SERP عوض شد» بدان، نه بازنویسی اضطراری. بهتر کردن گذری که GSC از قبل با کوئری وصل کرده کافی است.
+
+برای YMYL، اسنیپت غلط حادثهٔ اعتماد است. جملهٔ اول محتاط و منبع‌دار را ترجیح بده.
+
+`<CorrectExample>` / جدول این سایت عمداً extractableاند. تنها جواب را در canvas یا تصویر نپیچ.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| SERP زنده | گذر با HTML دیدنی می‌خواند | schema مخفی / ناسازگار |
+| Rich Results Test | FAQ فقط اگر دیدنی | خطای FAQPage / اضافه |
+| GSC | عملکرد روی کوئری | انتظار گزارش اسنیپت به‌عنوان اهرم رتبه |
+| روی صفحه | سؤال + جواب در HTML | جواب فقط در JSON-LD |

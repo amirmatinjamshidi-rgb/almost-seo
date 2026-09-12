@@ -1,0 +1,98 @@
+---
+title: تگ canonical
+description: rel=canonical به‌عنوان ترجیح برای یک URL که باید سند را نمایندگی کند — self روی برنده، هرگز 404 یا noindex.
+module: 02-on-page-seo
+topic_order: 10
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+`rel=canonical` (HTML یا HTTP `Link`) به گوگل می‌گوید وقتی چند URL تقریباً همان سند را نشان می‌دهند کدام را ترجیح می‌دهی. **hint** است، دستور نیست (duplicate ماژول ۰۳). گوگل ممکن است canonical احمق را نادیده بگیرد.
+
+روی صفحهٔ سالم: **self-canonical** به هاست HTTPS ترجیحی، مطابق sitemap و لینک داخلی. سیاست اسلش انتهایی و query باید یکی باشد.
+
+وقتی این URL duplicate واقعی است (نمای چاپ، UTM، tracking) **و** نمی‌توانی 301 کنی، canonical را به URL دیگر بزن. اگر URL اضافه نباید وجود داشته باشد، به‌جایش **301**.
+
+هرگز به URL `noindex`، 404، entity دیگر، یا هوم‌پیج به‌عنوان کشوی آشغال canonical نزن.
+
+## چرا مهم است
+
+canonical غلط سند را به URL غلط می‌بخشد یا حلقهٔ hint می‌سازد. نبود self-canonical می‌گذارد پارامتر تکثیر شود.
+
+<CorrectExample title="درست">
+```html
+<link rel="canonical" href="https://www.example.com/en/docs/02-on-page-seo/canonical-tags" />
+```
+
+`?utm_source=newsletter` روی همان مقاله: یا در لبه بکن یا به URL تمیز canonical کن. URL یو‌تی‌ام را self-canonical نکن.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Canonical به خانه، به noindex، یا به HTTP سند را دوپاره یا می‌اندازد.">
+```html
+<link rel="canonical" href="https://www.example.com/" />
+<link rel="canonical" href="http://example.com/canonical-tags" />
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast per پست self-canonical چاپ می‌کند. فقط وقتی منظورت است override کن.
+2. بعد از مهاجرت HTTPS / هاست، تأیید کن یواست `home` جدید را استفاده می‌کند.
+
+**Rank Math**
+
+1. فیلد canonical در Rank Math. مردم هوم‌پیج پیست می‌کنند. نکن.
+2. تنظیم canonical pagination: صفحهٔ ۲ اگر یکتاست باید به صفحهٔ ۲ canonical شود، نه همیشه به صفحهٔ ۱ (موضوع pagination).
+
+**AIOSEO**
+
+1. همان ریسک override.
+2. تضاد با پلاگین canonical دیگر: view-source، یک کانال نگه دار.
+
+**جا خالی واقعی:** هر چهار تا canonical می‌دهند. Rank Math/AIOSEO toggle «canonical pagination» بیشتری نشان می‌دهند که می‌تواند بی‌صدا صفحهٔ ۲ را به ۱ بزند. Yoast محافظه‌کارتر است. SEOPress هم. هدر سرور `Link` به‌علاوهٔ تگ پلاگین = تکراری — یک کانال بردار.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+const canonical =
+  "https://www.example.com/en/docs/02-on-page-seo/canonical-tags";
+
+export const metadata: Metadata = {
+  alternates: { canonical },
+};
+```
+
+`metadataBase` در App Router باید origin `https://` باشد. Pages Router: canonical مطلق صریح. Facet: `noindex` یا canonical به دستهٔ تمیز (ماژول ۰۳ / ۰۷).
+
+canonical را فقط در ریکت کلاینت رندر نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** canonical به‌عنوان دستور تضمینی.
+- **DEPRECATED:** canonical بین‌دامنه‌ای به سایتی که کنترل نمی‌کنی به‌عنوان دزدی رتبه.
+- self-canonical روی فیلتر آشغالی که می‌خواستی noindex باشد (پیام قاطی).
+- canonical نسبی که به هاست غلط resolve می‌شود.
+- اختلاف زنجیرهٔ canonical + 301.
+
+## نکته‌های سطح بالا / پروداکشن
+
+یک تابع `canonicalFor(path, locale)` که metadata، sitemap و hreflang استفاده کنند. مغز دوتکه باگ معمول است.
+
+وقتی URL cannibal را ادغام می‌کنی، بازنده را 301 کن؛ مگر دلیل داری (چاپ) برای همیشه 200 با canonical نگذار.
+
+canonical انتخاب‌شدهٔ گوگل را در URL Inspection ببین، نه فقط تگ خودت.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source | HTTPS مطلق self (یا عمدی) | جاافتاده / خانه / HTTP |
+| URL Inspection | گوگل موافق است یا توضیح می‌دهد | URL پارامتر را انتخاب کرد |
+| Sitemap | همان loc با canonical | sitemap duplicate را لیست می‌کند |
+| هدر در مقابل HTML | یک داستان canonical | دو Link / link متفاوت |

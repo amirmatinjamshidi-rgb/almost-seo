@@ -1,0 +1,127 @@
+---
+title: خوشه‌بندی کلمه
+description: کوئری‌هایی که یک URL می‌خواهند را گروه کن — همان نیت، همان SERP — نه یک صفحه per مترادف.
+module: 01-keyword-research
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**خوشه** مجموعه‌ای از کوئری است که **یک سند** باید جواب بدهد (به‌علاوه، گاهی، hub اسناد مرتبط). دو کوئری وقتی با هم‌اند که نیت یکی باشد و SERP شبیه این باشد که همان نتیجه باید ببرد: عنوان هم‌پوشان، همان قالب، همان entity.
+
+روش خوشه (بیش از یکی استفاده کن):
+
+- **هم‌پوشانی SERP** — همان برنده‌ها در صفحهٔ یک. قوی‌ترین تست عملی.
+- **نیت** — هر دو «چطور PDF را noindex کنیم،» نه یکی how-to و یکی ابزار.
+- **Entity / موضوع والد** — بچه‌های `robots.txt` (سینتکس، در مقابل meta robots، افسانهٔ crawl-delay).
+- **واریانت زبان** — فارسی رسمی در مقابل محاوره که همان مقاله را می‌خواهند.
+
+**topic cluster** در استراتژی محتوا (ماژول ۰۶) الگوی انتشار است: ستون + مقالهٔ پشتیبان + لینک داخلی. خوشه‌بندی کلمه قدم تحقیق است که می‌گوید آن الگو *چند* URL لازم دارد.
+
+فقط با «همان کلمهٔ اول» یا فقط شباهت embedding خوشه نکن. مدل نیت نامرتبط را می‌چسباند؛ SERP جدا می‌کند.
+
+## چرا مهم است
+
+بدون خوشه یا cannibalization می‌فرستی (موضوع بعد) یا شلوغی ۱۰٬۰۰۰ URL. با خوشه به نویسنده **یک کوئری اصلی + واریانت طبیعی** بریف می‌دهی، نه فهرست چگالی.
+
+<CorrectExample title="درست">
+یک URL: `/docs/robots-txt`
+
+کوئری‌های خوشه: `robots.txt`، `robots txt syntax`، `disallow googlebot`، `crawl-delay google` (به‌عنوان بخش افسانه جواب داده می‌شود، نه URL دوم).
+
+```html
+<h1>robots.txt</h1>
+<h2>Disallow vs noindex</h2>
+<h2>Crawl-delay</h2>
+```
+
+URL جدا فقط اگر SERP برای `x-robots-tag pdf` نوع سند دیگری است (اغلب هست — جدا نگه دار یا بخش واضح با jump link).
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="صفحهٔ مترادف سیگنال را دوپاره می‌کند. خوشهٔ فقط-embedding، «بخر» و «چیست» را قاطی می‌کند چون کلمه‌ها نزدیک‌اند.">
+```txt
+/robots-txt
+/robots-txt-file
+/what-is-robots-txt
+/google-robots-txt
+```
+
+چهار outline، یک SERP.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. یک focus keyphrase per URL خوشه. related keyphrase (Premium) یادآوری اختیاری است، پست اضافه نیست.
+2. «related posts» خودکار نساز که سه URL cannibal را به‌عنوان «خوشه» به هم لینک دهد.
+
+**Rank Math**
+
+1. کلمهٔ primary + secondary در Rank Math: باز **یک URL**. secondary permalink جدید نیست.
+2. titleهای SEO گروهی که هر آرشیو تگ را «خوشه» یکتا می‌کنند آشغال ایندکس می‌کنند.
+
+**AIOSEO**
+
+1. همان: keyphrase اضافه ≠ URL اضافه.
+2. اگر از قبل duplicate منتشر کردی، برندهٔ canonical بردار و 301 کن (ماژول ۰۳) نه «ادغام در پلاگین» بدون ریدایرکت.
+
+**جا خالی واقعی:** هیچ پلاگینی با هم‌پوشانی SERP خوشه نمی‌کند. SEOPress / Rank Math / Yoast عبارت ذخیره می‌کنند. ابزار خوشه شیت + چک SERP است، یا کراولر *عنوان‌های خودت*.
+
+## پیاده‌سازی کد
+
+```ts
+type Cluster = {
+  slug: string;
+  primary: string;
+  variants: string[];
+  intent: "informational" | "commercial" | "transactional";
+};
+
+export const clusters: Cluster[] = [
+  {
+    slug: "robots-txt",
+    primary: "robots.txt",
+    variants: ["robots txt syntax", "disallow googlebot"],
+    intent: "informational",
+  },
+];
+
+export function pathForQuery(q: string, list: Cluster[]) {
+  const hit = list.find(
+    (c) => c.primary === q || c.variants.includes(q),
+  );
+  return hit ? `/docs/${hit.slug}` : null;
+}
+```
+
+App Router: `generateStaticParams` از `clusters`. Pages Router: همان. از `variants` به‌عنوان slug جدا `generateStaticParams` نساز.
+
+Title می‌تواند واریانت را در heading بیاورد؛ canonical و مسیر همان slug خوشه می‌مانند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** یک URL per کلمه به‌عنوان «بهترین روش.»
+- **DEPRECATED:** فهرست کلمهٔ LSI به‌عنوان API خوشهٔ گوگل. گوگل گفته LSI استفاده نمی‌کند.
+- خوشه فقط داخل یک زبان و فراموش که `fa` / `en` خوشهٔ جدا هستند (جفت hreflang، نه duplicate).
+- ادغام کوئری پزشکی YMYL و commercial چون مدل گفت نزدیک‌اند.
+- «خوشه» ۵۰ مقاله‌ای بدون H1 جدا.
+
+## نکته‌های سطح بالا / پروداکشن
+
+بعد از دیدن GSC دوباره خوشه کن: کوئری که به URL غلط می‌خورد شکاف است. کوئری که همه به یک URL می‌خورند خوشه‌ای است که از قبل داری — برای «بهینه» شکان‌ش نکن.
+
+برای فروشگاه، SKU و دسته خوشهٔ جدا هستند حتی اگر توکن شریک باشند (`espresso machine` در مقابل شمارهٔ مدل).
+
+اتوماسیون: جاب هم‌پوشانی SERP در CI خوب است. انتشار از جاب بدون ادیتور همان ۴۰۰ نزدیک-تکراری است.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| نمونهٔ هم‌پوشانی SERP | همان برنده‌ها | قالب متفاوت |
+| سایت | یک URL زنده per خوشه | URL مترادف در رقابت |
+| GSC | کوئری‌ها روی hub جمع می‌شوند | پخش روی کلون |
+| بریف | primary + variants لیست شده | «هر ۴۰ کلمه را در H2 بگذار» |

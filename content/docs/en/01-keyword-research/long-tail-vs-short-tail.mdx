@@ -1,0 +1,106 @@
+---
+title: Long-tail vs short-tail
+description: Head terms versus specific queries — volume is not value, and one URL should not pretend to be both.
+module: 01-keyword-research
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Short-tail** (head) queries are broad: `espresso`, `SEO`, `insurance`. High competition, mixed intent, often dominated by brands, dictionaries, or category hubs.
+
+**Long-tail** queries are specific: `espresso machine for two-group café`, `noindex vs robots txt`. Lower volume per string, clearer intent, often the queries that convert or that a specialist site can actually win.
+
+The tail is not “four words.” It is **specificity**. A two-word branded query can be as specific as a nine-word question.
+
+Do not treat tool “volume” as a ranking of importance. GSC and ad tools sample and round. A zero-volume tail can still appear in GSC after you publish the right page. Head terms are often *covered* by a hub that also earns tails, not by a thin page that only repeats the head.
+
+## Why it matters
+
+Chasing only head terms produces generic documents nobody needed. Chasing only microscopic tails produces 5,000 near-duplicate URLs (doorways / thin content). The job is a **hub + supporting URLs**, not a volume sort in Excel.
+
+<CorrectExample>
+Hub: `/guides/espresso-machines` targets the commercial head and related tails in one coherent guide. Child: `/guides/espresso-machines/plumbed-in-vs-tank` for a distinct question.
+
+```html
+<!-- hub -->
+<h1>Espresso machines</h1>
+<p><a href="/guides/espresso-machines/plumbed-in-vs-tank">Plumbed-in vs tank</a></p>
+```
+
+Internal links make the tail reachable. The child is not a spun copy of the hub.
+</CorrectExample>
+
+<IncorrectExample why="One thin URL per keyword variant explodes the site and cannibalizes. Volume-sorted CSVs are not an IA.">
+```txt
+/best-espresso
+/best-espresso-machine
+/best-espresso-machines-2026
+/espresso-machine-best
+```
+
+Each is 300 words of the same outline. Tool said “all have volume.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Do not create a post per spreadsheet row. One cornerstone (Yoast’s term) per hub, then real supporting posts.
+2. Cornerstone internal linking is useful only if the supporting URLs are distinct intents.
+
+**Rank Math**
+
+1. Rank Math “pillar” / focus keyword: one focus string per URL is a reminder, not a law. A hub may rank for many related queries.
+2. Do not clone a post and change three words to hit another tail.
+
+**AIOSEO**
+
+1. AIOSEO cornerstone-style flags: same as Yoast — flag the hub, do not mass-produce tails.
+2. Tag archives for every tail synonym usually should not be indexable hubs.
+
+**Feature gap:** Plugins grade a focus keyword, which pushes people toward short-tail stuffing. SEOPress has the same focus field. None will tell you two tails are the same intent.
+
+## Code implementation
+
+```ts
+const routes = [
+  { path: "/guides/espresso-machines", role: "hub" },
+  { path: "/guides/espresso-machines/plumbed-in-vs-tank", role: "support" },
+] as const;
+
+export function isIndexableKeywordPage(role: "hub" | "support" | "variant") {
+  return role !== "variant";
+}
+```
+
+App Router: `generateStaticParams` from **clusters**, not from a raw keyword export. Pages Router: same. Variants (`?kw=`) must not become indexable (Module 03 duplicates).
+
+If you must land ads on a head term, that landing can exist; it still needs unique copy and a canonical strategy, not 50 clones.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Long-tail always converts; head never.” Depends on the business. Brand heads convert. Random four-word questions often do not.
+- **DEPRECATED:** Exact-match domains for every tail.
+- **DEPRECATED:** Minimum word counts to “rank for the head.”
+- Ignoring GSC tails already hitting an existing URL (you may already own them).
+- Translating an English head into Persian word-for-word and expecting the same SERP.
+
+## Senior / production notes
+
+Start from **GSC + sales language + support tickets**, then fill gaps with third-party tools. Tools invent queries; customers do not.
+
+For Persian, morphology and colloquial forms (`سئو سایت` vs `بهینه سازی موتور جستجو`) are often one cluster, not two tails. Do not split them into competing URLs.
+
+News and YMYL heads are usually unwinnable for a new site. Win the specialist tail, then earn the hub.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| URL inventory vs sheet | One URL per distinct job | One URL per synonym |
+| GSC | Hub collects related queries | 12 URLs splitting one query |
+| Child vs parent | Unique H1 and section | Spun duplicate |
+| Index | Variants noindex/canonical | 5,000 thin tails indexed |

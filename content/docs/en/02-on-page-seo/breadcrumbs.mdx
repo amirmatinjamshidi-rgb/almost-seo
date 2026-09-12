@@ -1,0 +1,122 @@
+---
+title: Breadcrumbs
+description: A visible, crawlable trail that matches the IA — BreadcrumbList markup only if the trail is on the page.
+module: 02-on-page-seo
+topic_order: 13
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Breadcrumbs** show where the URL sits in the hierarchy: Home → On-page SEO → Breadcrumbs. They help users, expose internal links to parent hubs, and can feed breadcrumb rich results when marked up as `BreadcrumbList`.
+
+They must **match reality**: every crumb is a live, crawlable URL (except the current page, which may be plain text). Do not invent a folder that 404s. Do not contradict the primary nav.
+
+JSON-LD `BreadcrumbList` is allowed **if** the same trail is visible. Markup-only breadcrumbs are misleading.
+
+Position 1 is usually the home or a real section hub, not a keyword-stuffed fake parent.
+
+## Why it matters
+
+A trail that matches IA reinforces hubs (Module 03 architecture). A trail that says `Best SEO Tehran` on every post is stuffing. Broken crumb links create 404s in the crawl of every article.
+
+<CorrectExample>
+```html
+<nav aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/en/docs">Docs</a></li>
+    <li><a href="/en/docs/02-on-page-seo">On-page SEO</a></li>
+    <li aria-current="page">Breadcrumbs</li>
+  </ol>
+</nav>
+```
+
+Parents `200`. Current page is not a loop to itself unless you want it. Schema mirrors this list.
+</CorrectExample>
+
+<IncorrectExample why="Fake parents and JSON-LD-only trails lie. Keyword crumbs on every URL are stuffing.">
+```html
+<nav>
+  <a href="/best-seo">Best SEO</a> /
+  <a href="/best-seo-tehran">Best SEO Tehran</a> /
+  Breadcrumbs
+</nav>
+```
+
+Those parents are doorways. Or: `BreadcrumbList` in JSON-LD with no visible nav.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast → Search Appearance → Breadcrumbs. Enable and place the widget/template tag in the theme. Taxonomy for posts: category as parent only if that archive is a real hub.
+2. Yoast emits BreadcrumbList. Disable extra breadcrumb plugins.
+
+**Rank Math**
+
+1. Rank Math → General Settings → Breadcrumbs. Same: one emitter.
+2. Custom separators are cosmetic. Custom “fake” parents are not.
+
+**AIOSEO**
+
+1. AIOSEO breadcrumbs. Confirm they do not duplicate Yoast’s list in source.
+2. WooCommerce: shop → category → product should be real archives.
+
+**Feature gap:** All four can output breadcrumbs + schema. Two at once = two lists. SEOPress breadcrumbs are fine. Theme breadcrumbs + plugin breadcrumbs is the usual mess.
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+
+const crumbs = [
+  { href: "/en/docs", name: "Docs" },
+  { href: "/en/docs/02-on-page-seo", name: "On-page SEO" },
+];
+
+export function Breadcrumbs({ current }: { current: string }) {
+  return (
+    <nav aria-label="Breadcrumb">
+      <ol>
+        {crumbs.map((c) => (
+          <li key={c.href}>
+            <Link href={c.href}>{c.name}</Link>
+          </li>
+        ))}
+        <li aria-current="page">{current}</li>
+      </ol>
+    </nav>
+  );
+}
+```
+
+App Router: Fumadocs already provides a docs trail — do not invent a second. Pages Router: same list in the layout. JSON-LD from the same `crumbs` array.
+
+`aria-current="page"` on the last item. Do not `nofollow` crumb links.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Breadcrumbs as a major ranking factor on their own.
+- **DEPRECATED:** Keyword-stuffed crumb parents.
+- Schema without visible trail.
+- Crumbs pointing at `noindex` or 404 parents.
+- Homepage as the only crumb on a 6-level IA (users still need the section hub).
+
+## Senior / production notes
+
+Generate crumbs from the **same tree** as the sidebar (this site: folder `02-on-page-seo`). When you move a topic, crumbs, internals, and redirects move together.
+
+Rich result appearance is optional. Broken UX is not.
+
+RTL: the visual order flips with `dir=rtl`; the list order in HTML stays root → leaf.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Click each crumb | 200 hubs | 404 / stuffed parents |
+| Visible vs JSON-LD | Same names/URLs | Markup-only |
+| View-source | One trail | Theme + plugin duplicate |
+| Rich Results Test | BreadcrumbList valid if used | Errors / extra lists |

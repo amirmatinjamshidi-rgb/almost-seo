@@ -1,0 +1,103 @@
+---
+title: لینک داخلی
+description: hrefهای HTML که کاربر و Googlebot را در IA می‌برند — انکر توصیفی، لینک قابل crawl، بدون nofollow مجسمه‌ساز PageRank.
+module: 02-on-page-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**لینک داخلی** همان `<a href>` است (یا `Link` در Next.js که آن را رندر می‌کند) بین URLهایی که کنترل می‌کنی. سه شغل: ناوبری، کشف برای Googlebot، بافت (انکر + متن اطراف).
+
+قانون:
+
+- `href` واقعی در HTML اول. handler کلیک که هیچ‌وقت انکر نمی‌دهد لینک نیست (معماری / JS SEO ماژول ۰۳).
+- **انکر توصیفی** — `robots.txt syntax` از `اینجا کلیک کنید` بهتر است. انکر برند و URL خوب است؛ اسپم exact-match در هر پاراگراف نه.
+- به برندهٔ **canonical** خوشه اشاره کن، نه کپی UTM یا واریانت HTTP.
+- Hub بچه‌ها را لیست می‌کند؛ بچه بالا و به موضوع مرتبط لینک می‌دهد. یتیم دیر رتبه می‌گیرد.
+- لینک داخلی را `nofollow` نکن تا «PageRank مجسمه» شود.
+
+مرتبط: breadcrumb (بعد در همین ماژول)، sitemap (ماژول ۰۳) به‌عنوان فهرست hint، نه جایگزین.
+
+## چرا مهم است
+
+مقالهٔ درخشان با صفر اینلینک مشکل crawl و UX است. لینک افراطی هر جمله به صفحهٔ پول‌ساز شبیه doorway است. گراف *همان* معماری سایت است.
+
+<CorrectExample title="درست">
+```html
+<p>
+  Disallow is not deindex.
+  Use <a href="/en/docs/03-technical-seo/indexing-directives">noindex / X-Robots-Tag</a>
+  on a crawlable URL.
+</p>
+```
+
+در hub، فهرست `<a href>` بچه مثل مثال معماری ماژول ۰۳.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="کارت فقط-JS و «اینجا کلیک کنید» به‌علاوهٔ nofollow داخلی گراف را مخفی یا دروغ می‌کند.">
+```html
+<span onclick="go('/docs/secret')">click here</span>
+<a href="/docs/money" rel="nofollow">money</a>
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. cornerstone یواست + لینک متنی در پست. ویجت auto-related-posts که ۱۲ href آشغال می‌گذارد معمولاً از سه لینک editorial بدتر است.
+2. بعد از 301، در محتوا slug قدیم را جستجو کن.
+
+**Rank Math**
+
+1. پیشنهاد لینک Rank Math: اختیاری. هر پیشنهاد را برای نمرهٔ «تعداد لینک» قبول نکن.
+2. لینک exact-match فوتر سایت‌واید به ۳۰ URL پول‌ساز الگوی اسپم است.
+
+**AIOSEO**
+
+1. همان. ماژول TOC و related-posts: `href` قابل crawl، نه placeholder `#`.
+2. اتوماسیون «درج لینک به focus keyword» را اگر حلقه می‌سازد خاموش کن.
+
+**جا خالی واقعی:** لینک داخلی Premium یواست معروف‌ترین است. Rank Math/AIOSEO/SEOPress همه UI پیشنهاد دارند. هیچ‌کدام جایگزین IA نیستند. اگر تیک سراسری بزنی همه با خوشحالی داخلی را nofollow می‌کنند (نزن).
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+
+export function Related({ href, label }: { href: string; label: string }) {
+  return <Link href={href}>{label}</Link>;
+}
+```
+
+App Router: برای مسیر داخلی `Link` از `next/link`. خارجی `<a>` بماند. Pages Router: همان. فقط prefetch بدون `href` نکن.
+
+Hub برنامه‌ای: روی بچه map کن و `<Link href={path}>` رندر کن. فهرست `href="#"` خالی crawl را می‌بازد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** مجسمه‌سازی PageRank با `nofollow` داخلی.
+- **DEPRECATED:** فوتر exact-match سایت‌واید به‌عنوان سیستم رتبه.
+- بلوک related-posts که در هر URL به همان سه پست لینک می‌دهد.
+- انکر URL خام وقتی اسم هست — گاهی خوب است، نه تنها الگو.
+- لینک فقط از هوم‌پیج «چون PageRank.»
+
+## نکته‌های سطح بالا / پروداکشن
+
+در کراولر اندازه بگیر: اینلینک به URL پول‌ساز، تعداد یتیم، عمق کلیک. بعد از انتشار خوشه، لینک hub را همان رلیز اضافه کن.
+
+Nav در مقابل داخل متن: هر دو اگر `a href` باشند لینک‌اند. مگامنویی که ۵۰۰۰ لینک مخفی می‌کند می‌تواند شبیه مزرعهٔ لینک باشد؛ منو را صادق نگه دار.
+
+i18n: به **همان لوکیل** لینک بده مگر سوییچر زبان باشی. مقالهٔ `/fa/` وسط پاراگراف کاربر را بدون دلیل روی `/en/` نریزد.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| crawl از `/` | URL موضوع از HTML پیدا می‌شود | یتیم / فقط JS |
+| انکر | توصیفی | `click here` / stuffed |
+| URL برنده | داخلی به canonical می‌خورد | لینک به slug قدیم |
+| rel | داخلی follow | nofollow داخلی سایت‌واید |

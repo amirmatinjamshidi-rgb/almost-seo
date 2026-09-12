@@ -1,0 +1,118 @@
+---
+title: Semantic and entity SEO
+description: People, places, and things — write for entities and relationships, not for a bag of synonyms Google supposedly ‘needs’ on the page.
+module: 01-keyword-research
+topic_order: 6
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Search systems map queries and documents to **entities** (people, products, organizations, standards) and relations, not only to strings. **Semantic SEO** in 2026 means: make it obvious *which thing* you are about, with unambiguous names, consistent identifiers, and content that would satisfy a reader who already knows the entity.
+
+What that looks like in practice:
+
+- Clear **primary entity** on the page (`robots.txt` the file format, not a brand named Robots).
+- Related entities that belong (`Googlebot`, `Sitemap`, `noindex`) explained, not stuffed.
+- **Identifiers**: canonical URL, Organization/Person JSON-LD `sameAs`, product SKU, ISBN — when they are real.
+- Same names as GBP / official docs when you mean the same thing (Module 05 NAP is the local case).
+
+What it is **not**: “LSI keywords,” TF-IDF tools that paint your draft yellow, or a quota of synonyms. Google has publicly dismissed LSI as something it uses. Word vectors in your SEO plugin are not the Knowledge Graph.
+
+Entities still need **intent-matched documents**. Naming every coffee species on a transactional PDP does not make it an encyclopedia, and vice versa.
+
+## Why it matters
+
+Ambiguous pages rank for the wrong entity (`mercury` the planet vs the element vs the car). Thin synonym stuffing does not disambiguate. Clear entities help humans, sitelinks, and knowledge panels you do not control.
+
+<CorrectExample>
+```html
+<article>
+  <h1>robots.txt</h1>
+  <p>
+    <code>robots.txt</code> is the IETF-style file at the host root that
+    Googlebot fetches before crawling paths.
+  </p>
+  <p>Related: <a href="/docs/indexing-directives">noindex / X-Robots-Tag</a>.</p>
+</article>
+```
+
+JSON-LD `TechArticle` about that URL. Internal links to child entities. No “also known as crawl budget robots meta disallow SEO file” dump in the first paragraph.
+</CorrectExample>
+
+<IncorrectExample why="Synonym soup and fake sameAs do not create an entity. They read as stuffing and can contradict the real org.">
+```html
+<p>
+  robots.txt robot txt robot.txt crawler instructions SEO crawl budget
+  googlebot bingbot semantic keywords LSI latent indexing...
+</p>
+<script type="application/ld+json">
+{"@type":"Organization","sameAs":["https://en.wikipedia.org/wiki/Search_engine_optimization"]}
+</script>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Schema: Article/TechArticle + Organization with real `sameAs`. Do not attach Wikipedia pages you do not represent.
+2. Internal links to the canonical entity URL beat repeating the keyword.
+
+**Rank Math**
+
+1. Rank Math Schema generator: pick the type that matches. Extra “keyword” fields in schema are not an entity API.
+2. FAQ blocks for every alias: usually noise. One definition is enough.
+
+**AIOSEO**
+
+1. AIOSEO knowledge graph: consistent name with the rest of the site.
+2. Disable duplicate Article + WebPage + FAQ spam on a 400-word post.
+
+**Feature gap:** All four plugins emit schema; none build a knowledge graph for you. Rank Math’s “rich snippet” types are easy to over-apply. SEOPress same. Identifiers (`sameAs`, SKU) are editorial.
+
+## Code implementation
+
+```ts
+export const techArticle = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: "robots.txt",
+  about: {
+    "@type": "Thing",
+    name: "robots.txt",
+    description: "Host-level crawler allow/disallow file",
+  },
+  url: "https://www.example.com/docs/robots-txt",
+};
+```
+
+App Router: `JsonLd` on the doc page (this site). Pages Router: `next/head`. Pair with `alternates.canonical` and, for products, a real `sku` / `gtin` only when you have them.
+
+Do not generate 50 `Thing` nodes from a keyword list. `about` should match the H1.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** LSI keywords as a Google ranking system.
+- **DEPRECATED:** TF-IDF / “term frequency vs competitors” as a substitute for being the right document.
+- **DEPRECATED:** “Co-occurrence” tools that force every related entity into paragraph one.
+- Marking up a Person who does not exist (Module 04).
+- Using `sameAs` to Wikipedia to “steal” the entity.
+
+## Senior / production notes
+
+Disambiguate in the title when the string is ambiguous (`Mercury (element)` in an encyclopedia; in ecommerce, the model number). In Persian, loanwords vs native terms: pick the form your audience searches, mention the other once, do not fork URLs (clustering).
+
+For this encyclopedia, the entity is the **topic filename** (`robots-txt`) shared across `en`/`fa` with hreflang — two languages, one topic entity.
+
+Watch GSC for queries that show you rank for the wrong sense. Fix the H1 and intro; do not add more synonyms.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| First 100 words | Entity clear to a human | Synonym dump |
+| Schema | Type matches; `sameAs` yours | Fake wiki / extra types |
+| GSC | Queries match the entity | Wrong-sense queries dominate |
+| Internals | Links to related topic URLs | Orphan, or stuffed footer keywords |

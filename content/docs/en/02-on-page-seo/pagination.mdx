@@ -1,0 +1,117 @@
+---
+title: Pagination
+description: Page 2+ is a real URL when the list is unique — crawlable links, no fake rel=next ranking magic, no infinite-scroll-only HTML.
+module: 02-on-page-seo
+topic_order: 11
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Pagination** splits a long list (category, blog index, search results you insist on indexing) into `/page/2`, `?page=2`, or a “Load more” UI.
+
+Google **dropped `rel=next/prev` as an indexing signal** years ago. Those tags are optional UX for others; they are not a ranking system. Each paginated URL is its own document. If page 2 has unique items, it can be indexed. If it is a clone of page 1, it is a duplicate.
+
+Patterns:
+
+- **View-all** vs paginated: pick one indexable list. Do not index both.
+- **Infinite scroll / Load more:** the crawler still needs a crawlable `href` to page 2+ or a real server-rendered list. JS-only “load more” with no page URLs hides items (Module 03 JS SEO).
+- Canonical: page 2 **self-canonical** if unique. Canonical to page 1 only when page 2 is a duplicate (rare; usually a bug).
+- `noindex,follow` on pagination is a choice for some thin archives; it also drops those items from being landing pages. Know which you want.
+
+Do not paginate with `?session=` or sort params as extra dimensions without a facet policy.
+
+## Why it matters
+
+Products and posts stuck behind uncrawlable “load more” never get discovered. `rel=next` folklore wastes implementation time. Canonicalizing all pages to page 1 can hide unique items.
+
+<CorrectExample>
+```html
+<nav aria-label="Pagination">
+  <a href="/guides">1</a>
+  <a href="/guides/page/2">2</a>
+</nav>
+```
+
+Page 2 has different posts, self-canonical, in HTML. Sitemap may list page 1 only (hub) if you do not want page 2 as a landing URL — then `noindex,follow` page 2 consistently.
+</CorrectExample>
+
+<IncorrectExample why="Button without href and a canonical-to-page-1 on unique lists hide or duplicate the catalog.">
+```html
+<button onclick="loadMore()">Load more</button>
+<link rel="canonical" href="https://www.example.com/guides" />
+<!-- this is page 2 with different products -->
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast no longer relies on next/prev. Check archive SEO titles: `Page 2` should not share page 1’s exact title if indexed.
+2. If you noindex category pagination, do it on purpose in Search Appearance / templates.
+
+**Rank Math**
+
+1. Rank Math pagination canonical toggle: read twice. “Canonical to first page” on unique product lists is the footgun.
+2. Rank Math titles for `%%page%%` on archives.
+
+**AIOSEO**
+
+1. Same canonical-to-first option in some versions — verify view-source on `/page/2`.
+2. Disable duplicate view-all plugins.
+
+**Feature gap:** Rank Math/AIOSEO pagination canonicals are easier to mis-set than Yoast. SEOPress similar. WooCommerce shop pagination must stay crawlable.
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const { page } = await searchParams;
+  const n = page ?? "1";
+  const path = n === "1" ? "/guides" : `/guides/page/${n}`;
+  return { alternates: { canonical: `https://www.example.com${path}` } };
+}
+
+export function Pager({ page }: { page: number }) {
+  return (
+    <nav>
+      {page > 1 && <Link href={`/guides/page/${page - 1}`}>Previous</Link>}
+      <Link href={`/guides/page/${page + 1}`}>Next</Link>
+    </nav>
+  );
+}
+```
+
+App Router: `generateStaticParams` or server-rendered page numbers. Pages Router: `getServerSideProps` with `?page=` **or** path-based pages — pick one. Do not infinite-scroll without the pager hrefs in HTML.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** `rel=next/prev` as Google’s pagination system.
+- **DEPRECATED:** Always canonical paginated URLs to page 1.
+- `noindex` page 2+ and also removing internal links to products only listed there.
+- Indexed site-search pagination (`/search?q=&page=2`) as content.
+- Page 2 title identical to page 1 when both are indexed.
+
+## Senior / production notes
+
+Decide per template: blog index page 2+ often low value (noindex or leave). Ecommerce category page 2+ often must be crawled so SKUs linked only there are found. Then those SKUs should also appear in sitemap / hub filters.
+
+Log Googlebot hits on `/page/2`. Zero hits + missing products = uncrawlable pager.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source page 2 | Unique items, real `a href` pager | Empty, button-only |
+| Canonical | Self if unique | Forced to page 1 by mistake |
+| Crawl | Products found | Only page 1 SKUs |
+| Title | Distinct if indexed | Clone of page 1 |

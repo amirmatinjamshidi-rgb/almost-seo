@@ -1,0 +1,118 @@
+---
+title: Search intent
+description: What the query is trying to accomplish — informational, navigational, commercial, transactional — and why the SERP is the spec.
+module: 01-keyword-research
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Search intent** is the job the query is hiring a result to do. Google’s ranking systems try to match that job. Practitioner buckets that still earn their keep:
+
+- **Informational** — learn, compare conceptually, diagnose. Guides, docs, explainers.
+- **Navigational** — reach a known brand, login, or URL. The official homepage usually wins.
+- **Commercial investigation** — shortlist before money. Roundups, spec tables, “vs” pages.
+- **Transactional** — do the thing: buy, book, subscribe, download.
+
+Mixed SERPs exist (a query can show shopping, videos, and a guide). **The live SERP is the spec**, not a spreadsheet column you invented. If page one is product listings, your 4,000-word essay is the wrong document even if it “contains the keyword.”
+
+Intent can shift by modifier (`buy`, `near me`, `how to`, `login`, a year) and by locale. Persian and English queries for the “same” topic often want different formats.
+
+## Why it matters
+
+Ranking work on the wrong template is wasted crawl and wasted writing. A transactional URL stuffed with an informational H1 confuses users and systems. Intent is the brief; keywords are labels on the brief.
+
+<CorrectExample>
+Query: `espresso machine for small cafe`. SERP is buying guides and product categories.
+
+```html
+<h1>Espresso machines for a small café</h1>
+<p>What to spec (boiler, group, plumbed-in), then models we actually run.</p>
+```
+
+The URL is a commercial guide with a path to product pages. Title and H1 match the job, not a homepage slogan.
+</CorrectExample>
+
+<IncorrectExample why="Navigational/brand SERP does not want your affiliate roundup. You fight the official site and look like a doorway.">
+Query: `example labs login`
+
+```html
+<h1>Example Labs Login — Best SEO Login Tips 2026</h1>
+<p>Buy our course, then we mention login in paragraph nine.</p>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast’s “traffic light” on a post does not detect intent. Map each post type to a job: product = transactional, blog how-to = informational.
+2. Search Appearance templates should not force every archive into `Best {keyword} {year}` if the SERP is branded.
+
+**Rank Math**
+
+1. Rank Math focus keyword is a string, not intent. Do not chase a green score on a mismatch.
+2. Use the snippet preview against the real SERP, not against Rank Math’s grade.
+
+**AIOSEO**
+
+1. AIOSEO TruSEO similarly scores tokens. Ignore it when the SERP format disagrees.
+2. Category descriptions: commercial categories need unique copy; informational tags often should stay `noindex` if they duplicate the blog (Module 03).
+
+**Feature gap:** None of Yoast / Rank Math / AIOSEO / SEOPress fetch the live SERP. Intent work is Search + a sheet, then the CMS. SEOPress content analysis is the same class of token checker.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+type Intent = "informational" | "navigational" | "commercial" | "transactional";
+
+export function metadataForIntent(intent: Intent, title: string): Metadata {
+  switch (intent) {
+    case "transactional":
+      return { title, robots: { index: true, follow: true } };
+    case "informational":
+      return { title, robots: { index: true, follow: true } };
+    case "commercial":
+      return { title, robots: { index: true, follow: true } };
+    case "navigational":
+      return { title, robots: { index: true, follow: true } };
+    default: {
+      const _exhaustive: never = intent;
+      return _exhaustive;
+    }
+  }
+}
+```
+
+App Router: pick the **template** (PDP, guide, login) in the route, not a keyword density function. Pages Router: same. A blog `page.tsx` should not render a buy box as the H1 for an informational query.
+
+Do not generate 200 city landing pages because the keyword tool listed `service + city` if you have no local presence (Module 05 / doorways).
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Every query is “informational vs transactional” only — commercial investigation is the missing bucket that eats “best X” queries.
+- **DEPRECATED:** Stuffing `buy` into an H1 to “make it transactional.”
+- Writing one URL to rank for `login`, `pricing`, and `what is` together.
+- Ignoring People Also Ask / discussions as intent clues (they are clues, not a mandate to FAQ-stuff).
+- Treating AI Overviews as a new intent type. They are a SERP feature on top of the same jobs.
+
+## Senior / production notes
+
+Classify at **cluster** level (next topics), not per synonym. Re-check SERPs after big template changes; intent drifts (a brand query can grow shopping units).
+
+For YMYL, informational intent still wants identifiable expertise (Module 04 E-E-A-T). A thin “what is insurance” spun from a tool export is the wrong document even if the SERP is informational.
+
+GSC query → landing page report: if an informational article harvests transactional queries with a high bounce, the page is attracting the wrong job. Fix the title or split the URL.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Top 10 SERP formats | Your template matches | Essay vs product grid |
+| Title / H1 | States the job | Keyword list, no job |
+| GSC queries on that URL | Same intent family | Brand-navigational on an affiliate URL |
+| On-page CTA | Matches (read vs buy vs go) | Buy box on a definition |

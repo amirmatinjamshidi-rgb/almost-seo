@@ -1,0 +1,117 @@
+---
+title: Schema و JSON-LD
+description: دادهٔ ساخت‌یافته به‌عنوان hint — یک گراف صادق، محتوای دیدنی، type مطابق صفحه، validate در ابزار گوگل.
+module: 02-on-page-seo
+topic_order: 9
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Structured data** (ترجیح JSON-LD) به ماشین نوع چیز روی صفحه را می‌گوید: `Article`، `TechArticle`، `Product`، `FAQPage`، `LocalBusiness`، `BreadcrumbList`، `Organization`، `WebSite`. گوگل مستند کرده کدام type می‌تواند **rich result** بسازد. markup یک **hint** است. به‌تنهایی رتبه نمی‌سازد.
+
+قانون صداقت:
+
+- هر property که markup می‌کنی **دیدنی** است (یا شناسهٔ استاندارد مثل SKU).
+- `@type` با صفحه می‌خواند. URL داک `Product` با offer جعلی نیست.
+- **یک گراف اصلی** per URL. سه پلاگین که Article + WebPage + FAQ + Product بدهند نویز یا اسپم است.
+- `aggregateRating` / نظر فقط با نظر دیدنی واقعی (ماژول ۰۵).
+- JSON-LD در HTML اول، نه بعد از کلیک.
+
+همین دانشنامه `TechArticle` / `WebSite` را با `JsonLd` تزریق می‌کند. type لوکال مال صفحهٔ لوکیشن است (ماژول ۰۵).
+
+## چرا مهم است
+
+markup معتبر مطابق می‌تواند rich result باز کند. markup نامعتبر یا اسپمی نادیده گرفته می‌شود یا سایت را با سیاست structured data گمراه‌کننده وصل می‌کند.
+
+<CorrectExample title="درست">
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Title tags",
+  "dateModified": "2026-09-01",
+  "url": "https://www.example.com/en/docs/02-on-page-seo/title-tags"
+}
+</script>
+```
+
+Headline با H1 می‌خواند. امتیاز جعلی نیست.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="FAQ نامرئی، offer جعلی، و پنج گراف رقیب markup گمراه‌کننده است.">
+```json
+{
+  "@type": ["Product", "FAQPage", "Article"],
+  "offers": { "price": "0", "availability": "InStock" },
+  "aggregateRating": { "ratingValue": "5", "reviewCount": "9999" }
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast پیش‌فرض Organization/WebSite/Article می‌دهد. نوعی که لازم نداری خاموش کن.
+2. schema Rank Math را روی یواست انباشته نکن.
+
+**Rank Math**
+
+1. Schema در Rank Math: یک type per قالب. JSON-LD سفارشی در ادیتور برای استثنا.
+2. پیش‌فرض «Rich Snippet» روی پست: Product/Recipe روی بلاگ شرکتی را audit کن.
+
+**AIOSEO**
+
+1. گراف schema در AIOSEO. همان قانون یک emitter.
+2. Local + Article + FAQ روی پست نازک: کم کن.
+
+**جا خالی واقعی:** فهرست type در Rank Math بزرگ‌ترین و آسان‌ترین برای سوءاستفاده است. Yoast کوچک‌تر است. schema سفارشی SEOPress قوی است. Rich Results Test / Schema Markup Validator گوگل قاضی‌اند.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Title tags",
+};
+
+export const article = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: "Title tags",
+  url: "https://www.example.com/en/docs/02-on-page-seo/title-tags",
+};
+```
+
+App Router: به `JsonLd` بده. Pages Router: script در `next/head`. همان گراف را در MDX **و** layout تکرار نکن.
+
+`generateMetadata` جایگزین JSON-LD نیست؛ title/description/canonical را اداره می‌کند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «type schema بیشتر = رتبه بیشتر.»
+- **DEPRECATED:** microdata به‌عنوان الزام (JSON-LD توصیهٔ پیش‌فرض فعلی است).
+- `speakable` / `Course` / `JobPosting` جعلی روی صفحهٔ نامرتبط.
+- markup ناموجود به‌عنوان `InStock`.
+- کپی JSON-LD رقیب از جمله `@id` آنها.
+
+## نکته‌های سطح بالا / پروداکشن
+
+بهداشت گراف: `@id` per entity، `isPartOf` / `publisher` به Organization. یک `lib/schema.ts` نگه دار تا NAP فوتر و JSON-LD جدا نشوند.
+
+CI: چک اختیاری که `headline` === H1. بعد از آپدیت پلاگین نمونهٔ قالب را validate کن.
+
+وقتی گوگل نوع rich-result را می‌اندازد، markup را همان رلیز بردار نه گراف مرده.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| Rich Results Test | type واجدی که می‌خواستی | خطا، اضافهٔ اسپمی |
+| view-source | یک گراف | ۳ پلاگین × ۳ type |
+| دیدنی در مقابل markup | می‌خواند | امتیاز/FAQ فقط در JSON |
+| URL Inspection | همان تست | CDN JSON-LD کهنه می‌دهد |

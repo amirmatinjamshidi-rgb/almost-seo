@@ -1,0 +1,110 @@
+---
+title: سلسله‌مراتب heading
+description: یک H1 برای شغل، بعد H2/H3 به‌عنوان outline — نه نردبان کلمه و نه فقط اندازهٔ فونت دیزاین.
+module: 02-on-page-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Headingها (`h1` تا `h6`) **outline** سندند. به کاربر، درخت a11y، و استخراج (sitelink، featured snippet، jump link) کمک می‌کنند. cheat code رتبه نیستند.
+
+قانونی که هنوز می‌ماند:
+
+- **یک H1** که شغل سند را می‌گوید، معمولاً هم‌تراز title.
+- **H2/H3** منطقی تو در تو. از `h1` به `h4` نپر چون CSS قالب قشنگ‌تر بود.
+- heading برای لوگو، nav، یا «مطالب مرتبط» استفاده نکن.
+- صفحه‌خوان و ابزار outline با `h` باید با چیزی که آدم ساختار می‌نامد بخواند.
+
+چند `h1` در HTML5 از نظر spec معتبر است و در قالب هنوز شلوغی است (قالب + بیلدر + پلاگین). یکی را ترجیح بده.
+
+## چرا مهم است
+
+H1 جاافتاده، یا H1 که می‌گوید `Home`، همهٔ کار را به title می‌دهد. stuffing heading (`h2` = هر مترادف) پسرعموی آن‌پیج keyword stuffing است.
+
+<CorrectExample title="درست">
+```html
+<h1>robots.txt</h1>
+<h2>What it can do</h2>
+<h2>What it cannot do</h2>
+<h3>noindex still needs a fetch</h3>
+<h2>WordPress</h2>
+```
+
+outline با بخش‌ها می‌خواند. اندازهٔ CSS جداست — `h1` را با `div` استایل‌شده جعل نکن.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="شش H1 و H2 مترادف stuffing است. «heading» فقط-دیداری که div است برای outline نامرئی است.">
+```html
+<h1>robots.txt</h1>
+<h1>robots txt</h1>
+<h1>SEO</h1>
+<h2>crawl budget googlebot disallow sitemap xml</h2>
+<div class="text-5xl">What it can do</div>
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast بسته به نسخه H1 جاافتاده / چند H1 را در چک‌های readability-ish فلگ می‌کند — باز در HTML رندرشده verify کن (wrapper قالب اضافه می‌کند).
+2. عنوان پست اغلب H1 است. در اولین بلوک Gutenberg H1 دوم نگذار.
+
+**Rank Math**
+
+1. تحلیل محتوا در Rank Math عاشق کلمه در heading است. نردبان مترادف برای نمره نساز.
+2. پلاگین TOC که هر خط بولد را `h2` می‌کند outline را خراب می‌کند.
+
+**AIOSEO**
+
+1. همان. صفحهٔ زنده را ببین، نه فقط بوم ادیتور (بعضی بیلدرها title را wrap می‌کنند).
+2. ووکامرس: عنوان محصول H1؛ نظر نباید H1 دوم تزریق کند.
+
+**جا خالی واقعی:** صفحه‌ساز (Elementor و بقیه) معمولاً کارخانهٔ H1اند. SEOPress/Yoast/Rank Math/AIOSEO محتوای پست را تحلیل می‌کنند، نه همیشه قالب هدر.
+
+## پیاده‌سازی کد
+
+```tsx
+export default function Page() {
+  return (
+    <article>
+      <h1>robots.txt</h1>
+      <h2>What it can do</h2>
+      <p>…</p>
+      <h2>What it cannot do</h2>
+    </article>
+  );
+}
+```
+
+App Router: لوگوی layout باید لینک باشد، نه `h1`، مگر شاید هوم‌پیج واقعی. Pages Router: `_document` نباید هر صفحه را با `h1` اضافه wrap کند.
+
+MDX همین دانشنامه `#` مارک‌داون را به heading نگاشت می‌کند — یک `#` در frontmatter + `##` در بدنه همان الگو است.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «کلمه در H2 فاکتور رتبهٔ بالا است.»
+- **DEPRECATED:** دقیقاً یک H1 به‌عنوان الزام مستند رتبهٔ گوگل (برای sanity باز هم بکن).
+- استفاده از `h2` برای فهرست لینک فوتر.
+- یکی کردن متن heading با title کاراکتر به کاراکتر و بعد stuffing هر دو.
+- مخفی کردن heading با CSS (فهرست کلمه با `display:none`).
+
+## نکته‌های سطح بالا / پروداکشن
+
+سیستم دیزاین: استایل `h1` تا `h3` در CSS؛ نویسنده رتبه را از روی معنی برمی‌دارد. اگر برند kicker درشت می‌خواهد، آن `p` یا `span` است، نه `h1`.
+
+برای داک بلند، TOC باید درخت واقعی `h2`/`h3` را منعکس کند (کار Fumadocs)، نه outline دوم.
+
+فارسی: ترتیب heading همان است؛ `dir=rtl` معنای رتبه را عوض نمی‌کند.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source / درخت a11y | یک H1، H2/H3 تو در تو | H1 لوگو + H1 مقاله + H1 بیلدر |
+| outline | به‌عنوان فهرست مطالب خواناست | فهرست مترادف |
+| CSS | heading تگ واقعی است | div درشت |
+| GSC | — | گزارش GSC نیست؛ crawl کن |

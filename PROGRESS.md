@@ -9,8 +9,10 @@
   - `pnpm build` green; `/sitemap.xml` and `/robots.txt` live
 - [x] Module 00 — Foundations (4/4 topics, 2026-09-12)
   - how-search-engines-work, serp-anatomy, ranking-systems-overview, white-gray-black-hat (en+fa)
-- [ ] Module 01 — Keyword Research (0/6 topics)
-- [ ] Module 02 — On-page SEO (0/13 topics)
+- [x] Module 01 — Keyword Research (6/6 topics, 2026-09-12)
+  - search-intent, long-tail-vs-short-tail, keyword-clustering, cannibalization, keyword-tools, semantic-entity-seo (en+fa)
+- [x] Module 02 — On-page SEO (13/13 topics, 2026-09-12)
+  - title-tags, meta-descriptions, heading-hierarchy, url-structure, internal-linking, image-seo, content-depth-eeat, featured-snippets, schema-jsonld, canonical-tags, pagination, hreflang-onpage, breadcrumbs (en+fa)
 - [x] Module 03 — Technical SEO (16/16 topics, 2026-09-12)
   - site-architecture, crawl-budget, robots-txt, xml-sitemaps, indexing-directives, core-web-vitals, mobile-first-indexing, https-mixed-content, redirects, 404-vs-410, duplicate-content-at-scale, log-file-analysis, javascript-seo-rendering, site-migration, international-seo-structure, hacked-site-recovery (en+fa)
 - [x] Module 04 — Off-page SEO (7/7 topics, 2026-09-12)

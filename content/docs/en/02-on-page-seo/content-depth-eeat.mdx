@@ -1,0 +1,97 @@
+---
+title: Content depth and on-page E-E-A-T
+description: Enough unique substance for the query — with visible who/how/when — not a word-count target or a fake author box.
+module: 02-on-page-seo
+topic_order: 7
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Depth** means the document finishes the job the SERP assigned (Module 01 intent). A calculator query needs a working calculator. A policy query needs accurate current rules. A product query needs specs and stock truth. Word count is a byproduct, not a target.
+
+**On-page E-E-A-T** (Experience, Expertise, Authoritativeness, Trust — rater concept, Module 04 off-page) here is *visible*: byline of a real person, date, method, sources, “we measured / we shipped,” contact, HTTPS. JSON-LD does not replace a bio. Fake “ medically reviewed by” is worse than none (Module 04 / 09 YMYL).
+
+Thin content and **doorway pages** (scaled near-duplicates for queries) are spam policies. Refreshing a date stamp without adding substance is not depth.
+
+## Why it matters
+
+Shallow pages bounce and fail raters. Inflated pages that repeat the SERP’s first result with extra adjectives also fail. Depth is *coverage of the job*, not length.
+
+<CorrectExample>
+A robots.txt topic that includes syntax, staging disasters, plugin steps, Next.js `robots.ts`, myths, and a verify table — because that is the job of this encyclopedia page. Author/org is the site; last_reviewed is in frontmatter. Examples are copy-pasteable, not “lorem.”
+</CorrectExample>
+
+<IncorrectExample why="2,000 words of synonym padding and a stock-photo ‘doctor’ do not add experience. City doorways with three swapped sentences are scaled thin content.">
+```html
+<h1>Best SEO Tehran</h1>
+<p>We are the best SEO in Tehran. SEO in Tehran is important...</p>
+<p>Medically reviewed by Dr. SEO</p>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast readability / word-count bars are not Google. Ignore “too short” on a correct 400-word definition page.
+2. Author archives: real bios or `noindex` empty authors.
+
+**Rank Math**
+
+1. Rank Math content score will nag for more headings/keywords. Do not pad to green.
+2. Schema Person: only real users.
+
+**AIOSEO**
+
+1. AIOSEO TruSEO same trap.
+2. “E-E-A-T” modules that add empty award lists: fill or disable.
+
+**Feature gap:** All four plugins score tokens. None can tell a domain expert from a spinner. SEOPress readability is the same class.
+
+## Code implementation
+
+```tsx
+export default async function Page() {
+  const doc = await getDoc("robots-txt");
+  return (
+    <article>
+      <h1>{doc.title}</h1>
+      <p>
+        Last reviewed {doc.lastReviewed} · {doc.authors.join(", ")}
+      </p>
+      {doc.body}
+    </article>
+  );
+}
+```
+
+App Router: body from MDX/CMS on the server. Pages Router: `getStaticProps`. Do not hide the only unique paragraphs behind a “read more” that is not in the HTML.
+
+Author pages as real routes if you claim people (Module 04).
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Minimum 300 / 500 / 2,000 words to rank.
+- **DEPRECATED:** “Skyscraper” as copy the top result and add 500 words.
+- Date-only refreshes (`Updated 2026`) with no diff.
+- Doorway city pages as “depth at scale.”
+- E-E-A-T as a plugin checkbox.
+
+## Senior / production notes
+
+Briefs should list **questions the URL must answer**, sourced from SERP + GSC + SMEs, not a word count. For YMYL, named reviewer and date are operational, not decorative.
+
+Prune or merge thin URLs (Module 06) rather than padding them.
+
+This encyclopedia’s `last_reviewed` frontmatter is the honesty mechanism — keep it real when you edit.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| SERP job | Page completes it | Padding / missing steps |
+| Byline / date | True or omitted | Fake reviewer |
+| Unique substance | Examples, methods | Spun clone |
+| Index | Thin/doorway templates gone | Thousands of near-dupes |

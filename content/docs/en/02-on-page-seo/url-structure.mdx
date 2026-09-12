@@ -1,0 +1,97 @@
+---
+title: URL structure
+description: Stable, readable paths that match the IA — ASCII slugs, one host, no session IDs, no annual rewrites.
+module: 02-on-page-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **URL** is an identifier. Humans paste it, crawlers discover it, links accrue to it. Changing it is a migration (Module 03 redirects).
+
+Good defaults:
+
+- HTTPS, preferred host (`www` or apex), consistent trailing-slash policy.
+- **Readable slug** from the topic (`/docs/robots-txt`), not `/p?id=12`.
+- Locale prefix if you are multilingual (`/en/…`, `/fa/…`) — this site’s pattern.
+- Lowercase, hyphenated, ASCII for the path when you can. Persian in the path is allowed but painful for tooling; many FA sites keep English slugs and Persian titles (this encyclopedia does).
+- No session IDs, tracking as the only difference, or `?sort=` as indexable URLs.
+
+Folders should match hubs (`/guides/espresso-machines/...`). Deep date paths (`/2026/09/12/post`) add churn when you reorganize.
+
+## Why it matters
+
+Ugly, unstable URLs leak links and confuse canonicals. Keyword-stuffed slugs (`/best-seo-tehran-cheap-agency`) look like 2012 doorways and are hell to change.
+
+<CorrectExample>
+```txt
+https://www.example.com/en/docs/02-on-page-seo/url-structure
+```
+
+Stable filename, locale prefix, HTTPS, matches the nav.
+</CorrectExample>
+
+<IncorrectExample why="Parameters, stuffed slugs, and yearly copies split signals and rot every January.">
+```txt
+http://example.com/Page.aspx?id=12&session=abc
+https://www.example.com/best-url-structure-seo-canonical-slug-2026
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Core WP: Settings → Permalinks. `/%postname%/` is the usual. Changing this later requires a redirect map.
+2. Yoast does not replace a bad permalink scheme. Strip stop-words in slugs by hand; do not automate aggressive deletions that collide.
+
+**Rank Math**
+
+1. Rank Math → General Settings → Links: “strip category” / remove stop words. Easy to break inbound URLs — 301 first.
+2. Do not enable all-lowercase if you already have mixed-case URLs in the wild without redirects.
+
+**AIOSEO**
+
+1. Same: permalinks are core WP. AIOSEO cannot save a `%category%/%postname%` scheme without redirects when you flatten.
+2. Attachment URLs: disable if they create `/image/` clones of the post.
+
+**Feature gap:** Rank Math’s slug tools are the most aggressive. Yoast is quieter. SEOPress follows core permalinks. Nobody invents a good IA for you.
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+
+<Link href="/en/docs/02-on-page-seo/url-structure">URL structure</Link>
+```
+
+App Router file path = public path (`app/[lang]/docs/[[...slug]]`). `trailingSlash` in `next.config` must match canonicals and sitemap. Pages Router: `as` rewrites that are not real files become a second URL space — avoid.
+
+Never put `?utm=` in internal `href`s. Ads can add UTM; canonical strips them (canonical topic).
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Exact-match URLs as a major ranking lever.
+- **DEPRECATED:** “Shorter always ranks better.” Readable and stable beat tiny.
+- Uppercase paths that 200 alongside lowercase.
+- Re-slug every title change (`url-structure-updated-final-v3`).
+- IDs in the path *and* a slug that both 200 (`/12-robots` and `/robots-txt`).
+
+## Senior / production notes
+
+Slug policy in git: English kebab-case, identical in `en`/`fa` trees so hreflang pairs never 404. If you need Persian slugs, you need a second mapping table — expensive.
+
+When you must change a slug: 301, update internals, sitemap, GSC. Treat it as Module 03 migration, not a “quick edit.”
+
+Query strings: indexable only when they are real landing pages (Module 03 / 07 facets).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Sample money URLs | Readable, HTTPS, stable | IDs, sessions, stuffed |
+| Trailing slash | One canonical form | Both 200 |
+| Internals | No UTM | Sitewide `?utm_source=nav` |
+| FA/EN pair | Same slug after locale | One side 404 |

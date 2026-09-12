@@ -1,0 +1,114 @@
+---
+title: Keyword tools
+description: What GSC, Keyword Planner, and third-party crawlers can and cannot tell you — treat volume as a hint, SERPs and your logs as ground truth.
+module: 01-keyword-research
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **keyword tool** estimates demand or difficulty. None of them are Google’s ranking API.
+
+Ground-truth stack:
+
+- **Google Search Console** — queries that already hit *your* URLs: impressions, clicks, average position. Biased toward what you already show for. Best for expansion and cannibalization.
+- **Google Keyword Planner** / Ads — advertiser demand, grouped ideas, ranges. Built for ads. Volume is bucketed and not a promise of organic size.
+- **Autocomplete / “People also ask” / related searches** — live language, zero “difficulty score.”
+- **Third-party tools** (Ahrefs, Semrush, etc.) — crawled SERP models, clickstream estimates, competitor URL overlap. Useful, **not** Google. Scores are proprietary.
+
+Also: site search logs, support tickets, sales calls — queries tools never invented.
+
+Do not fabricate or treat a “KD 12” as a Google document. Difficulty is “who is on page one today,” which you see by looking at the SERP.
+
+## Why it matters
+
+Teams ship calendars from a CSV of volume and then wonder why the SERP is a local pack or a shopping grid. Tools without a SERP check are how you pick the wrong intent.
+
+<CorrectExample>
+Process: pull GSC queries with impressions and low CTR → open the SERP → cluster → brief.
+
+```txt
+GSC: "x-robots-tag pdf" → landing /docs/indexing-directives (position ~8)
+SERP: technical docs, Search Central
+Brief: add a PDF / header section; do not new URL
+```
+
+Planner/third-party used only to find *gaps* not in GSC yet, then verified in the SERP before a new slug.
+</CorrectExample>
+
+<IncorrectExample why="Sorting 5,000 rows by volume and spawning a post per row ignores intent, SERP features, and duplicates.">
+```txt
+keyword,volume,kd
+best vpn, 50000, 90
+best vpn 2026, 12000, 80
+buy best vpn, 800, 70
+```
+
+All become separate WordPress posts the same week. No SERP screenshot in the brief.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not include Keyword Planner. Paste titles from your brief; do not let the traffic light pick the query.
+2. GSC integration in WP (Site Kit or native) is for monitoring, not for dumping all queries into drafts.
+
+**Rank Math**
+
+1. Rank Math Google Trends / “keyword suggestions” if present are extra estimates. Still check SERPs.
+2. Instant Indexing does not make a bad keyword choice rank.
+
+**AIOSEO**
+
+1. AIOSEO SEO Analyzer / keyword ideas: same caveat.
+2. Do not sync a third-party “content file” of 500 titles into drafts automatically.
+
+**Feature gap:** Site Kit + Yoast/Rank Math/AIOSEO/SEOPress still will not replace a SERP review. Rank Math’s in-plugin suggestions are convenient and shallow compared with GSC + your head.
+
+## Code implementation
+
+Tools are off-site. What you implement is **not** inventing volume in the app. Optional: internal search logging to feed research (privacy-respecting):
+
+```ts
+export async function POST(req: Request) {
+  const { q } = await req.json();
+  if (typeof q !== "string" || q.length > 200) {
+    return Response.json({ ok: false }, { status: 400 });
+  }
+  await logSiteSearch(q); // aggregate, no PII in the string policy
+  return Response.json({ ok: true });
+}
+```
+
+App Router route handler. Pages Router: API route. Do not log tokens or emails. Do not expose the log as an indexable `/search?q=` page farm (Module 03 crawl traps).
+
+`sitemap.ts` stays for URLs you chose, not for every tool row.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Exact-match volume as the only KPI for a content team.
+- **DEPRECATED:** Keyword difficulty as a Google metric.
+- **DEPRECATED:** LSI keyword tools.
+- Paying for a tool and never opening GSC.
+- Using only English tools for Persian demand (coverage is worse; GSC + people win).
+- Treating ChatGPT “keyword lists” as demand data. They are language models, not clickstream.
+
+## Senior / production notes
+
+Budget: GSC is mandatory. Ads Planner is enough for many sites. Third-party suites pay for **competitor URL** and link graphs, not for prettier volume.
+
+Persian: mix Arabic/Persian Yeh/Kaf, colloquial vs formal. Tools split these; clusters should not.
+
+Never publish a table of invented volumes in this encyclopedia or in client decks without citing the tool and date as an estimate.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Brief | SERP note + GSC or gap source | Volume column only |
+| New URL | Cluster decided first | One row = one post |
+| GSC after publish | Query family appears | Only the stuffed head, or nothing |
+| Site search | `/search` noindex, not in sitemap | Indexed query URLs |

@@ -1,0 +1,98 @@
+---
+title: Canonical tags
+description: rel=canonical as a preference for the one URL that should represent the document — self-referencing on winners, never a 404 or a noindex.
+module: 02-on-page-seo
+topic_order: 10
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+`rel=canonical` (HTML or HTTP `Link`) tells Google which URL you prefer when several URLs show substantially the same document. It is a **hint**, not a directive (Module 03 duplicates). Google may ignore a silly canonical.
+
+On a healthy page: **self-canonical** to the HTTPS preferred host, matching sitemap and internal links. Trailing slash and query policy must agree.
+
+Point canonical at another URL when this URL is a true duplicate (print view, UTM, tracking) **and** you cannot 301. If the extra URL should not exist, **301** instead.
+
+Never canonical to a `noindex` URL, a 404, a different entity, or a homepage as a junk drawer.
+
+## Why it matters
+
+Wrong canonicals donate the document to the wrong URL or create a loop of hints. Missing self-canonicals let parameters proliferate.
+
+<CorrectExample>
+```html
+<link rel="canonical" href="https://www.example.com/en/docs/02-on-page-seo/canonical-tags" />
+```
+
+`?utm_source=newsletter` on the same article: either strip at the edge or canonical to the clean URL. Do not self-canonical the UTM URL.
+</CorrectExample>
+
+<IncorrectExample why="Canonical to home, to noindex, or to HTTP splits or drops the document.">
+```html
+<link rel="canonical" href="https://www.example.com/" />
+<link rel="canonical" href="http://example.com/canonical-tags" />
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast prints self-canonicals per post. Override only when you mean it.
+2. After HTTPS / host migration, confirm Yoast uses the new `home`.
+
+**Rank Math**
+
+1. Rank Math canonical field. People paste the homepage. Don’t.
+2. Pagination canonical settings: page 2 should canonical to page 2 if it is unique, not always to page 1 (see pagination topic).
+
+**AIOSEO**
+
+1. Same override risk.
+2. Conflict with another canonical plugin: view-source, keep one.
+
+**Feature gap:** All four emit canonicals. Rank Math/AIOSEO expose more “canonical pagination” toggles that can silently point page 2 at page 1. Yoast is more conservative. SEOPress too. Server `Link` headers plus plugin tags = duplicates — pick one channel.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+const canonical =
+  "https://www.example.com/en/docs/02-on-page-seo/canonical-tags";
+
+export const metadata: Metadata = {
+  alternates: { canonical },
+};
+```
+
+App Router `metadataBase` must be `https://` origin. Pages Router: explicit absolute canonical. Facets: `noindex` or canonical to the clean category (Module 03 / 07).
+
+Do not render canonical in client-only React.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Canonical as a guaranteed directive.
+- **DEPRECATED:** Cross-domain canonical to a site you do not control as a ranking steal.
+- Self-canonical on junk filters you wanted noindexed (mixed message).
+- Relative canonicals that resolve to the wrong host.
+- Canonical + 301 chain disagreement.
+
+## Senior / production notes
+
+One function `canonicalFor(path, locale)` used by metadata, sitemap, and hreflang. Split-brain is the usual bug.
+
+When consolidating cannibal URLs, 301 the loser; do not leave it 200 with a canonical forever unless you have a reason (print).
+
+Inspect Google’s chosen canonical in URL Inspection, not only your tag.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source | Absolute HTTPS self (or intended) | Missing / home / HTTP |
+| URL Inspection | Google agrees or explains | Chose a parameter URL |
+| Sitemap | Same loc as canonical | Sitemap lists the duplicate |
+| Headers vs HTML | One canonical story | Two different Link / link |

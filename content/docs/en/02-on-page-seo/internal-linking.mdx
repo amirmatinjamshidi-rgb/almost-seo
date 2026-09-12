@@ -1,0 +1,103 @@
+---
+title: Internal linking
+description: HTML hrefs that carry users and Googlebot through the IA — descriptive anchors, crawlable links, no PageRank-sculpting nofollow.
+module: 02-on-page-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Internal links** are `<a href>` (or Next.js `Link` that renders them) between URLs you control. They do three jobs: navigation, discovery for Googlebot, and context (anchor + surrounding text).
+
+Rules:
+
+- Real `href` in the first HTML. Click handlers that never emit an anchor are not links (Module 03 architecture / JS SEO).
+- **Descriptive anchors** — `robots.txt syntax` beats `click here`. Brand and URL anchors are fine; exact-match spam in every paragraph is not.
+- Point at the **canonical** winner of the cluster, not a UTM copy or the HTTP variant.
+- Hubs list children; children link up and sideways to related topics. Orphans rank late.
+- Do not `nofollow` internal links to “sculpt PageRank.”
+
+Related: breadcrumbs (later in this module), sitemaps (Module 03) as a hint list, not a substitute.
+
+## Why it matters
+
+A brilliant article with zero inlinks is a crawl and UX problem. Over-linking every sentence to money pages looks like a doorway. The graph *is* the site architecture.
+
+<CorrectExample>
+```html
+<p>
+  Disallow is not deindex.
+  Use <a href="/en/docs/03-technical-seo/indexing-directives">noindex / X-Robots-Tag</a>
+  on a crawlable URL.
+</p>
+```
+
+In a hub, a list of child `<a href>` as in Module 03’s architecture example.
+</CorrectExample>
+
+<IncorrectExample why="JS-only cards and ‘click here’ plus nofollow internals hide the graph or lie about it.">
+```html
+<span onclick="go('/docs/secret')">click here</span>
+<a href="/docs/money" rel="nofollow">money</a>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast cornerstone + text links in the post. Auto-related-posts widgets that insert 12 junk hrefs are usually worse than three editorial links.
+2. After a 301, run a search for old slugs in content.
+
+**Rank Math**
+
+1. Rank Math link suggestions: optional. Do not accept every suggestion to hit a “link count” score.
+2. Sitewide footer exact-match links to 30 money URLs is a spam pattern.
+
+**AIOSEO**
+
+1. Same. TOC and related-posts modules: crawlable `href`, not `#` placeholders.
+2. Disable “insert link to focus keyword” automations if they create loops.
+
+**Feature gap:** Yoast Premium’s internal linking is the most famous. Rank Math/AIOSEO/SEOPress all have suggestion UIs. None replace an IA. All will happily nofollow internals if you tick a global box (don’t).
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+
+export function Related({ href, label }: { href: string; label: string }) {
+  return <Link href={href}>{label}</Link>;
+}
+```
+
+App Router: `Link` from `next/link` for internal paths. External stay `<a>`. Pages Router: same. Do not prefetch-only without an `href`.
+
+Programmatic hubs: map over children and render `<Link href={path}>`. Empty `href="#"` lists fail crawls.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** PageRank sculpting with internal `nofollow`.
+- **DEPRECATED:** Exact-match sitewide footers as a ranking system.
+- Related-posts blocks that link to the same three posts on every URL.
+- Anchors that are the raw URL when a name exists — fine occasionally, not as the only pattern.
+- Linking only from the homepage “because PageRank.”
+
+## Senior / production notes
+
+Measure in a crawler: inlinks to money URLs, orphan count, click depth. After publishing a cluster, add the hub link in the same release.
+
+Nav vs in-body: both count as links if they are `a href`. Mega-menus that hide 5,000 links can look like a link farm; keep the menu honest.
+
+i18n: link to the **same locale** unless you are the language switcher. `/fa/` articles should not dump users onto `/en/` mid-paragraph without a reason.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Crawl from `/` | Topic URLs found via HTML | Orphans / JS-only |
+| Anchors | Descriptive | `click here` / stuffed |
+| Winner URLs | Internals hit canonicals | Links to old slugs |
+| rel | Internals follow | Sitewide internal nofollow |

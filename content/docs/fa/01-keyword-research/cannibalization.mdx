@@ -1,0 +1,111 @@
+---
+title: cannibalization کلمه
+description: وقتی دو URL خودت برای یک کوئری رقابت می‌کنند — در GSC چطور ببینی، و ادغام کنی، فرق بگذاری، یا canonical.
+module: 01-keyword-research
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Cannibalization** یعنی چند URL روی **هاست تو** برای همان کوئری مرتبط‌اند، پس گوگل impression را دوپاره می‌کند، برندهٔ ناپایدار برمی‌دارد، یا قالب ضعیف‌تر را رتبه می‌دهد (آرشیو تگ در مقابل راهنما).
+
+«دو صفحه که یک کلمه شریک‌اند» نیست. محصول و راهنمای تعمیر هر دو می‌توانند `espresso machine` بگویند با نیت متفاوت. cannibalization **همان نیت، چند کاندیدا** است.
+
+منبع معمول: بلاگ بازنشرشده در مقابل راهنمای evergreen، URL صفحه‌بندی/sort، تگ وردپرس، کپی `?utm=`، دو لوکیل بدون hreflang، HTTP جا مانده، و «پست جدید ۲۰۲۶» وقتی `/guides/x` هنوز زنده است.
+
+ترتیب تعمیر: **فرق بگذار** (اگر هر دو شغل واقعی‌اند) ← **ادغام** (ضعیف را به برنده 301 کن، داخلی را به‌روز کن) ← **canonical / noindex** فقط وقتی URL اضافه باید زنده بماند (فیلتر، چاپ). canonical hint است؛ 301 برای URLی است که باید بمیرد.
+
+## چرا مهم است
+
+برای دو سند پول دادی. کاربر روی کهنه فرود می‌آید. GSC شبیه «برای همان کوئری #۸ و #۱۲» است — اغلب یک خوشه با دو URL است، نه نیاز به لینک بیشتر.
+
+<CorrectExample title="درست">
+GSC: کوئری `robots.txt` به `/blog/robots-intro` و `/docs/robots-txt` می‌خورد. برنده باید داک باشد.
+
+```http
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/docs/robots-txt
+```
+
+nav داخلی و sitemap URL بلاگ را می‌اندازند. H1 داک `robots.txt` می‌ماند. پست بلاگ فقط اگر 301 می‌کنی اشاره‌گر کوتاه می‌شود؛ هر دو را 200 نگذار.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="هر دو را 200 با self-canonical «برای نگه داشتن ترافیک» گذاشتن شکاف را نگه می‌دارد. بازنویسی ۲۰۲۶ بدون 301 از slug قدیم دو برابرش می‌کند.">
+```txt
+/guides/espresso-machines
+/guides/espresso-machines-2026
+/blog/best-espresso-machines
+```
+
+همه ایندکس‌پذیر، همه `best espresso machines` را هدف گرفته‌اند.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast cannibalization را تشخیص نمی‌دهد. از GSC (Queries ← Pages) یا رتبه‌گیر گروه‌شده بر کوئری استفاده کن.
+2. بعد از ادغام: canonical یواست روی برنده = خودش. پلاگین ریدایرکت / Premium برای بازنده. بازنده را از sitemap بردار (نوع noindex خاموش).
+
+**Rank Math**
+
+1. ریدایرکت Rank Math: بازنده را 301 کن. 302 نه.
+2. اگر دو پست focus keyword یکسان دارند بو است، اثبات نه — SERP/GSC را ببین.
+
+**AIOSEO**
+
+1. ریدایرکت AIOSEO: همان 301. حذف در مقابل 301: permalink حذف‌شده تا ریدایرکت نگذاری 404 است — اول ریدایرکت بگذار.
+2. دسته در مقابل پست با همان عبارت: یکی را hub بردار (معمولاً راهنما/پست)، پست را noindex نکن.
+
+**جا خالی واقعی:** «content AI» در Rank Math با خوشحالی پست دوم برای همان focus keyword می‌نویسد. Yoast/AIOSEO/SEOPress هم جلوت را نمی‌گیرند. تشخیص GSC است، نه پلاگین.
+
+## پیاده‌سازی کد
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/blog/robots-intro",
+        destination: "/docs/robots-txt",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+App Router: بعد از ریدایرکت مسیر قدیم را حذف یا unpublish کن تا 200 روی مسیر دوم نماند. Pages Router: همان. وقتی slug قدیم باید محو شود به `rel=canonical` تنها تکیه نکن.
+
+قبل و بعد، URL صفحهٔ GSC برای کوئری را لاگ کن. اگر گوگل بازنده را نگه داشت، داخلی که هنوز به آن اشاره می‌کند و sitemap را چک کن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «گوگل از دو صفحه که stem شریک‌اند بدش می‌آید؛ هیچ‌وقت کلمه را دو بار در سایت نیاور.»
+- **DEPRECATED:** `noindex` URL اضافه ولی هنوز در nav اصلی به آن لینک بده.
+- canonical از برنده به بازنده از روی اشتباه.
+- ادغام دو نیت متفاوت در یک URL چاق چون داشبورد گفت «cannibalized.»
+- پست تاریخ‌دار جدید (`-2026`) به‌عنوان استراتژی تازه‌سازی بدون بازنشسته کردن slug قدیم.
+
+## نکته‌های سطح بالا / پروداکشن
+
+اسپردشیت تریاژ: کوئری، URL A، URL B، کلیک، قالب، تصمیم (هر دو را نگه دار / 301 / noindex). حین مهاجرت هفتگی؛ روی بلاگ بزرگ ماهانه.
+
+Facet: خیلی «cannibal» SKU همان پارامتر تکراری است (ماژول ۰۳). در قالب درست کن، نه با ۱۰٬۰۰۰ پست.
+
+hreflang: `/en/` و `/fa/` برای همان مفهوم **cannibalization نیستند** اگر annotation متقابل است. هستند اگر هر دو لوکیل کپی انگلیسی‌اند.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| GSC query ← pages | یک URL اصلی | دو URL در حال عوض شدن |
+| `curl -I` بازنده | 301 به برنده | هر دو 200 |
+| Sitemap | فقط برنده | هر دو لیست |
+| رتبه‌گیر | URL پایدار | slug در حال flip-flop |

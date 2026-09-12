@@ -1,0 +1,118 @@
+---
+title: سئوی معنایی و entity
+description: آدم، جا، چیز — برای entity و رابطه بنویس، نه برای کیسهٔ مترادفی که گوگل ظاهراً «باید» روی صفحه ببیند.
+module: 01-keyword-research
+topic_order: 6
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+سیستم سرچ کوئری و سند را به **entity** (آدم، محصول، سازمان، استاندارد) و رابطه نگاشت می‌کند، نه فقط به رشته. **سئوی معنایی** در ۲۰۲۶ یعنی: روشن باشد *دربارهٔ کدام چیز* هستی، با اسم unambiguous، شناسهٔ یکدست، و محتوایی که خواننده‌ای که entity را می‌شناسد راضی کند.
+
+در عمل:
+
+- **entity اصلی** واضح روی صفحه (`robots.txt` فرمت فایل، نه برندی به اسم Robots).
+- entity مرتبط که مال کار است (`Googlebot`، `Sitemap`، `noindex`) توضیح داده شود، نه stuffed.
+- **شناسه**: URL canonical، `sameAs` در Organization/Person JSON-LD، SKU محصول، ISBN — وقتی واقعی‌اند.
+- همان اسم GBP / داک رسمی وقتی همان چیز را می‌گویی (NAP ماژول ۰۵ حالت لوکال است).
+
+چه نیست: «کلمهٔ LSI»، ابزار TF-IDF که پیش‌نویس را زرد می‌کند، یا سهمیهٔ مترادف. گوگل علناً LSI را به‌عنوان چیزی که استفاده می‌کند رد کرده. بردار کلمه در پلاگین SEO، Knowledge Graph نیست.
+
+Entity هنوز **سند مطابق نیت** می‌خواهد. اسم بردن همهٔ گونهٔ قهوه روی PDP تراکنشی آن را دانشنامه نمی‌کند، و برعکس.
+
+## چرا مهم است
+
+صفحهٔ مبهم برای entity غلط رتبه می‌گیرد (`mercury` سیاره در مقابل عنصر در مقابل ماشین). stuffing مترادف نازک رفع ابهام نمی‌کند. entity روشن به آدم، sitelink، و پنل دانشی که کنترل نمی‌کنی کمک می‌کند.
+
+<CorrectExample title="درست">
+```html
+<article>
+  <h1>robots.txt</h1>
+  <p>
+    <code>robots.txt</code> is the IETF-style file at the host root that
+    Googlebot fetches before crawling paths.
+  </p>
+  <p>Related: <a href="/docs/indexing-directives">noindex / X-Robots-Tag</a>.</p>
+</article>
+```
+
+JSON-LD `TechArticle` دربارهٔ همان URL. لینک داخلی به entity بچه. بدون dump «also known as crawl budget robots meta disallow SEO file» در پاراگراف اول.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="سوپ مترادف و sameAs جعلی entity نمی‌سازد. شبیه stuffing است و می‌تواند با org واقعی بجنگد.">
+```html
+<p>
+  robots.txt robot txt robot.txt crawler instructions SEO crawl budget
+  googlebot bingbot semantic keywords LSI latent indexing...
+</p>
+<script type="application/ld+json">
+{"@type":"Organization","sameAs":["https://en.wikipedia.org/wiki/Search_engine_optimization"]}
+</script>
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Schema: Article/TechArticle + Organization با `sameAs` واقعی. صفحهٔ ویکی‌پدیا که نمایندگی‌اش نمی‌کنی نچسبان.
+2. لینک داخلی به URL canonical همان entity از تکرار کلمه بهتر است.
+
+**Rank Math**
+
+1. سازندهٔ Schema در Rank Math: نوعی را بردار که می‌خواند. فیلد «keyword» اضافه در schema API entity نیست.
+2. بلوک FAQ برای هر alias: معمولاً نویز. یک تعریف کافی است.
+
+**AIOSEO**
+
+1. knowledge graph در AIOSEO: اسم یکدست با بقیهٔ سایت.
+2. اسپم تکراری Article + WebPage + FAQ روی پست ۴۰۰ کلمه‌ای را خاموش کن.
+
+**جا خالی واقعی:** هر چهار پلاگین schema می‌دهند؛ هیچ‌کدام برایت knowledge graph نمی‌سازند. نوع «rich snippet» در Rank Math راحت زیاد اعمال می‌شود. SEOPress همان. شناسه (`sameAs`، SKU) تحریری است.
+
+## پیاده‌سازی کد
+
+```ts
+export const techArticle = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: "robots.txt",
+  about: {
+    "@type": "Thing",
+    name: "robots.txt",
+    description: "Host-level crawler allow/disallow file",
+  },
+  url: "https://www.example.com/docs/robots-txt",
+};
+```
+
+App Router: `JsonLd` روی صفحهٔ داک (همین سایت). Pages Router: `next/head`. با `alternates.canonical` جفت کن و برای محصول `sku` / `gtin` واقعی فقط وقتی داری.
+
+از فهرست کلمه ۵۰ نود `Thing` نساز. `about` باید با H1 بخواند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** کلمهٔ LSI به‌عنوان سیستم رتبهٔ گوگل.
+- **DEPRECATED:** TF-IDF / «فرکانس عبارت در مقابل رقبا» به‌عنوان جایگزین سند درست.
+- **DEPRECATED:** ابزار «هم‌رخدادی» که هر entity مرتبط را به پاراگراف اول مجبور می‌کند.
+- markup شخص که وجود ندارد (ماژول ۰۴).
+- استفاده از `sameAs` به ویکی‌پدیا برای «دزدیدن» entity.
+
+## نکته‌های سطح بالا / پروداکشن
+
+وقتی رشته مبهم است در title رفع ابهام کن (`Mercury (element)` در دانشنامه؛ در فروشگاه شمارهٔ مدل). در فارسی، وام‌واژه در مقابل اصطلاح بومی: فرمی را بردار که مخاطب می‌جوید، آن یکی را یک‌بار بگو، URL را دو شاخه نکن (خوشه‌بندی).
+
+برای این دانشنامه، entity همان **filename موضوع** است (`robots-txt`) مشترک در `en`/`fa` با hreflang — دو زبان، یک entity موضوع.
+
+GSC را برای کوئری‌ای ببین که نشان می‌دهد برای حس غلط رتبه می‌گیری. H1 و مقدمه را درست کن؛ مترادف بیشتر اضافه نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| صد کلمهٔ اول | entity برای آدم روشن است | dump مترادف |
+| Schema | type می‌خواند؛ `sameAs` مال تو | ویکی جعلی / نوع اضافه |
+| GSC | کوئری با entity می‌خواند | کوئری حس غلط غالب است |
+| داخلی | لینک به URL موضوع مرتبط | یتیم، یا کلمهٔ فوتر stuffed |
