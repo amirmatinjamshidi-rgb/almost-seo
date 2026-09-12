@@ -1,0 +1,99 @@
+---
+title: WordPress SEO plugin comparison
+description: Choose Yoast, Rank Math, AIOSEO, or SEOPress by verified capability, ownership, tier, and operational cost—not dashboard scores.
+module: 10-wordpress-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+An SEO plugin is the **metadata control plane** for WordPress: titles, canonicals, robots directives, XML sitemaps, schema, breadcrumbs, and social metadata. It is not an SEO strategy, a cache, a CDN, or proof that Google indexed a URL.
+
+Choose one primary SEO plugin. The table reflects vendors’ documented product lines reviewed in September 2026; packaging changes frequently, so “paid” can mean a premium tier or separate add-on.
+
+| Capability | Yoast SEO | Rank Math | AIOSEO | SEOPress |
+| --- | --- | --- | --- | --- |
+| Schema support | Automatic connected graph in free; specialized capabilities vary by Premium/add-ons | Built-in types; advanced generator/templates and some specialized fields are PRO | Core graph/types; advanced schema features are tier-dependent | Basic automatic schema in free; manual/automatic advanced types in PRO |
+| Redirect manager | Premium; also included in some paid product bundles | Built-in module; advanced automation/analytics vary by tier | Paid Redirection Manager; tier-dependent | PRO, including regex/import-export |
+| 404 monitor | No native crawl/log monitor in core; use server logs or a dedicated tool | Built-in simple monitor; advanced logging is tier-dependent | Available with paid redirect tooling | PRO |
+| Local SEO module | Paid Local capability, bundled with current paid suites; verify license | Local settings available; multi-location/advanced blocks are PRO | Paid Local SEO module/tier | PRO |
+| WooCommerce SEO | Dedicated paid WooCommerce product/add-on | Base integration; advanced WooCommerce SEO is PRO | WooCommerce features are paid/tier-dependent | PRO |
+| Content analysis | Readability + SEO analysis; more suggestions in paid products | Score/checklist; Content AI is a separate quota/service | TruSEO checklist; advanced assistant features vary by tier | Content analysis; enhanced AI/advanced tools in paid products |
+| Sitemap control | XML sitemaps and type/taxonomy controls; specialized news/video products are paid | XML sitemap controls; news/video are PRO | Smart XML sitemaps; news/video are tier-dependent | XML/HTML/image controls; news/video in PRO |
+| Breadcrumbs | Output + schema; theme integration may require code/block | Output + schema, shortcode/block/widget options | Output + schema; advanced templates/primary term are paid | Basic breadcrumb capability differs by version; advanced customizable breadcrumbs in PRO |
+| Social preview | Social metadata; visual previews are product/tier-dependent | Social metadata and preview UI | Social metadata and preview controls; tier-dependent details | Open Graph/X metadata; preview workflow varies by edition |
+| Pricing model | Free core; paid subscription and specialized products/bundles | Free core; PRO/Business/Agency subscriptions; Content AI separate | Free core; multiple annual paid tiers | Free core; PRO subscription, generally fewer add-on boundaries |
+| Performance / bloat impact | Mature but maintains indexables tables and analysis UI; measure on your site | Modular, but enabling analytics, AI, 404 logging, and every module adds work | Broad suite; disable unused modules and measure admin/front-end queries | Often a compact stack; PRO breadth still adds scheduled jobs and tables |
+
+“Lightweight” is not a universal benchmark. Front-end impact depends on enabled modules, theme hooks, database size, cron, object cache, and whether bot-hit 404 logging grows without retention.
+
+## Why it matters
+
+Running two suites can emit conflicting canonicals, duplicate schema graphs, competing sitemaps, and two redirect engines. Switching based on a green content score can also discard primary-term, redirect, or schema metadata.
+
+<CorrectExample>
+One plugin owns titles, canonicals, robots, schema, social cards, breadcrumbs, and sitemaps. Redirects live either in that suite or at the edge—not both. The team records the paid tier, disabled modules, data owner, and an export/rollback procedure.
+</CorrectExample>
+
+<IncorrectExample why="Three control planes create duplicate output and nobody can tell which canonical, sitemap, or redirect is authoritative.">
+```txt
+Yoast: canonical + sitemap + schema
+Rank Math: canonical + sitemap + 404 redirects
+AIOSEO: Product schema + redirects
+Theme: another Product JSON-LD graph
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast:** strong default graph and broad editorial familiarity. Redirects and specialized Local/WooCommerce workflows depend on paid products. Its content score is guidance, not a ranking factor.
+
+**Rank Math:** modular UI, native redirects/404 monitoring, and many schema controls. Disable Analytics, Content AI, or logging when unowned; advanced and multi-location capabilities can require PRO.
+
+**AIOSEO:** broad suite with sitemap, schema, breadcrumbs, social, Local/WooCommerce, and redirect products. Confirm the exact license tier before promising a client a module.
+
+**Feature gap:** Yoast core has no native 404 request monitor. Rank Math exposes a 404 monitor in-plugin. AIOSEO and SEOPress tie comparable operational tooling to paid products. SEOPress matters when you want its advanced-condition schema, redirect export, or comparatively consolidated PRO bundle—not as a generic fourth plugin to install.
+
+Migration rule: backup database/files, export the old plugin, use the destination importer on staging, compare source output, then deactivate—not delete—the old plugin for the rollback window.
+
+## Code implementation
+
+Use code to detect accidental duplicate emitters during QA:
+
+```js
+const html = await fetch(process.env.QA_URL).then((response) => response.text());
+const canonicals = html.match(/rel=["']canonical["']/gi) ?? [];
+const jsonLdBlocks = html.match(/application\/ld\+json/gi) ?? [];
+
+if (canonicals.length !== 1) throw new Error(`Expected one canonical, got ${canonicals.length}`);
+console.log({ jsonLdBlocks: jsonLdBlocks.length });
+```
+
+Multiple JSON-LD blocks can be valid; inspect their entities and `@id` values. The failure is conflicting or duplicate ownership, not merely a count above one.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A 100/100 plugin score makes a page rank.”
+- **DEPRECATED:** “More schema plugins create more rich results.”
+- Comparing lifetime screenshots or exact prices after vendors changed packaging.
+- Treating WordPress core sitemaps, plugin sitemaps, and a CDN-generated sitemap as additive.
+- Leaving 404 logs forever on bot-heavy sites.
+- Activating every module because it is included.
+
+## Senior / production notes
+
+Write an ownership matrix: metadata, schema, redirects, sitemap, breadcrumbs, social, analytics, and 404 retention. Benchmark cached and uncached TTFB, front-end queries, admin edit latency, cron events, and table growth before and after activation. A premium feature is not infrastructure: host/server cache and CDN behavior remain outside the SEO plugin.
+
+Review vendor release notes and the installed admin screen before procurement; this page intentionally avoids exact prices because regional taxes, promotions, site limits, and bundle contents change.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View source | One canonical, one robots owner, coherent schema graph | Conflicting tags or duplicate Product entities |
+| Sitemap | One submitted index with intended post types | Core and plugin maps submitted blindly |
+| Redirect sample | One hop, expected status and target | Loop or plugin/CDN chain |
+| Operations | Modules, tier, exports, retention documented | “The plugin handles SEO” |
+| Performance | Measured delta within budget | “Lightweight” accepted from marketing copy |

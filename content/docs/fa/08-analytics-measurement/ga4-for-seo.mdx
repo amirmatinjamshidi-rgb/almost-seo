@@ -1,0 +1,145 @@
+---
+title: GA4 برای سئو
+description: رفتار organic بعد از کلیک را با event plan، consent و privacy control بسنج — sessionهای GA4 را به زور برابر کلیک GSC نکن.
+module: 08-analytics-measurement
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Google Analytics 4 یا GA4 یک سیستم اندازه‌گیری **event-based و بعد از کلیک** است. برای سئو dimensionهایی مثل landing page، session default channel group، source/medium، device و country مفیدند؛ event مفید هم outcome واقعی مثل `generate_lead`، `purchase` یا activation دقیق تعریف‌شده است.
+
+«organic traffic» به‌تنهایی KPI نیست. measurement plan بنویس:
+
+1. سؤال کسب‌وکار: landing ارگانیک outcome باکیفیت ساخته؟
+2. Event: کدام رفتار قابل مشاهده این outcome را ثابت می‌کند؟
+3. Parameter: فقط context غیر PII که برای توضیح لازم است.
+4. مالک و QA: خرابی event را چه کسی می‌فهمد؟
+5. Retention و consent: از نظر قانون و قرارداد چه چیزی قابل جمع‌آوری است؟
+
+GA4 و GSC قرار نیست one-to-one reconcile شوند. scope، timezone، attribution، identity، consent، bot filtering، canonical و processing آن‌ها فرق دارد. reportهای GA4 ممکن است modeled data داشته باشند که در BigQuery event export نیست.
+
+## چرا مهم است
+
+کار سئو می‌تواند click را زیاد و کیفیت lead را کم کند؛ یا click ثابت بماند ولی conversion بهتر شود. outcome بر اساس landing page این فرق را نشان می‌دهد. tracking بد اما noise ناوبری را جای موفقیت می‌نشاند، دادهٔ شخصی لو می‌دهد و attribution را با دقت جعلی تحویل می‌دهد.
+
+<CorrectExample title="درست">
+تیم فقط بعد از ثبت موفق و server-confirmed فرم معتبر، `generate_lead` می‌فرستد. payload شامل `form_type: "enterprise_demo"` و `landing_group: "comparison"` است—نه اسم، ایمیل، موبایل، free-text یا query string کامل. consent state قبل از collection اعمال می‌شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="کلیک دکمه lead تأییدشده نیست، کلیک تکراری outcome را باد می‌کند، و فرستادن فیلد فرم یا URL دارای ایمیل به Analytics هم خلاف policy است هم ریسک privacy.">
+هر کلیک «ارسال» قبل از validation یک conversion می‌زند. payload ایمیل، موبایل و `page_location` با `?email=person@example.com` دارد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast ابزار پیاده‌سازی GA4 یا consent نیست.
+2. یک مالک tag داشته باش: GTM، integration قالب، یا پلاگین analytics؛ هر سه با هم نه.
+
+**Rank Math**
+
+1. Rank Math Analytics می‌تواند برای reporting به سرویس‌های گوگل وصل شود؛ در configuration نصب‌شده بررسی کن خودش tracking هم inject می‌کند یا نه.
+2. چون dashboard در زمان processing خالی است tag دوم روشن نکن.
+
+**AIOSEO**
+
+1. reportهای search در AIOSEO جای event design در GA4 نیست.
+2. مسئولیت webmaster verification، SEO reporting و analytics collection را جدا و روشن نگه دار.
+
+**SEOPress**
+
+1. SEOPress بسته به version/config می‌تواند GA tracking و privacy/consent control بدهد.
+2. network request واقعی قبل و بعد consent را تست کن؛ اسم یک toggle مدرک نیست.
+
+**جا خالی واقعی:** SEOPress با امکان tag insertion مستقیم فرق مادی دارد؛ بقیهٔ SEO pluginها بیشتر report یا Google integration می‌دهند. هیچ‌کدام جای CMP با بررسی حقوقی، server-side validation یا event specification نسخه‌دار نیست.
+
+## پیاده‌سازی کد
+
+GA measurement ID تنظیم public است، secret نیست. این component در App Router consent ذخیره‌سازی را پیش‌فرض denied می‌کند، query string را نمی‌فرستد و navigation کلاینت را بعد از update consent توسط CMP می‌سنجد:
+
+```tsx
+// app/analytics.tsx
+"use client";
+
+import Script from "next/script";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+
+declare global {
+  interface Window {
+    dataLayer: unknown[];
+    gtag: (...args: unknown[]) => void;
+  }
+}
+
+export function Analytics({ measurementId }: { measurementId: string }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    window.gtag?.("event", "page_view", {
+      page_location: `${window.location.origin}${pathname}`,
+      page_path: pathname,
+      page_title: document.title,
+    });
+  }, [pathname]);
+
+  return (
+    <>
+      <Script id="ga-consent" strategy="beforeInteractive">
+        {`window.dataLayer=window.dataLayer||[];
+window.gtag=function(){dataLayer.push(arguments);}
+gtag('consent','default',{
+  analytics_storage:'denied',
+  ad_storage:'denied',
+  ad_user_data:'denied',
+  ad_personalization:'denied'
+});`}
+      </Script>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`}
+        strategy="afterInteractive"
+      />
+      <Script id="ga-config" strategy="afterInteractive">
+        {`gtag('js',new Date());gtag('config','${measurementId}',{send_page_view:false});`}
+      </Script>
+    </>
+  );
+}
+```
+
+فقط وقتی `NEXT_PUBLIC_GA_MEASUREMENT_ID` هست آن را از `app/layout.tsx` render کن. CMP باید انتخاب واقعی کاربر را با `gtag("consent", "update", ...)` بفرستد؛ granted را hard-code نکن. اگر `user_id` داری، فقط شناسهٔ non-PII کاربر loginشده را به‌عنوان config بده و بعد sign-out مقدار `null` بفرست.
+
+Pages Router: همین component را در `pages/_app.tsx` mount کن و به `router.events.routeChangeComplete` وصل شو؛ `send_page_view: false` بماند تا duplicate نشود.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «تعریف bounce rate در Universal Analytics عیناً در GA4 است.»
+- **DEPRECATED:** «کلیک GSC باید با organic session در GA4 برابر باشد.»
+- هر scroll، CTA click یا refresh صفحهٔ تشکر را key event کردن.
+- فرستادن ایمیل، موبایل، اسم، مکان دقیق، free text یا PII داخل URL/event parameter.
+- تصور اینکه web data redaction از Measurement Protocol یا Data Import هم محافظت می‌کند؛ نمی‌کند.
+- load tag قبل از ثبت consent default.
+- مقایسهٔ scopeهای last-click، data-driven، session و first-user به‌عنوان یک attribution model.
+- ندیدن internal traffic، cross-domain، referral exclusion و tag تکراری.
+
+## نکته‌های سطح بالا / پروداکشن
+
+event contract نسخه‌دار بساز: trigger، deduplication key، parameter مجاز، نیاز consent، owner و payload نمونه. outcome مهم را روی server validate کن و فقط دسته‌بندی non-PII حداقلی بفرست.
+
+DebugView و network request مرورگر را audit کن، ولی DebugView total پروداکشن نیست. GA4 UI، Data API و BigQuery را در scope مستند خودشان reconcile کن؛ cardinality، identity، modeled data و processing فرق می‌کند.
+
+گوگل فرستادن PII به Analytics را ممنوع کرده. data redaction کمربند ایمنی است، نه مجوز و نه پوشش کامل. الزام consent به حوزهٔ قضایی و use case بستگی دارد؛ با مشاور حقوقی چک کن. منابع رسمی: [سیاست PII](https://support.google.com/analytics/answer/7686480)، [data redaction](https://support.google.com/analytics/answer/13544947)، و [Consent Mode](https://support.google.com/analytics/answer/13802165).
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Consent | default قبل collection؛ update با انتخاب کاربر | granted هاردکد |
+| Payload | parameter غیر PII از allowlist | فیلد فرم/query کامل |
+| Navigation | یک `page_view` برای هر view موردنظر | initial و route دوبل |
+| Outcome | server-confirmed و deduplicated | click دکمه به اسم revenue |
+| Reconciliation | فرق scope مستند | GA4 به زور برابر GSC |

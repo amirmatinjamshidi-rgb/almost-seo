@@ -1,0 +1,154 @@
+---
+title: راهنمای ارزیاب کیفیت و E-E-A-T
+description: راهنمای rater را لنز کیفیت بگیر؛ Trust مرکز E-E-A-T است و ارزیاب‌ها صفحهٔ تو را مستقیم برای ranking نمره نمی‌دهند.
+module: 09-algorithm-updates
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+گوگل با **Search Quality Rater Guidelines** یا QRG به ارزیاب‌های بیرونی یاد می‌دهد کیفیت نتیجه‌های Search را بسنجند. این بازخورد کمک می‌کند گوگل ببیند سیستم‌های موجود یا تغییر پیشنهادی درست کار می‌کنند یا نه. rater نه رتبه را کنترل می‌کند، نه برای URL تو ranking score می‌سازد و نه rating یک صفحه را مستقیم وارد الگوریتم ranking می‌کند. تشبیه خود گوگل کارت بازخورد مشتری رستوران است.
+
+در زمان این بازبینی، PDF رسمی موجود نسخهٔ ۱۱ سپتامبر ۲۰۲۵ با Copyright 2025 است. وقتی گوگل نسخه‌ای منتشر نکرده، «QRG 2026» از خودت نساز. برای ممیزی دوباره [PDF رسمی QRG](https://guidelines.raterhub.com/searchqualityevaluatorguidelines.pdf) را چک کن.
+
+راهنما برای سنجش Page Quality از **E-E-A-T** استفاده می‌کند:
+
+- **Experience:** تجربهٔ دست‌اول یا تجربهٔ زندگی که به هدف صفحه ربط دارد؛ مثلاً یادداشت تست صاحب محصول یا روایت دقیق بیمار از تجربهٔ خودش.
+- **Expertise:** دانش یا مهارت لازم برای موضوع. نوع و سطحش به کار بستگی دارد؛ راهنمای سیم‌کشی خانه با خاطرهٔ رستوران یک شرط ندارد.
+- **Authoritativeness:** اینکه creator یا سایت در همان زمینه چقدر منبع go-to شناخته می‌شود. بعضی موضوع‌ها منبع رسمی یکتا دارند، خیلی‌ها ندارند.
+- **Trust:** صفحه چقدر دقیق، صادق، امن و قابل‌اتکاست. **Trust عضو مرکزی و مهم‌ترین بخش است.** تخصص ظاهری، scam، conflict پنهان، checkout ناامن یا evidence ساختگی را نجات نمی‌دهد.
+
+E-E-A-T نمرهٔ پلاگین یا checklist مستقیم ranking factor نیست. خود گوگل می‌گوید E-E-A-T به‌تنهایی **specific ranking factor** نیست؛ سیستم‌های خودکار از ترکیبی از factorها استفاده می‌کنند که می‌توانند جنبه‌هایش را تشخیص دهند. ترکیب لازم برای هر صفحه فرق دارد. خاطرهٔ سفر و پروتکل اورژانس قرار نیست یک مدل proof داشته باشند.
+
+قاب **Who, How, Why** گوگل کمک می‌کند:
+
+1. **Who:** چه کسی نوشته یا بازبینی کرده، جایی که خواننده منطقی انتظار دارد بداند؟
+2. **How:** چطور ساخته شده—تست، source، گزارش اصل، automation، روش review؟
+3. **Why:** برای کمک به audience موجود است یا عمدتاً برای گرفتن traffic از Search؟
+
+## چرا مهم است
+
+خیلی از تیم‌ها E-E-A-T را دکور می‌کنند: بایلاین expert جعلی، `Person` schema، author box، badge و صفت بیشتر در About. وقتی ادعا قابل verify نیست همین کار Trust را کمتر می‌کند.
+
+کار مفید، عملیاتی است: مسئول معلوم باشد، ادعای factual مدرک داشته باشد، conflict مادی گفته شود، commerce امن باشد، خطا اصلاح شود و evidence مناسب هدف صفحه دیده شود. Main Content قوی، reputation سایت و creator، اطلاعات مالکیت و customer service سالم با هم مهم‌اند؛ یک widget جای همه را نمی‌گیرد.
+
+<CorrectExample title="درست">
+Review دستگاه اسپرسو اسم تست‌کننده را می‌گوید، روش تکرارپذیر تست را توضیح می‌دهد، عکس و measurement خودش را می‌آورد، نتیجهٔ مشاهده‌شده را از ادعای سازنده جدا می‌کند، درآمد احتمالی affiliate را شفاف می‌گوید، ضعف‌ها را هم می‌نویسد و به policy اصلاح خطا لینک می‌دهد. مدرک با هدف صفحه جور است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="محتوای کپی با مدرک غیرقابل‌بررسی و schema تزئین شده. با وجود همهٔ برچسب‌های E-E-A-T، Trust خراب است.">
+```txt
+Reviewed by: Dr. Expert
+Credentials: "۲۰ سال برتری"
+Method: اعلام نشده
+Images: press kit سازنده
+Rating: 9.8/10
+Drawbacks: هیچ
+Affiliate relationship: پنهان
+Person schema: sameAs به profileهای خالی
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. نویسندهٔ واقعی را به identity درست `Person` یا Organization وصل کن و هر جا خواننده انتظار دارد archive/profile قابل‌فهم بساز.
+2. schema یواست identity را توصیف می‌کند؛ credential، reputation، source و تجربهٔ دست‌اول را verify نمی‌کند.
+
+**Rank Math**
+
+1. Person/Organization و author schema را از پروندهٔ تحریریهٔ واقعی تنظیم کن. فقط برای افزودن `reviewedBy` کاربر reviewer جعلی نساز.
+2. Content AI و SEO score، E-E-A-T یا Page Quality در QRG را اندازه نمی‌گیرند.
+
+**AIOSEO**
+
+1. فیلدهای Author SEO را فقط برای تحصیلات، شغل، نقش و حوزهٔ تخصص واقعی استفاده کن. اگر لازم است ادعا را به مدرک وصل کن.
+2. policy تحریریه، correction، مالکیت، contact و affiliate disclosure را در خود سایت بساز؛ schema تنها کافی نیست.
+
+**جا خالی واقعی:** این پلاگین‌ها metadata هویت و schema می‌دهند. reputation نمی‌سازند، انجام تست را ثابت نمی‌کنند و medical review را validate نمی‌کنند. SEOPress در این کار تفاوت مادی ندارد. CMS باید ownership تحریریه، مدرک reviewer، source field، تاریخچهٔ correction و access control داشته باشد.
+
+## پیاده‌سازی کد
+
+provenance را از دادهٔ ساختاریافته برای آدم render کن؛ فقط در JSON-LD قایمش نکن:
+
+```tsx
+// app/about/editorial/page.tsx
+type EditorialOwner = {
+  name: string;
+  role: string;
+  profileUrl: string;
+};
+
+const owner: EditorialOwner = {
+  name: "Mina Rahimi",
+  role: "Managing editor",
+  profileUrl: "/authors/mina-rahimi",
+};
+
+export default function EditorialPolicyPage() {
+  return (
+    <main>
+      <h1>How we publish</h1>
+      <p>
+        Each article has an accountable owner. Sources are checked against the
+        claim, material conflicts are disclosed, and substantive corrections
+        are recorded on the article.
+      </p>
+      <dl>
+        <dt>Editorial owner</dt>
+        <dd>
+          <a href={owner.profileUrl}>{owner.name}</a>, {owner.role}
+        </dd>
+        <dt>Corrections</dt>
+        <dd>
+          <a href="/about/corrections">Read our corrections policy</a>
+        </dd>
+        <dt>Contact</dt>
+        <dd>
+          <a href="/contact">Report a factual issue</a>
+        </dd>
+      </dl>
+    </main>
+  );
+}
+```
+
+این صفحهٔ App Router یک Server Component است و provenance قابل crawl و قابل‌دیدن می‌سازد، بدون وابستگی به JavaScript کلاینت. روی هر مقاله، نویسنده/reviewer، تاریخ آپدیت معنادار، source، method و disclosure متناسب با هدف را render کن. اگر `Person` یا `Article` JSON-LD داری، از همان رکورد تحریریه بساز تا ادعای نمایشی و machine-readable از هم جدا نشوند.
+
+Pages Router: همین component را در `pages/about/editorial.tsx` بگذار؛ برای دادهٔ CMS بر اساس freshness از `getStaticProps` یا `getServerSideProps` استفاده کن. انتخاب router، E-E-A-T تولید نمی‌کند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «Quality rater صفحهٔ من را می‌بیند و نمره‌ای می‌دهد که گوگل با آن rank می‌کند.»
+- **DEPRECATED:** «E-E-A-T یک ranking factor مستقیم با score قابل‌اندازه‌گیری است.»
+- **DEPRECATED:** «Author box و `Person` schema و About اضافه کن تا E-E-A-T پاس شود.»
+- **DEPRECATED:** استفاده از Experience به‌عنوان مجوزی برای اینکه خاطرهٔ شخصی در advice روشن YMYL جای expert consensus را بگیرد.
+- ساختن مدرک تحصیلی، تأیید reviewer، award، نتیجهٔ تست، تعداد مشتری یا `sameAs`.
+- چسباندن «medically reviewed» به همهٔ مقاله‌ها بدون اینکه معلوم باشد چه کسی، چه چیزی و چه زمانی را دیده.
+- پنهان کردن sponsor یا affiliate پشت لینک عمومی footer.
+- عوض کردن تاریخ برای ظاهر تازه، بدون review واقعی.
+- فرض اینکه creator کوچک چون reputation عمومی ندارد حتماً منفی است؛ context و purpose مهم‌اند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+فقط author را model نکن؛ **claim** را هم model کن. claim پرریسک باید source، تاریخ source، reviewer لازم و content owner داشته باشد. bio عمومی نویسنده مدرک تک‌تک ادعاها نیست.
+
+credential را به حوزه محدود کن. cardiologist خودکار متخصص tax نیست؛ برای review آسیاب قهوه ممکن است تست دست‌اول یک enthusiast از عنوان عمومی مفیدتر باشد. در advice روشن YMYL، expertise مناسب و هم‌سویی با consensus جاافتاده لازم است. تجربهٔ شخصی هنوز ارزش دارد، اگر روشن بماند تجربه است و advice ناامن نشود.
+
+Trust بیرون مقاله هم زندگی می‌کند: پرداخت امن، return صادقانه، customer service در دسترس، مالکیت روشن، reputation مستقل، correction و نبود deceptive design. نگذار schema بیشتر از چیزی که کاربر می‌تواند verify کند ادعا کند.
+
+QRG را framework مفهومی ممیزی بدان، نه فهرست مخفی weightهای ranking. نسخهٔ دقیق PDF آموزشی را نگه دار و با انتشار نسخهٔ جدید checklist را بازبینی کن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| ادعای QRG | PDF و نسخهٔ رسمی ثبت شده | «راهنمای ۲۰۲۶» ساختگی |
+| هویت | creator/reviewer واقعی با حوزهٔ مرتبط | «Expert Team» عمومی |
+| Evidence | source، method، proof اصل و conflict دیده می‌شود | credential فقط در schema |
+| عملیات Trust | contact، correction، مالکیت و transaction کار می‌کند | badge تزئینی |
+| سازگاری | متن، CMS و JSON-LD یک حرف می‌زنند | `Person` جعلی یا stale |
+| زبان rater | ارزیابی غیرمستقیم کیفیت سیستم | «rater مستقیم رتبه می‌دهد» |

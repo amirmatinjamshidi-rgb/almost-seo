@@ -1,0 +1,91 @@
+---
+title: WordPress permalink structure
+description: Design stable, readable WordPress URLs; separate display taxonomy from URL ownership and redirect every intentional change.
+module: 10-wordpress-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A permalink is the public, durable URL of a post, page, product, archive, or attachment. Prefer a short structure whose meaning survives redesigns: usually `/%postname%/` for editorial sites and deliberate bases such as `/product/` and `/product-category/` for stores.
+
+WordPress rewrite rules map pretty paths to queries. Categories, dates, and authors may help users, but putting changeable hierarchy or dates into every post URL creates migration debt. Removing all bases can create slug collisions and routing ambiguity.
+
+## Why it matters
+
+Changing a permalink changes an address already linked, crawled, shared, and cached. A clean structure aids comprehension; it does not outweigh redirect chains, lost links, or accidental duplicates created by a late “SEO cleanup.”
+
+<CorrectExample>
+An existing `/2024/04/caching-wordpress/` keeps its URL because it ranks. New evergreen posts use `/%postname%/`. If the business approves a migration, a tested one-to-one 301 map ships with updated internal links and sitemap URLs.
+</CorrectExample>
+
+<IncorrectExample why="Changing the global structure on production creates site-wide 404s; redirecting every old URL to the homepage is irrelevant and may be treated as a soft 404.">
+```txt
+Friday: /%year%/%monthnum%/%postname%/
+Saturday: /%postname%/
+Fallback: every 404 → /
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+1. Set **Settings → Permalinks** once. Avoid “Plain” for public content; avoid dates for evergreen content unless dates are integral to the publication.
+2. Keep product/category bases explicit unless collision and translation behavior have been tested.
+3. After changing registered post types or rewrite code, visit Permalinks once or flush rewrite rules only on activation—not every request.
+
+**Yoast, Rank Math, and AIOSEO:** each can update canonicals/sitemaps to the current URL, but none makes an unplanned URL change safe. Use the paid/built-in redirect feature available in your installed tier or server/edge redirects. Test primary-category permalink features carefully: reclassifying a post must not silently change its URL.
+
+**Feature gap:** Rank Math has a built-in redirect module; Yoast redirects are paid; AIOSEO’s redirect manager is paid/tier-dependent. SEOPress PRO is relevant for regex/import-export redirect workflows. WordPress core remembers some old post slugs, but that heuristic is not a migration plan and does not cover every taxonomy/CPT case.
+
+## Code implementation
+
+Register rewrites at initialization and flush only when the plugin is activated:
+
+```php
+function seogod_register_guide_type(): void {
+    register_post_type('guide', [
+        'public' => true,
+        'rewrite' => ['slug' => 'guides', 'with_front' => false],
+        'has_archive' => true,
+    ]);
+}
+add_action('init', 'seogod_register_guide_type');
+
+register_activation_hook(__FILE__, function (): void {
+    seogod_register_guide_type();
+    flush_rewrite_rules();
+});
+```
+
+Server redirects are faster and survive plugin deactivation:
+
+```nginx
+location = /old-guide/ {
+    return 301 https://example.com/guides/new-guide/;
+}
+```
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Removing `/category/` always improves rankings.”
+- **DEPRECATED:** “Keywords deeper in the path lose PageRank.”
+- Translating slugs without mapping inbound links.
+- Two pages, terms, or post types claiming the same path.
+- Calling `flush_rewrite_rules()` on every request.
+- Fixing a URL with canonical only; canonical is not a redirect.
+
+## Senior / production notes
+
+Freeze URL policy in an architecture decision record. Inventory encoded characters, trailing slash policy, uppercase variants, feeds, pagination, REST routes, and multilingual prefixes. Redirect exact old URLs directly to final equivalents; avoid regex rules that swallow admin, API, assets, or query parameters needed for attribution.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Old URL | One 301 hop to exact successor | 404, home redirect, or chain |
+| New URL | 200 and self-canonical | Canonical points to old path |
+| Internals/sitemap | Only final URLs | Old paths still emitted |
+| Routing | Posts, terms, feeds, API work | Slug collision or rewrite 404 |
+| GSC | Expected transition monitored | Unexplained Not found spike |

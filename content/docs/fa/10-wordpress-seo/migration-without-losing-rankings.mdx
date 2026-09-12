@@ -1,0 +1,98 @@
+---
+title: مهاجرت وردپرس بدون از دست دادن رتبه
+description: host، domain، HTTPS، theme یا platform را با URL ثابت تا جای ممکن، staging noindex، redirect map، rollback، DNS/TTL و GSC کنترل‌شده مهاجرت بده.
+module: 10-wordpress-seo
+topic_order: 9
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Migration یعنی تغییر host، domain، protocol، URL structure، theme، CMS یا چند مورد با هم. هرچه variable همزمان بیشتر، ریسک بیشتر. برای host-only امن‌ترین راه این است که **URL عمومی و خروجی عوض نشوند**. اگر URL باید عوض شود، هر URL قدیمی باارزش مقصد دقیق می‌خواهد؛ معمولاً 301 در server/edge.
+
+پلن کامل inventory، ایزوله کردن staging، backup، تمرین restore، redirect map، launch check، DNS/TTL، monitoring و شرط rollback زمان‌دار دارد؛ فقط انتقال فایل نیست.
+
+## چرا مهم است
+
+موتور جستجو باید redirect، canonical، internal link، sitemap، hreflang، structured data و content را دوباره crawl و reconcile کند. جا افتادن یک template می‌تواند هزاران URL را حذف کند. قول «رتبه اصلاً تکان نمی‌خورد» حرفه‌ای نیست؛ scope محدود و اصلاح سریع افت قابل‌اجتناب را کم می‌کند.
+
+<CorrectExample title="درست">
+دو هفته قبل launch، TTL تا حد مجاز provider پایین می‌آید. staging هم HTTP auth دارد هم `noindex`. crawl کامل و export analytics/GSC baseline می‌شود. URL تا جای ممکن ثابت؛ تغییرها map یک-hop reviewشده دارند. فایل/DB backup و restore زمان‌گیری شده. سیستم قدیم تا پایان rollback window زنده است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="staging عمومی index می‌شود، redirect chain diagnosis را سخت می‌کند و حذف DB قدیم rollback را می‌کشد.">
+```txt
+staging.example.com: عمومی و indexable
+همهٔ URLهای قدیم → homepage
+DNS TTL: لحظهٔ launch عوض شود
+server/database قدیم: فوری پاک شود
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+1. staging را بدون email تراکنشی، payment، webhook یا purge واقعی clone کن.
+2. با HTTP auth/IP access ببند. گزینهٔ «discourage search engines»/`noindex` لایهٔ دوم است، نه تنها قفل.
+3. search-replace دامنه فقط با ابزار serialization-aware و dry run reviewشده؛ raw SQL replace روی serialized data نزن.
+4. upload، attachment path، user، order state، timezone، permalink، robots، cron و secret محیط را حفظ کن.
+
+**Yoast، Rank Math و AIOSEO:** setting/redirect را export کن، importer را فقط staging اجرا کن و canonical، schema، sitemap، social metadata و primary term را compare کن. فقط یک plugin مالک خروجی بماند.
+
+**جا خالی واقعی:** پلاگین redirect را import/store می‌کند، ولی DNS، TLS، host cache، DB consistency، mail، object storage و rollback زیرساخت‌اند. SEOPress PRO وقتی importer/exporter آن به map می‌خورد مفید است؛ launch control سرور نیست.
+
+برای تغییر domain، هر دو property قدیم/جدید GSC را verify، sitemap جدید را submit و اگر شرایط مستند گوگل برقرار است Change of Address را استفاده کن.
+
+## پیاده‌سازی کد
+
+redirect دقیق و path-preserving:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name old.example.com;
+
+    location = /legacy-guide/ {
+        return 301 https://www.example.com/guides/current-guide/;
+    }
+
+    location / {
+        return 301 https://www.example.com$request_uri;
+    }
+}
+```
+
+قبل از replace با WP-CLI، backup را verify و dry run را ببین:
+
+```bash
+wp search-replace 'https://old.example.com' 'https://www.example.com' \
+  --all-tables-with-prefix --precise --recurse-objects --dry-run
+```
+
+هیچ destructive DB commandی در runbook launch نگذار. backup ID بررسی‌شده و restore command متعلق به platform هاست/DB باید ثبت باشد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «301 دقیقاً ۱۰۰٪ رتبه را فوری نگه می‌دارد.»
+- **DEPRECATED:** «Disallow در robots.txt جلوی index staging را می‌گیرد.» ممکن است `noindex` را پنهان کند.
+- تغییر همزمان host، domain، URL، theme و content.
+- redirect همه به home یا chain از HTTP به HTTPS به www به path جدید.
+- فراموش کردن DNS TTL، certificate، email record یا CDN origin.
+- حذف host قدیم قبل از ثبات log/GSC و پایان rollback.
+
+## نکته‌های سطح بالا / پروداکشن
+
+trigger rollback را قبل launch عددی کن: error rate، درصد template گم‌شده، checkout failure، پوشش redirect یا anomaly شدید ترافیک. rollback فقط code نیست؛ application، سازگاری DB، file، DNS/CDN origin و job queue باید برگردند. publishing را freeze کن یا writeهای زمان cutover را reconcile کن.
+
+دامنه، redirect و certificate قدیم را بلندمدت نگه دار. analytics annotation بزن؛ GSC Page indexing/Crawl stats/Sitemaps و server log را per-template ببین؛ conversion را هم کنار session بسنج.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Crawl diff | status، canonical، robots، heading و schema طبق plan | template گم یا mass noindex |
+| Redirect map | یک hop به 200 مرتبط | chain، loop یا home |
+| Staging | auth-protected و noindex | عمومی/indexable |
+| DNS/TLS | resolver همگرا و origin سالم | origin قاطی یا cert خراب |
+| GSC/log | هر دو property monitor و sitemap جدید | launch کور |
+| Rollback | restore زمان‌گیری و owner مشخص | سیستم قدیم نابود |

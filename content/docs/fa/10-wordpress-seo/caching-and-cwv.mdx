@@ -1,0 +1,87 @@
+---
+title: Cache وردپرس و Core Web Vitals
+description: page، object، browser و edge cache را لایه‌بندی کن بدون cache کردن پاسخ خصوصی؛ LCP، INP و CLS را با field data بهتر کن.
+module: 10-wordpress-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Cache کار قابل‌استفادهٔ دوباره را نگه می‌دارد:
+
+- **Page cache** برای کاربر anonymous، HTML آماده می‌دهد و هر بار PHP بالا نمی‌آید.
+- **Object cache** مثل Redis نتیجهٔ query را نگه می‌دارد؛ جای page cache نیست.
+- **Browser cache** asset نسخه‌دار را نگه می‌دارد.
+- **CDN/edge cache** محتوای cacheable را نزدیک کاربر می‌دهد.
+- **PHP OPcache** bytecode کامپایل‌شده را نگه می‌دارد.
+
+Core Web Vitals یعنی **LCP**، **INP** و **CLS** در percentile 75 field data، جدا برای mobile/desktop وقتی CrUX دادهٔ کافی دارد. Lighthouse آزمایشگاهی ابزار diagnosis است، نه دیتاست ranking.
+
+## چرا مهم است
+
+TTFB خوب به LCP کمک می‌کند، ولی cache نمی‌تواند hero سنگین، long task، consent script یا layout shift را درمان کند. cache غلط ممکن است cart، account، preview، nonce یا HTML شخصی یک نفر را به بقیه نشان بدهد.
+
+<CorrectExample title="درست">
+articleهای anonymous page-cache می‌شوند. logged-in، preview، cart، checkout، account و request دارای session/cart cookie bypass هستند. asset hash‌شده TTL بلند دارد. purge فقط URL لازم را می‌زند. field CWV و conversion تصمیم می‌گیرند تغییر بماند یا نه.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="cache-all، HTML شخصی و nonce کهنه لو می‌دهد؛ delay-all هم consent، analytics یا interaction را می‌شکند.">
+```txt
+cache: تمام HTML برای ۳۰ روز
+vary: هیچ
+bypass cookie: هیچ
+optimization: هر script تا اولین click عقب بیفتد
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+اول cache رسمی هاست را انتخاب کن. LiteSpeed Cache برای server page cache به LiteSpeed/OpenLiteSpeed تکیه دارد؛ WP Rocket پولی است؛ W3 Total Cache لایه‌های زیاد و ownership دقیق می‌خواهد؛ Cloudflare APO یا edge cache هاست می‌تواند HTML را در edge بگیرد. دو page-cache plugin را stack نکن.
+
+**Yoast، Rank Math و AIOSEO:** زیرساخت full-page cache/CDN نیستند. بعد از تغییر title، canonical، robots، redirect یا schema purge کن.
+
+**جا خالی واقعی:** هیچ SEO suite جای FastCGI/LiteSpeed cache، Redis، CDN rule یا RUM را نمی‌گیرد؛ SEOPress هم استثنا نیست. «SEO score» پلاگین cache همان CrUX/GSC نیست.
+
+در WooCommerce، cart، checkout، account، password reset، preview، logged-in session و cookieهای مستند WooCommerce/vendor را exclude کن.
+
+## پیاده‌سازی کد
+
+شروع محافظه‌کارانه برای NGINX FastCGI:
+
+```nginx
+set $skip_cache 0;
+if ($request_method != GET) { set $skip_cache 1; }
+if ($request_uri ~* "^/(wp-admin|wp-login\.php|cart|checkout|my-account|wp-json)/") { set $skip_cache 1; }
+if ($http_cookie ~* "wordpress_logged_in_|woocommerce_items_in_cart|wp_woocommerce_session_") { set $skip_cache 1; }
+
+fastcgi_cache_bypass $skip_cache;
+fastcgi_no_cache $skip_cache;
+fastcgi_cache_valid 200 10m;
+```
+
+این template نهایی نیست؛ route و استفاده از `if` باید با هاست review شود. `Set-Cookie` را خراب نکن و پاسخ `private`/`no-store` را cache نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «cache plugin نصب شد، CWV حل شد.»
+- **DEPRECATED:** «Lighthouse 100 یعنی ranking boost قطعی.»
+- stack کردن cache پلاگین، هاست و edge بدون مالک purge.
+- cache کردن logged-in یا cart.
+- preload فونت و تصویرهای زیاد یا اشتباه.
+- خاموش کردن global heartbeat، REST یا cron برای نمره.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برای هر template budget بده: TTFB، بایت LCP، main-thread، CLS و third-party. hit ratio و headerهای `Age`/cache-status را ببین. فقط URL ارزشمند را warm کن؛ preload کور origin را خفه می‌کند. object eviction و page purge را جدا اداره کن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Header | repeat anonymous = HIT؛ private = BYPASS | cart/account = HIT |
+| محتوا | state logged-in/out درست | دادهٔ کاربر یا nonce لو رفته |
+| Field CWV | روند ۲۸روزهٔ template بهتر | فقط یک Lighthouse بهتر |
+| Origin | PHP/DB کمتر در load برابر | preloader worker را پر کرده |
+| کارکرد | form، consent و checkout سالم | delay باعث شکست شده |

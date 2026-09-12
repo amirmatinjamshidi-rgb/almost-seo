@@ -1,0 +1,82 @@
+---
+title: WordPress Multisite SEO
+description: Govern domains, locales, canonicals, sitemaps, schema identity, crawling, and plugin ownership across a WordPress Multisite network.
+module: 10-wordpress-seo
+topic_order: 8
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+WordPress Multisite runs multiple sites from one installation. Sites may use subdirectories, subdomains, or mapped domains, but each public site still needs a coherent origin, audience, content purpose, canonical policy, sitemap, Search Console setup, and organization identity.
+
+Multisite is an operations architecture, not an automatic international SEO solution. Translation relationships require reciprocal `hreflang` and locale governance; regional sites need more than copied pages with swapped place names.
+
+## Why it matters
+
+A network-wide plugin or theme change can alter metadata on every site. Domain mapping, cache keys, cron, user roles, and shared content introduce failures that are easy to multiply: cross-domain canonicals, wrong language alternates, sitemap host mismatches, or every region claiming the same Organization.
+
+<CorrectExample>
+Each mapped domain resolves over HTTPS and self-canonicalizes. Locale equivalents use reciprocal, indexable hreflang. Every site has a scoped sitemap/GSC property, unique market ownership, and network defaults that local admins can override within policy.
+</CorrectExample>
+
+<IncorrectExample why="Cross-domain canonicals ask Google to consolidate regional sites while nonreciprocal hreflang and shared cache entries make the signals contradictory.">
+```txt
+ca.example.com canonical → example.com
+example.com hreflang → ca.example.com
+ca.example.com reciprocal hreflang → missing
+edge cache key → path only
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+Decide network-activated versus per-site SEO plugin intentionally. One suite version should be maintained network-wide, but settings, licenses, sitemaps, organization data, and webmaster verification may be site-specific.
+
+**Yoast, Rank Math, and AIOSEO:** all can operate in multisite environments, but licensing and network controls differ by product/tier. Test site creation, mapped-domain canonicals, sitemap host, schema identity, social defaults, and role access on staging.
+
+**Feature gap:** none turns duplicated sites into valid localization. Rank Math multi-location Local SEO is a paid capability and is not the same as Multisite. Yoast Local and AIOSEO Local also solve business-location markup, not locale architecture. SEOPress matters only if its network/license or white-label controls materially fit the operator.
+
+Search Console domain properties simplify ownership, but URL-prefix properties can isolate sitemap and locale diagnostics.
+
+## Code implementation
+
+Use the current site URL, never a hard-coded network primary domain:
+
+```php
+add_filter('wpseo_canonical', function (string $canonical): string {
+    $host = wp_parse_url(home_url('/'), PHP_URL_HOST);
+    $url_host = wp_parse_url($canonical, PHP_URL_HOST);
+
+    if ($host !== $url_host) {
+        return home_url(wp_parse_url($canonical, PHP_URL_PATH) ?: '/');
+    }
+    return $canonical;
+});
+```
+
+This Yoast-specific guard is illustrative; investigate why a host mismatch occurs instead of masking legitimate cross-domain canonical policy. For edge caches, include the `Host` header in the cache key.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Subdomains or subfolders always rank better.”
+- **DEPRECATED:** “Multisite automatically adds hreflang.”
+- Copying identical pages to every market.
+- Hard-coding the primary domain in theme canonical/schema code.
+- Network-activating a plugin before license and table/cron impact tests.
+- Sharing one cache object or sitemap across hosts incorrectly.
+
+## Senior / production notes
+
+Maintain a site registry: blog ID, public domain, locale, market owner, legal entity, Search Console property, sitemap, analytics, cache zone, and retirement plan. Test backup/restore for one site and whole network. Capacity-plan shared database tables, cron, media, and deploy blast radius.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Domain/TLS | Every mapped host is valid and redirects once | Old network host leaks |
+| Canonical/hreflang | Self-canonical, reciprocal eligible alternates | Cross-host conflict |
+| Sitemap | Locs use that site’s public host | Mixed-domain URLs |
+| Cache | Same path differs correctly by host/locale | Cross-site HTML leak |
+| Governance | Site registry and rollback current | Unknown owner/network-wide surprise |

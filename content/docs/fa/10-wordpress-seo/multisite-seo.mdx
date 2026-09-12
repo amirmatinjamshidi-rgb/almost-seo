@@ -1,0 +1,82 @@
+---
+title: سئوی WordPress Multisite
+description: دامنه، locale، canonical، sitemap، هویت schema، crawl و مالکیت پلاگین را در شبکهٔ Multisite اداره کن.
+module: 10-wordpress-seo
+topic_order: 8
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+WordPress Multisite چند سایت را روی یک installation اجرا می‌کند. سایت‌ها می‌توانند subdirectory، subdomain یا mapped domain باشند، ولی هر سایت عمومی هنوز origin، audience، purpose، canonical policy، sitemap، Search Console و هویت Organization منسجم می‌خواهد.
+
+Multisite معماری عملیات است، نه راهکار خودکار international SEO. رابطهٔ ترجمه‌ها `hreflang` دوطرفه و governance لوکیل می‌خواهد؛ سایت region فقط copy با نام شهر عوض‌شده نیست.
+
+## چرا مهم است
+
+یک تغییر network-wide در plugin/theme می‌تواند metadata همهٔ سایت‌ها را عوض کند. domain mapping، cache key، cron، role و محتوای shared خطا را تکثیر می‌کنند: canonical به دامنهٔ غلط، hreflang اشتباه، sitemap با host قاطی یا همهٔ regionها با یک Organization جعلی.
+
+<CorrectExample title="درست">
+هر mapped domain با HTTPS بالا می‌آید و self-canonical است. معادل‌های locale، hreflang دوطرفه و indexable دارند. هر سایت sitemap/GSC scoped، مالک بازار و default شبکه دارد و admin محلی در مرز policy override می‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="canonical بین دامنه‌ها درخواست consolidation می‌دهد، در حالی که hreflang یک‌طرفه و cache مشترک signal متناقض می‌سازند.">
+```txt
+ca.example.com canonical → example.com
+example.com hreflang → ca.example.com
+hreflang برگشتی → ندارد
+edge cache key → فقط path
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+network activation یا per-site بودن SEO plugin را آگاهانه انتخاب کن. یک version را شبکه نگه دار، اما setting، license، sitemap، Organization و verification می‌توانند per-site باشند.
+
+**Yoast، Rank Math و AIOSEO:** در multisite قابل‌استفاده‌اند، ولی licensing و network control به محصول/tier بستگی دارد. ساخت سایت، canonical mapped domain، host sitemap، schema identity، social default و role را روی staging تست کن.
+
+**جا خالی واقعی:** هیچ‌کدام سایت duplicate را localization معتبر نمی‌کند. multi-location در Rank Math قابلیت پولی Local SEO است و Multisite نیست. Yoast Local و AIOSEO Local هم markup location می‌دهند، نه architecture زبان. SEOPress فقط اگر کنترل network/license یا white-label آن برای operator فرق واقعی دارد مطرح است.
+
+Domain property در GSC ownership را ساده می‌کند؛ URL-prefix property برای diagnosis جداگانهٔ locale/sitemap مفید است.
+
+## پیاده‌سازی کد
+
+دامنهٔ سایت جاری را بخوان؛ network primary را hard-code نکن:
+
+```php
+add_filter('wpseo_canonical', function (string $canonical): string {
+    $host = wp_parse_url(home_url('/'), PHP_URL_HOST);
+    $url_host = wp_parse_url($canonical, PHP_URL_HOST);
+
+    if ($host !== $url_host) {
+        return home_url(wp_parse_url($canonical, PHP_URL_PATH) ?: '/');
+    }
+    return $canonical;
+});
+```
+
+این guard مخصوص Yoast فقط مثال است؛ علت mismatch را پیدا کن و cross-domain canonical عمدی را پنهان نکن. در edge cache حتماً `Host` داخل key باشد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «subdomain یا subfolder همیشه بهتر rank می‌گیرد.»
+- **DEPRECATED:** «Multisite خودکار hreflang می‌سازد.»
+- copy یکسان در همهٔ marketها.
+- hard-code دامنهٔ اصلی در canonical/schema قالب.
+- network-activate قبل از تست license، table و cron.
+- cache object یا sitemap مشترک غلط بین hostها.
+
+## نکته‌های سطح بالا / پروداکشن
+
+site registry داشته باش: blog ID، domain عمومی، locale، market owner، legal entity، GSC property، sitemap، analytics، cache zone و retirement plan. restore یک سایت و کل شبکه را تست کن. shared DB، cron، media و blast radius deploy را capacity-plan کن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Domain/TLS | هر host معتبر و یک redirect | network host قدیمی leak |
+| Canonical/hreflang | self-canonical و alternate دوطرفه | conflict بین host |
+| Sitemap | loc با host همان سایت | URL چند دامنه قاطی |
+| Cache | path یکسان per-host درست فرق دارد | HTML سایت دیگر |
+| Governance | registry و rollback به‌روز | owner نامعلوم و surprise شبکه‌ای |

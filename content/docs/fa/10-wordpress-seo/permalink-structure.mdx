@@ -1,0 +1,91 @@
+---
+title: ساختار permalink در وردپرس
+description: URLهای پایدار و خوانا بساز؛ taxonomy نمایشی را از مالکیت URL جدا کن و هر تغییر عمدی را redirect بده.
+module: 10-wordpress-seo
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Permalink آدرس عمومی و ماندگار post، page، product، archive یا attachment است. ساختار کوتاهی بردار که بعد از redesign هم معنی بدهد: معمولاً `/%postname%/` برای سایت محتوایی و base روشن مثل `/product/` و `/product-category/` برای فروشگاه.
+
+Rewrite ruleهای وردپرس path را به query وصل می‌کنند. category، date و author شاید برای کاربر مفید باشند، ولی گذاشتن hierarchy یا تاریخِ تغییرپذیر در همهٔ URLها بدهی migration می‌سازد. حذف همهٔ baseها هم collision اسلاگ و ابهام routing می‌آورد.
+
+## چرا مهم است
+
+عوض کردن permalink یعنی عوض کردن آدرسی که قبلاً link، crawl، share و cache شده. URL تمیز فهم را بهتر می‌کند، ولی ارزش chain redirect، لینک ازدست‌رفته یا duplicate ناشی از «تمیزکاری SEO» دیرهنگام را ندارد.
+
+<CorrectExample title="درست">
+`/2024/04/caching-wordpress/` چون رتبه و لینک دارد دست نمی‌خورد. محتوای evergreen جدید با `/%postname%/` ساخته می‌شود. اگر migration تصویب شد، map یک‌به‌یک 301 همراه با internal link و sitemap جدید در همان release می‌آید.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="عوض کردن ساختار global روی production هزاران 404 می‌سازد؛ فرستادن همه به homepage نامرتبط است و می‌تواند soft 404 شود.">
+```txt
+جمعه: /%year%/%monthnum%/%postname%/
+شنبه: /%postname%/
+fallback: هر 404 → /
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+1. **Settings → Permalinks** را یک‌بار با policy روشن تنظیم کن. برای public content حالت Plain مناسب نیست؛ برای evergreen تاریخ نگذار مگر تاریخ جزو ماهیت محتوا باشد.
+2. base محصول/دسته را نگه دار مگر collision و ترجمه را واقعاً تست کرده باشی.
+3. بعد از تغییر CPT یا rewrite code فقط هنگام activation ruleها را flush کن، نه هر request.
+
+**Yoast، Rank Math و AIOSEO:** canonical و sitemap را با URL فعلی هماهنگ می‌کنند، اما تغییر بی‌برنامه را امن نمی‌کنند. redirect داخلی tier خودت یا server/edge را استفاده کن. permalink وابسته به primary category خطر دارد: تغییر دسته نباید یواشکی URL را عوض کند.
+
+**جا خالی واقعی:** Rank Math ماژول redirect داخلی دارد؛ redirect در Yoast پولی است؛ Redirection Manager در AIOSEO پولی/tier-dependent است. SEOPress PRO برای regex و import/export فرق واقعی دارد. core وردپرس بعضی old slugها را حدس می‌زند، ولی migration plan نیست و همهٔ taxonomy/CPT را پوشش نمی‌دهد.
+
+## پیاده‌سازی کد
+
+Rewrite را در init ثبت و فقط activation flush کن:
+
+```php
+function seogod_register_guide_type(): void {
+    register_post_type('guide', [
+        'public' => true,
+        'rewrite' => ['slug' => 'guides', 'with_front' => false],
+        'has_archive' => true,
+    ]);
+}
+add_action('init', 'seogod_register_guide_type');
+
+register_activation_hook(__FILE__, function (): void {
+    seogod_register_guide_type();
+    flush_rewrite_rules();
+});
+```
+
+برای redirect پایدار و سریع:
+
+```nginx
+location = /old-guide/ {
+    return 301 https://example.com/guides/new-guide/;
+}
+```
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «برداشتن `/category/` حتماً رتبه را بهتر می‌کند.»
+- **DEPRECATED:** «keyword هرچه در path عمیق‌تر باشد PageRank کمتر می‌گیرد.»
+- ترجمهٔ slug بدون map لینک‌های ورودی.
+- claim کردن یک path توسط page، term یا post type مختلف.
+- اجرای `flush_rewrite_rules()` در هر request.
+- استفاده از canonical به‌جای redirect.
+
+## نکته‌های سطح بالا / پروداکشن
+
+URL policy را ADR کن. encoded character، trailing slash، uppercase، feed، pagination، REST و prefix زبان را inventory کن. هر old URL مستقیم به جانشین نهایی برود؛ regexی ننویس که admin، API، asset یا query parameter واقعی را ببلعد.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| URL قدیم | یک 301 به جانشین دقیق | 404، home یا chain |
+| URL جدید | 200 و self-canonical | canonical به قدیم |
+| internal/sitemap | فقط URL نهایی | path قدیمی هنوز هست |
+| routing | post، term، feed و API سالم | collision یا rewrite 404 |
+| GSC | transition قابل‌توضیح | جهش Not found مرموز |

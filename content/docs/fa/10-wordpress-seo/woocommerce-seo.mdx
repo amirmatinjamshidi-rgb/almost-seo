@@ -1,0 +1,83 @@
+---
+title: سئوی WooCommerce
+description: محصول و دستهٔ ووکامرس را crawlable، canonical، صادق و سریع نگه دار؛ inventory، schema، feed و filter هم‌راستا باشند.
+module: 10-wordpress-seo
+topic_order: 7
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+SEO ووکامرس ترکیب information architecture، دادهٔ محصول، merchandising دسته، faceted navigation، سیاست stock، performance، Product/Offer schema و Merchant Center feed است. هدف یک URL مفید و indexable برای هر intent است؛ نه index کردن هر filter و variation.
+
+WooCommerce core محصول، taxonomy، price، stock و checkout و structured data پایه را می‌دهد. theme بیشتر HTML را رندر می‌کند. SEO plugin metadata/schema/sitemap را refine می‌کند. host/cache/CDN مسئول delivery است.
+
+## چرا مهم است
+
+فروشگاه می‌تواند میلیون‌ها ترکیب parameter بسازد و در همان حال دسته‌های مهم thin بمانند. price، availability، identifier، صفحهٔ دیدنی، JSON-LD و feed ممکن است از هم جدا شوند. cart fragment، session، personalization و gallery سنگین cache را حساس‌تر می‌کنند.
+
+<CorrectExample title="درست">
+دسته copy یکتای متناسب با intent، محصول مفید، pagination crawlable، self-canonical و filter کنترل‌شده دارد. PDP ارزش یکتا، variant، policy و GTIN/MPN/SKU واقعی دارد؛ Product/Offer از همان state ووکامرس می‌آید که خریدار می‌بیند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="index کردن همهٔ facetها crawl space تکراری می‌سازد؛ stock/review جعلی و canonical به دسته حقیقت محصول را پنهان می‌کند.">
+```txt
+/shoes/?color=black&size=42&sort=price&rating=5 → index
+PDP: Out of stock
+Schema/feed: InStock
+Canonical: /shoes/
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast:** SEO پایه به‌علاوهٔ محصول پولی WooCommerce برای integration تخصصی‌تر. یک Product graph و قابلیت‌های واقعی bundle فعلی را چک کن.
+
+**Rank Math:** handling پایه WooCommerce دارد؛ SEO پیشرفته WooCommerce، identifier و بخشی از schema/variation در PRO است. schema رقیب theme/WooCommerce را اگر duplicate می‌کند خاموش کن.
+
+**AIOSEO:** WooCommerce SEO و کنترل پیشرفته محصول وابسته به tier پولی است. template محصول/دسته و sitemap را در license نصب‌شده ببین.
+
+**جا خالی واقعی:** حقیقت commerce دست WooCommerce core است؛ هیچ SEO pluginای stock، tax، variant یا feed غلط را درست نمی‌کند. SEOPress PRO وقتی فرق دارد که toggle ووکامرس، barcode field یا conditional schema آن به مدل داده‌ات بخورد. فقط یک schema owner.
+
+cart، checkout، account، internal search و facet بی‌ارزش را noindex کن؛ URLی را که Google باید `noindex` آن را ببیند در robots.txt نبند. filter landing ارزشمند باید curated و internally linked باشد.
+
+## پیاده‌سازی کد
+
+endpoint کم‌ارزش را قابل‌دسترسی ولی noindex نگه دار:
+
+```php
+add_filter('wp_robots', function (array $robots): array {
+    if (is_cart() || is_checkout() || is_account_page() || is_search()) {
+        unset($robots['index']);
+        $robots['noindex'] = true;
+        $robots['follow'] = true;
+    }
+    return $robots;
+});
+```
+
+این را برای product/category کورکورانه استفاده نکن. schema باید price، currency، stock و identifier واقعی WooCommerce را بخواند؛ `InStock` را hard-code نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «هر variation باید URL indexable داشته باشد.»
+- **DEPRECATED:** «Product schema ستاره یا رتبه را تضمین می‌کند.»
+- canonical همهٔ pageهای دسته به page 1.
+- redirect خودکار محصول ناموجود به دسته.
+- cache غلط cart، account، currency یا price محلی.
+- Product graph تکراری از theme + WooCommerce + SEO plugin.
+
+## نکته‌های سطح بالا / پروداکشن
+
+filter allowlist، policy URL variant، محصول discontinued، مالک feed، tax/currency، moderation review و emitter schema را مستند کن. تغییر price/stock باید purge/revalidation بسازد. Merchant Center disapproval را جدا از GSC organic ببین. semantic قانونی price/availability را حفظ کن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Crawl | PDP/دستهٔ مفید reachable؛ trap کنترل | facet/search بی‌نهایت |
+| حقیقت محصول | HTML، checkout، schema و feed برابر | mismatch قیمت/stock |
+| Rich Results Test | Product/Offer معتبر از یک owner | duplicate یا دادهٔ جعلی |
+| route خصوصی | noindex و cache bypass | cart/account index یا cache |
+| GSC/Merchant Center | coverage قابل‌توضیح | duplicate/disapproval رو به رشد |

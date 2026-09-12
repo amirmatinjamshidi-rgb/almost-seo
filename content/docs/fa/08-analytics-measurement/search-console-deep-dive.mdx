@@ -1,0 +1,141 @@
+---
+title: بررسی عمیق Search Console
+description: کلیک، impression، CTR و average position را شاهد تجمیع‌شدهٔ Search بخوان — نه لاگ کامل رتبه و نه جایگزین analytics.
+module: 08-analytics-measurement
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Google Search Console یا GSC اتفاق قبل از کلیک و لحظهٔ کلیک در Google Search را گزارش می‌کند. گزارش Performance چهار metric اصلی **click، impression، CTR و average position** را با dimensionهایی مثل query، page، country، device، date و search appearance می‌دهد.
+
+این عددها شاهد تجمیع‌شده و privacy-filtered هستند:
+
+- impression طبق قانون دیده‌شدن گوگل شمرده می‌شود؛ pageview نیست.
+- position بالاترین نتیجهٔ property یا URL در aggregation انتخابی است و بعد average می‌شود؛ «رتبهٔ کلمه» نیست.
+- CTR یعنی `clicks / impressions`؛ فقط intent و device هم‌جنس را مقایسه کن.
+- query کم‌تکرار یا حساس ممکن است پنهان شود؛ پس جمع ردیف‌های جدول الزاماً با عدد chart یکی نیست.
+- دادهٔ جمع‌شده معمولاً بعد از **۲ تا ۳ روز** آماده است. تازه‌ترین داده می‌تواند preliminary باشد.
+- روزهای عادی با Pacific Time برچسب می‌خورند؛ نمای 24-hour از زمان محلی بیننده استفاده می‌کند.
+
+aggregation در سطح property و page نتیجه‌های تکراری را یکسان نمی‌شمارد. با عوض‌کردن dimension ممکن است total عوض شود، بدون اینکه ترافیک عوض شده باشد. property type، search type، filter، aggregation و منطق تاریخ را کنار هر گزارش ذخیره کن.
+
+## چرا مهم است
+
+GSC جواب می‌دهد «گوگل این URL را نشان داد و به آن کلیک فرستاد؟» GA4 جواب می‌دهد «بعد از ورود چه شد؟» قاطی‌کردنشان تشخیص غلط می‌سازد: ممکن است کلیک ثبت شود ولی analytics بلاک باشد، صفحه قبل از tag خراب شود، consent رد شود، یا attribution روی canonical فرق کند.
+
+<CorrectExample title="درست">
+برای migration، دو بازهٔ ۲۸روزهٔ کامل و هم‌فصل را با page group و device ثابت مقایسه می‌کنی. releaseها را annotate می‌کنی. برای canonical/indexing یک URL سراغ URL Inspection و برای crawl سراغ server log می‌روی؛ Performance را برای تقاضای Search و تغییر click می‌خوانی.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="average position ترکیب query، مکان، device، result type و impression است؛ حرکت ۸٫۱ به ۹٫۰ ثابت نمی‌کند هر کلمه یک رتبه افتاده.">
+داشبورد می‌گوید average position دیروز ۰٫۹ افت کرده، پس release پنالتی گرفته. تحلیل‌گر دیروز preliminary را با یک روز کامل مقایسه کرده و ندیده impression موبایل دو برابر شده.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Site Connections می‌تواند verification token گوگل را بگذارد؛ Performance data را وارد یا تعمیر نمی‌کند.
+2. sitemap ساخته‌شدهٔ Yoast را در GSC submit کن و fetch موفقش را ببین.
+
+**Rank Math**
+
+1. ماژول Analytics می‌تواند به GSC وصل شود و بخشی از reportها را در وردپرس cache کند.
+2. داشبورد پلاگین convenience layer است؛ اختلاف را با همان filter در خود GSC بررسی کن.
+
+**AIOSEO**
+
+1. Webmaster Tools Verification تگ تأیید را چاپ می‌کند.
+2. Search Statistics به plan/version نصب‌شده وابسته است؛ measurement را به گزارش داخل پلاگین قفل نکن.
+
+**SEOPress**
+
+1. تنظیم analytics و webmaster verification جداست؛ tag گوگل آنالیتیکس property سرچ کنسول را verify نمی‌کند.
+2. HTML tag را وقتی DNS verification عملی نیست استفاده کن.
+
+**جا خالی واقعی:** Rank Math و بعضی editionهای AIOSEO دادهٔ GSC را داخل وردپرس نشان می‌دهند؛ Yoast و SEOPress بیشتر برای verification کمک می‌کنند. هیچ‌کدام همهٔ قواعد aggregation، query پنهان، API limit یا state در URL Inspection را نشان نمی‌دهند.
+
+## پیاده‌سازی کد
+
+OAuth token را server-side نگه دار. این route در App Router روزهای کامل را می‌گیرد و browser cache را می‌بندد:
+
+```ts
+// app/api/gsc/route.ts
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const token = process.env.GSC_ACCESS_TOKEN;
+  const siteUrl = process.env.GSC_SITE_URL;
+  if (!token || !siteUrl) {
+    return NextResponse.json({ error: "GSC is not configured" }, { status: 503 });
+  }
+
+  const end = new Date();
+  end.setUTCDate(end.getUTCDate() - 3);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - 27);
+  const date = (value: Date) => value.toISOString().slice(0, 10);
+
+  const response = await fetch(
+    `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        startDate: date(start),
+        endDate: date(end),
+        dimensions: ["date", "page"],
+        rowLimit: 25000,
+        startRow: 0,
+        type: "web",
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    return NextResponse.json({ error: "GSC request failed" }, { status: response.status });
+  }
+  return NextResponse.json(await response.json());
+}
+```
+
+در پروداکشن refresh-token یا workload identity بگذار؛ access token را commit نکن و به client برنگردان. API در هر request تا ۲۵هزار ردیف با pagination از `startRow` می‌دهد، ولی Search Analytics در هر روز/search type/property حداکثر ۵۰هزار ردیف برتر را expose می‌کند و کامل‌بودن همهٔ ردیف‌ها را تضمین نمی‌کند.
+
+Pages Router: همین fetch سروری را در `pages/api/gsc.ts` بگذار؛ credential هیچ‌وقت `NEXT_PUBLIC_` نیست.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «Search Console real-time است.» نمای 24-hour تازه‌تر است؛ همهٔ reportها را final نمی‌کند.
+- **DEPRECATED:** «average position همان rank tracker است.»
+- جمع‌کردن ردیف‌های table و اسم‌گذاشتن total property روی آن.
+- مقایسهٔ Web با Image/News یا brand با non-brand.
+- بی‌ارزش خواندن query بدون click، بدون دیدن intent و SERP feature.
+- join روز Pacific Time در GSC با timezone خود property در GA4 بدون normalize.
+- تصور اینکه export/API، query ناشناس و محدودیت داده را حذف می‌کند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+daily partition تغییرناپذیر را بعد از freshness window معمول extract کن. dimension، filter، search type، aggregation type، زمان extract و property را ذخیره کن. چند روز اخیر را دوباره بگیر چون ردیف preliminary تغییر می‌کند.
+
+page group را با rule نسخه‌دار بساز، نه filter دستی dashboard. regex برند باید variant فارسی/انگلیسی و version داشته باشد. برای سایت بزرگ، bulk export سرچ کنسول به BigQuery pipeline جدا از API است و reconciliation test خودش را می‌خواهد.
+
+منبع رسمی: [دادهٔ Performance](https://support.google.com/webmasters/answer/17011364)، [Search Analytics API](https://developers.google.com/webmaster-tools/v1/searchanalytics/query)، و [محدودیت دادهٔ API](https://developers.google.com/webmaster-tools/v1/how-tos/all-your-data).
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| بازهٔ تاریخ | روز کامل؛ timezone ثبت‌شده | روز preliminary به‌عنوان final |
+| تعریف | property، type، filter و dimension ذخیره | اسکرین‌شات بی‌context |
+| total | limit و aggregation فهمیده شده | زورکردن جمع queryها به total |
+| API | secret سروری؛ pagination تست‌شده | token در client bundle |
+| تشخیص | GSC، GA4 و log هرکدام در scope خود | یک ابزار به‌عنوان حقیقت مطلق |

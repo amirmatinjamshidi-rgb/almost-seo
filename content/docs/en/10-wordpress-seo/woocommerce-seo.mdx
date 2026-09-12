@@ -1,0 +1,83 @@
+---
+title: WooCommerce SEO
+description: Make WooCommerce products and categories crawlable, canonical, truthful, fast, and operationally aligned with inventory, schema, feeds, and filters.
+module: 10-wordpress-seo
+topic_order: 7
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+WooCommerce SEO joins information architecture, product data, category merchandising, faceted navigation, stock policy, performance, Product/Offer schema, and Merchant Center feeds. The goal is one useful indexable URL per search intent—not indexing every filter and variation.
+
+Core WooCommerce supplies products, taxonomies, prices, stock, checkout, and baseline structured data. The theme controls much rendered HTML. SEO plugins refine metadata/schema/sitemaps. Host/cache/CDN layers own delivery.
+
+## Why it matters
+
+Stores can generate millions of parameter combinations while important categories remain thin. Price, availability, identifiers, visible page, JSON-LD, and feed can drift. Cart fragments, sessions, personalization, and large galleries also make caching riskier.
+
+<CorrectExample>
+A category has unique intent-led copy, useful products, crawlable pagination, self-canonical, and controlled filters. A PDP has unique value, variants, policies, GTIN/MPN/SKU where legitimate, and Product/Offer markup from the same WooCommerce state shown to shoppers.
+</CorrectExample>
+
+<IncorrectExample why="Indexing all facets creates duplicate crawl space; fake stock/reviews and canonical-to-category hide product truth rather than fixing it.">
+```txt
+/shoes/?color=black&size=42&sort=price&rating=5 → index
+PDP visible: Out of stock
+Schema/feed: InStock
+Canonical: /shoes/
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast:** base SEO plus the paid WooCommerce product for richer commerce integration. Verify one Product graph and whether the current bundle includes needed redirect/local capabilities.
+
+**Rank Math:** baseline WooCommerce handling exists; advanced WooCommerce SEO, identifiers, and some variation/schema capabilities are PRO. Disable competing WooCommerce/theme schema when it duplicates the chosen graph.
+
+**AIOSEO:** WooCommerce SEO and advanced product controls depend on paid tier. Confirm product/category templates and sitemap behavior in the installed license.
+
+**Feature gap:** WooCommerce core owns commerce truth; no SEO plugin fixes wrong stock, tax, variant, or feed data. SEOPress PRO differs when its WooCommerce toggles, barcode fields, or conditional schemas match your data model. Pick one schema owner.
+
+Noindex cart, checkout, account, internal search, and nonvaluable facets; do not block a URL in robots.txt if Google must crawl it to see `noindex`. Keep useful filter landing pages curated and internally linked.
+
+## Code implementation
+
+Prevent low-value WooCommerce endpoints from being indexed while preserving access:
+
+```php
+add_filter('wp_robots', function (array $robots): array {
+    if (is_cart() || is_checkout() || is_account_page() || is_search()) {
+        unset($robots['index']);
+        $robots['noindex'] = true;
+        $robots['follow'] = true;
+    }
+    return $robots;
+});
+```
+
+Do not copy this blindly for categories or products. For schema, consume WooCommerce’s actual price, currency, stock state, and legitimate identifiers; never hard-code `InStock`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Every variation needs an indexable URL.”
+- **DEPRECATED:** “Product schema guarantees stars or rankings.”
+- Canonicalizing every paginated category to page one.
+- Redirecting out-of-stock products automatically to the category.
+- Caching carts, accounts, currency, or localized prices incorrectly.
+- Letting theme + WooCommerce + SEO plugin emit duplicate Product graphs.
+
+## Senior / production notes
+
+Document filter allowlists, variant URL policy, discontinued-product policy, feed owner, tax/currency behavior, review moderation, and schema emitter. Queue cache purge/revalidation when price or stock changes. Monitor Merchant Center disapprovals separately from organic GSC reports. Preserve legally required pricing and availability semantics.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Crawl | Valuable PDP/categories reachable; traps controlled | Infinite facets/search paths |
+| Product truth | HTML, checkout, schema, feed agree | Price/stock mismatch |
+| Rich Results Test | Valid Product/Offer from one owner | Duplicate or fake data |
+| Private routes | noindex and cache bypass | Cart/account indexed or cached |
+| GSC/Merchant Center | Intended coverage, explainable issues | Rising duplicates/disapprovals |

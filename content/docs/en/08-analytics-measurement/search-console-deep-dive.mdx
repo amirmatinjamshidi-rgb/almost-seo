@@ -1,0 +1,141 @@
+---
+title: Search Console deep dive
+description: Read clicks, impressions, CTR, and average position as sampled search evidence — not a complete rank log or an analytics replacement.
+module: 08-analytics-measurement
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google Search Console (GSC) reports what happened on Google Search before and at the click. Its Performance report exposes **clicks, impressions, CTR, and average position** by dimensions such as query, page, country, device, date, and search appearance.
+
+Those numbers are aggregated, privacy-filtered evidence:
+
+- An impression follows Google’s visibility/counting rules; it is not a page view.
+- Position is the topmost result for the property or URL under the selected aggregation, then averaged. It is not “the rank.”
+- CTR is `clicks / impressions`; compare like-for-like query intent and device.
+- Rare or sensitive queries can be omitted. Chart totals therefore need not equal visible table rows.
+- Most collected data is normally available after **2–3 days**. The newest data can be preliminary.
+- Normal daily dates use Pacific Time; the 24-hour view uses the viewer’s local time.
+
+Property-level and page-level aggregation count duplicate results differently. Changing dimensions can change totals without traffic changing. Keep the property type, search type, filters, aggregation, and date logic in every saved definition.
+
+## Why it matters
+
+GSC answers “Did Google show and send clicks to this URL?” GA4 answers “What happened after arrival?” Mixing them creates false diagnoses: a click can be counted even if analytics is blocked, the page fails before tagging, consent is denied, or canonical attribution differs.
+
+<CorrectExample>
+For a migration, compare the same 28 complete days year over year, segmented by page group and device. Annotate seasonality and releases. Use URL Inspection for individual canonical/indexing questions and server logs for crawling; use Performance data for search demand and click change.
+</CorrectExample>
+
+<IncorrectExample why="Average position mixes queries, locations, devices, result types, and impressions; a property-wide movement from 8.1 to 9.0 is not proof that every keyword lost one place.">
+The dashboard says average position fell by 0.9 yesterday, so the release caused a ranking penalty. The analyst compares preliminary yesterday with a complete prior day and ignores that mobile impressions doubled.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Site Connections can place the Google verification token; it does not import or repair Performance data.
+2. Submit the sitemap URL shown by Yoast in GSC, then verify that Google can fetch it.
+
+**Rank Math**
+
+1. Its Analytics module can connect GSC and cache selected reports in WordPress.
+2. Treat the plugin dashboard as a convenience layer; investigate discrepancies in GSC with the exact filters.
+
+**AIOSEO**
+
+1. Webmaster Tools Verification can output the verification tag.
+2. Search Statistics availability depends on the installed plan/version; never make access to plugin reports a measurement dependency.
+
+**SEOPress**
+
+1. Analytics and webmaster verification settings are separate: a Google Analytics tag does not verify GSC.
+2. Use the HTML tag only when DNS verification is not practical.
+
+**Feature gap:** Rank Math and some AIOSEO editions surface GSC data inside WordPress; Yoast and SEOPress primarily help verification. None exposes every GSC aggregation rule, hidden query, API limit, or URL Inspection state.
+
+## Code implementation
+
+Keep OAuth access tokens server-side. This App Router handler fetches complete daily rows and refuses browser caching:
+
+```ts
+// app/api/gsc/route.ts
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const token = process.env.GSC_ACCESS_TOKEN;
+  const siteUrl = process.env.GSC_SITE_URL;
+  if (!token || !siteUrl) {
+    return NextResponse.json({ error: "GSC is not configured" }, { status: 503 });
+  }
+
+  const end = new Date();
+  end.setUTCDate(end.getUTCDate() - 3);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - 27);
+  const date = (value: Date) => value.toISOString().slice(0, 10);
+
+  const response = await fetch(
+    `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        startDate: date(start),
+        endDate: date(end),
+        dimensions: ["date", "page"],
+        rowLimit: 25000,
+        startRow: 0,
+        type: "web",
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    return NextResponse.json({ error: "GSC request failed" }, { status: response.status });
+  }
+  return NextResponse.json(await response.json());
+}
+```
+
+Use a refresh-token or workload-identity flow in production; never commit an access token or return it to the client. The API allows up to 25,000 rows per request with `startRow` pagination, but Search Analytics exposes at most 50,000 top rows per day per search type and property and does not guarantee every row.
+
+Pages Router: put the same server-only fetch in `pages/api/gsc.ts`; never use `NEXT_PUBLIC_` for credentials.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Search Console is real-time.” The 24-hour view improves freshness; it does not make every report final.
+- **DEPRECATED:** “Average position is a rank tracker.”
+- Adding table rows and calling the result the property total.
+- Comparing Web with Image/News or branded with non-branded data.
+- Treating a zero-click query as useless without inspecting intent and SERP features.
+- Joining GSC Pacific-Time days to GA4 property-time-zone days without normalization.
+- Exporting once and assuming API row limits, anonymized queries, and canonical grouping vanished.
+
+## Senior / production notes
+
+Extract immutable daily partitions after their normal freshness window. Store dimensions, filters, search type, aggregation type, extraction time, and property. Re-fetch a recent rolling window because preliminary rows can change.
+
+Create page groups from stable rules, not hand-edited dashboard filters. Segment brand carefully: regex lists need versioning and multilingual variants. For large sites, Google’s bulk Search Console export to BigQuery is a different pipeline from the API and should have its own reconciliation tests.
+
+Official references: [Performance report data](https://support.google.com/webmasters/answer/17011364), [Search Analytics API](https://developers.google.com/webmaster-tools/v1/searchanalytics/query), and [API data limits](https://developers.google.com/webmaster-tools/v1/how-tos/all-your-data).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Date window | Complete days; time zone recorded | Preliminary day treated as final |
+| Definition | Property, type, filters, dimensions saved | Screenshot with no context |
+| Totals | Chart/API limits understood | Visible query rows forced to equal total |
+| API | Secret stays server-side; pagination tested | Token in client bundle |
+| Diagnosis | GSC + GA4 + logs used for their own scopes | One tool declared ground truth |

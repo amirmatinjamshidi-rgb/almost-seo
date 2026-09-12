@@ -1,0 +1,131 @@
+---
+title: Rank tracking pitfalls
+description: A rank is one controlled observation of a changing SERP — segment distributions and business outcomes instead of worshipping a daily integer.
+module: 08-analytics-measurement
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A rank tracker requests a query under a chosen location, language, device, engine, and time, then records where a result appeared. That is an **observation under test conditions**, not what every searcher saw.
+
+Modern result pages vary by:
+
+- location, language, device, personalization, and time;
+- result type and layout: local, image, video, shopping, AI/answer experiences;
+- canonical and host changes;
+- tracker rendering, consent, proxy quality, and result-depth limits.
+
+Store the test conditions with each observation. Report distributions—share in top 3/10/20, visibility weighted by a documented demand source, and landing-page groups—alongside GSC impressions/clicks and outcomes. A single daily rank has too much noise for executive decisions.
+
+## Why it matters
+
+Rank tracking is useful for controlled release monitoring, market comparison, and query-class diagnosis. Used badly, it creates alerts for normal SERP movement, encourages keyword cannibalization fixes that harm useful pages, and hides that a “winning” query has no demand or conversion.
+
+<CorrectExample>
+The dashboard separates mobile Tehran Persian queries from desktop US English queries, versions the keyword set, shows median and top-10 share over 28 days, and annotates releases. A drop becomes an investigation only when GSC page-group clicks/impressions or conversions corroborate it.
+</CorrectExample>
+
+<IncorrectExample why="The observations changed test conditions and keyword inventory, so the average cannot distinguish an SEO change from measurement drift.">
+Last month’s 50 desktop keywords are compared with this month’s 200 mobile keywords. Missing results are silently stored as rank 1, SERP features are ignored, and a one-day average triggers rollback.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast analysis scores are not live rankings.
+2. Its focus keyphrase field does not register a query with Google or create a rank-tracking baseline.
+
+**Rank Math**
+
+1. Rank Tracker availability and limits depend on plan/configuration.
+2. Export the keyword set and test conditions; do not let a plugin account become the only history.
+
+**AIOSEO**
+
+1. Search Statistics can surface keyword/page trends in supported editions.
+2. Confirm whether a displayed position comes from GSC aggregation or a synthetic rank check—they answer different questions.
+
+**SEOPress**
+
+1. SEOPress metadata scoring is not rank tracking.
+2. Use an external controlled tracker or GSC for observed search performance.
+
+**Feature gap:** Rank Math materially offers dedicated rank-tracking workflows; some AIOSEO reports expose search statistics. Yoast and SEOPress primarily optimize metadata/content. None removes localization, SERP-feature, sampling, or keyword-set bias.
+
+## Code implementation
+
+This App Router endpoint summarizes already-collected, non-user-level observations. It validates input and treats missing ranks as missing—not as position 1 or an invented 101.
+
+```ts
+// app/api/rank-summary/route.ts
+import { NextResponse } from "next/server";
+
+type Observation = { queryId: string; rank: number | null };
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as { observations?: Observation[] };
+  const rows = body.observations;
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 10000) {
+    return NextResponse.json({ error: "Invalid observations" }, { status: 400 });
+  }
+
+  const observed = rows
+    .map((row) => row.rank)
+    .filter((rank): rank is number => Number.isInteger(rank) && rank > 0 && rank <= 100);
+  const missing = rows.length - observed.length;
+  const sorted = [...observed].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const median =
+    sorted.length === 0
+      ? null
+      : sorted.length % 2
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
+
+  return NextResponse.json({
+    sampleSize: rows.length,
+    observed: observed.length,
+    missing,
+    median,
+    top3Share: observed.length ? observed.filter((rank) => rank <= 3).length / observed.length : null,
+    top10Share: observed.length ? observed.filter((rank) => rank <= 10).length / observed.length : null,
+  });
+}
+```
+
+Run collection in a licensed provider/server job; do not scrape search results from user requests. The payload contains stable query IDs, not searcher identity or PII. Persist engine, market, language, device, timestamp, result type, target URL, and collector version beside rank.
+
+Pages Router: move the same handler logic into `pages/api/rank-summary.ts`, gate on `req.method === "POST"`, and return `405` otherwise.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “There is one true rank for a keyword.”
+- **DEPRECATED:** “Putting the keyphrase in Yoast registers or tracks it.”
+- Averaging different markets, devices, engines, and keyword-set versions.
+- Converting “not found” to rank zero, one, or 101 without labeling it censored/missing.
+- Adding easy low-value keywords and celebrating visibility growth.
+- Ignoring local packs and SERP features above the organic result.
+- Alerting on one observation with no sustained corroboration.
+- Tracking only the preferred URL and missing cannibalization/host changes.
+
+## Senior / production notes
+
+Version keyword inventory, tags, demand weights, and target mappings. Keep a frozen benchmark panel; add discovery keywords to a separate panel so trend history survives. Store raw observations so metric definitions can be recomputed.
+
+Use control queries/pages to detect provider or SERP-parser breaks. Define alerting with a minimum sample, sustained window, material threshold, and corroborating signal. Respect provider contracts and engine terms; do not build an uncontrolled proxy scraper.
+
+For international SEO, market is not language. A Persian query checked from the US is not an Iran-market observation, and access constraints can make some locations impossible to reproduce honestly—label the actual test location.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Conditions | Engine/market/language/device stored | “Rank 4” with no context |
+| Inventory | Versioned frozen panel | Keywords silently added/removed |
+| Missing | Reported separately | Converted to a winning rank |
+| Alert | Sustained + corroborated | One-day integer panic |
+| Outcome | GSC and conversion reviewed | Visibility treated as revenue |

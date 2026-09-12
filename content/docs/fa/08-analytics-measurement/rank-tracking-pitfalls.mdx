@@ -1,0 +1,131 @@
+---
+title: دام‌های rank tracking
+description: rank فقط یک مشاهدهٔ کنترل‌شده از SERP متغیر است — distribution و outcome کسب‌وکار را segment کن، نه اینکه عدد روزانه را بپرستی.
+module: 08-analytics-measurement
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+rank tracker یک query را با location، language، device، engine و زمان انتخابی درخواست می‌کند و جای نتیجه را می‌نویسد. این **مشاهده در شرایط تست** است، نه چیزی که همهٔ searcherها دیده‌اند.
+
+SERP امروز با این‌ها فرق می‌کند:
+
+- location، language، device، personalization و زمان؛
+- result type و layout مثل local، image، video، shopping و تجربهٔ AI/answer؛
+- تغییر canonical و host؛
+- rendering ابزار، consent، کیفیت proxy و سقف عمق نتیجه.
+
+شرایط تست را کنار هر observation ذخیره کن. distribution گزارش کن—سهم top 3/10/20، visibility با وزن demand مستند و landing-page group—و کنارش impression/click در GSC و outcome را بگذار. یک rank روزانه برای تصمیم مدیریتی noise زیادی دارد.
+
+## چرا مهم است
+
+rank tracking برای مانیتور release کنترل‌شده، مقایسهٔ market و تشخیص query class خوب است. استفادهٔ بد از آن alert روی نوسان طبیعی می‌سازد، تیم را به «رفع cannibalization» مضر هل می‌دهد و پنهان می‌کند query برنده demand یا conversion ندارد.
+
+<CorrectExample title="درست">
+داشبورد query فارسی موبایل تهران را از query انگلیسی desktop آمریکا جدا می‌کند، keyword set نسخه دارد، median و سهم top-10 را در ۲۸ روز نشان می‌دهد و releaseها annotate شده‌اند. drop فقط وقتی investigation می‌شود که click/impression page group در GSC یا conversion هم آن را تأیید کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="شرایط تست و inventory کلمه عوض شده؛ average نمی‌تواند تغییر SEO را از measurement drift جدا کند.">
+۵۰ کلمهٔ desktop ماه قبل با ۲۰۰ کلمهٔ mobile این ماه مقایسه می‌شود. missing result بی‌صدا rank 1 ذخیره شده، SERP feature نادیده است و average یک‌روزه rollback می‌سازد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. نمرهٔ analysis یواست rank زنده نیست.
+2. focus keyphrase یک query را در گوگل register یا baseline rank نمی‌کند.
+
+**Rank Math**
+
+1. دسترسی و limitهای Rank Tracker به plan/config وابسته است.
+2. keyword set و شرایط تست را export کن؛ account پلاگین نباید تنها تاریخچه باشد.
+
+**AIOSEO**
+
+1. Search Statistics در edition پشتیبانی‌شده trend کلمه/page نشان می‌دهد.
+2. بفهم position نمایشی از aggregation سرچ کنسول آمده یا synthetic rank check؛ سؤالشان فرق دارد.
+
+**SEOPress**
+
+1. scoring متادیتا در SEOPress rank tracking نیست.
+2. برای مشاهدهٔ کنترل‌شده ابزار بیرونی یا برای performance واقعی GSC استفاده کن.
+
+**جا خالی واقعی:** Rank Math workflow مخصوص rank tracking دارد؛ بعضی reportهای AIOSEO search statistics می‌دهند. Yoast و SEOPress بیشتر metadata/content را optimize می‌کنند. هیچ‌کدام bias مکان، SERP feature، sampling و keyword set را حذف نمی‌کنند.
+
+## پیاده‌سازی کد
+
+این endpoint در App Router observation جمع‌شده و غیر user-level را خلاصه می‌کند. input را validate می‌کند و rank گم‌شده را missing نگه می‌دارد—نه rank 1 یا عدد اختراعی 101.
+
+```ts
+// app/api/rank-summary/route.ts
+import { NextResponse } from "next/server";
+
+type Observation = { queryId: string; rank: number | null };
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as { observations?: Observation[] };
+  const rows = body.observations;
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 10000) {
+    return NextResponse.json({ error: "Invalid observations" }, { status: 400 });
+  }
+
+  const observed = rows
+    .map((row) => row.rank)
+    .filter((rank): rank is number => Number.isInteger(rank) && rank > 0 && rank <= 100);
+  const missing = rows.length - observed.length;
+  const sorted = [...observed].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const median =
+    sorted.length === 0
+      ? null
+      : sorted.length % 2
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
+
+  return NextResponse.json({
+    sampleSize: rows.length,
+    observed: observed.length,
+    missing,
+    median,
+    top3Share: observed.length ? observed.filter((rank) => rank <= 3).length / observed.length : null,
+    top10Share: observed.length ? observed.filter((rank) => rank <= 10).length / observed.length : null,
+  });
+}
+```
+
+collection را در job سروری/provider مجاز اجرا کن؛ از request کاربر SERP scrape نکن. payload شناسهٔ پایدار query دارد، نه هویت searcher یا PII. engine، market، language، device، timestamp، result type، target URL و collector version را کنار rank persist کن.
+
+Pages Router: همین logic را به `pages/api/rank-summary.ts` ببر، `req.method === "POST"` را gate کن و برای بقیه `405` بده.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «برای هر keyword یک rank واقعی وجود دارد.»
+- **DEPRECATED:** «گذاشتن focus keyphrase در Yoast آن را register یا track می‌کند.»
+- average گرفتن از market، device، engine و نسخهٔ keyword set متفاوت.
+- تبدیل not found به صفر، یک یا 101 بدون برچسب censored/missing.
+- اضافه‌کردن کلمهٔ آسان و کم‌ارزش و جشن visibility.
+- ندیدن local pack و SERP feature بالای organic result.
+- alert روی یک observation بدون corroboration پایدار.
+- track فقط URL دلخواه و ندیدن cannibalization/تغییر host.
+
+## نکته‌های سطح بالا / پروداکشن
+
+keyword inventory، tag، demand weight و target mapping را version کن. یک benchmark panel ثابت نگه دار؛ discovery keyword را در panel جدا اضافه کن تا trend تاریخی نشکند. raw observation را ذخیره کن تا تعریف metric قابل محاسبهٔ دوباره باشد.
+
+control query/page کمک می‌کند خرابی provider یا SERP parser را بفهمی. alert حداقل sample، window پایدار، threshold مادی و سیگنال تأییدکننده می‌خواهد. قرارداد provider و terms موتور را رعایت کن؛ proxy scraper کنترل‌نشده نساز.
+
+در international SEO، market همان language نیست. query فارسی از آمریکا observation بازار ایران نیست و محدودیت دسترسی ممکن است بازتولید بعضی locationها را ناممکن کند—location واقعی تست را صادقانه label کن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| شرایط | engine/market/language/device ذخیره | «rank 4» بی‌context |
+| Inventory | panel ثابت نسخه‌دار | کلمه بی‌صدا کم‌وزیاد |
+| Missing | جدا گزارش شده | تبدیل به rank برنده |
+| Alert | پایدار + تأییدشده | وحشت عدد یک‌روزه |
+| Outcome | GSC و conversion کنار آن | visibility به اسم revenue |

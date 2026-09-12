@@ -1,0 +1,144 @@
+---
+title: KPI and attribution
+description: Tie SEO to qualified outcomes with a metric tree, explicit attribution scope, and uncertainty — not a single dashboard revenue number.
+module: 08-analytics-measurement
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A useful SEO measurement system connects controllable work to business outcomes:
+
+1. **Inputs:** pages improved, technical defects removed, internal links shipped.
+2. **Leading indicators:** valid indexation, relevant impressions, qualified landing-page engagement.
+3. **Outputs:** non-brand clicks, assisted journeys, qualified leads, orders, margin.
+4. **Guardrails:** conversion quality, returns/cancellations, page performance, brand/non-brand mix.
+
+A KPI needs a formula, scope, source, owner, freshness expectation, and decision. “Organic conversions” is incomplete until you state event, channel definition, attribution model, lookback, time zone, consent boundary, and whether reporting uses observed or modeled data.
+
+Attribution allocates credit under rules; it does not prove causality. Session acquisition, first-user acquisition, advertising attribution, CRM source, and an experiment can all answer different valid questions. Incrementality requires a credible counterfactual—such as a phased rollout or holdout—not a prettier multi-touch chart.
+
+## Why it matters
+
+Without a metric tree, teams optimize what is easy to count: rank, traffic, or key events. That can reward branded demand owned by another campaign, duplicate leads, low-margin orders, or consent-model changes. Explicit scope lets finance, product, and SEO disagree about assumptions instead of arguing over unexplained totals.
+
+<CorrectExample>
+The quarterly scorecard reports non-brand organic landing-page clicks, server-confirmed qualified leads, and accepted pipeline by landing group. It shows both session-scoped GA4 and CRM first-known-source views, labels consent/model changes, and evaluates a phased content rollout against comparable untouched groups.
+</CorrectExample>
+
+<IncorrectExample why="Last-click allocation is a reporting rule, branded demand is not necessarily created by SEO, and multiplying estimated traffic by an assumed conversion rate invents revenue rather than measuring it.">
+The team claims all GA4 organic purchase revenue as incremental SEO revenue, adds rank-tool “traffic value,” and fills missing consented conversions with a fixed multiplier. No refund, lead-quality, or channel-definition reconciliation exists.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast can shape discoverability; its traffic-light score is not a KPI.
+2. Keep analytics/event implementation in one governed layer outside snippet scoring.
+
+**Rank Math**
+
+1. Analytics dashboards can combine selected search and analytics data.
+2. Export definitions before presenting plugin totals to finance; cached/report scopes can differ from source tools.
+
+**AIOSEO**
+
+1. Search Statistics can support content/page monitoring in eligible configurations.
+2. It cannot know lead acceptance, margin, refund, or CRM attribution unless those systems are deliberately joined elsewhere.
+
+**SEOPress**
+
+1. SEOPress can insert analytics tags and selected event tracking depending on configuration.
+2. Validate event semantics and consent, not merely whether a hit appears.
+
+**Feature gap:** Rank Math and some AIOSEO editions provide integrated SEO reporting; SEOPress materially differs through tag/event controls; Yoast focuses on optimization and integrations. None is a warehouse, experimentation platform, finance ledger, or causal attribution engine.
+
+## Code implementation
+
+Calculate ratios from aggregate, non-PII inputs and return the numerator/denominator so dashboards cannot hide scope. This App Router route does not collect user journeys:
+
+```ts
+// app/api/seo-kpis/route.ts
+import { NextResponse } from "next/server";
+
+type KPIInput = {
+  impressions: number;
+  clicks: number;
+  organicSessions: number;
+  qualifiedLeads: number;
+  acceptedPipeline: number;
+};
+
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0;
+
+export async function POST(request: Request) {
+  const input = (await request.json()) as Partial<KPIInput>;
+  const keys: (keyof KPIInput)[] = [
+    "impressions",
+    "clicks",
+    "organicSessions",
+    "qualifiedLeads",
+    "acceptedPipeline",
+  ];
+  if (!keys.every((key) => isCount(input[key]))) {
+    return NextResponse.json({ error: "All metrics must be non-negative numbers" }, { status: 400 });
+  }
+
+  const data = input as KPIInput;
+  const ratio = (numerator: number, denominator: number) =>
+    denominator === 0 ? null : numerator / denominator;
+
+  return NextResponse.json({
+    scope: "aggregate-input-only",
+    ctr: { value: ratio(data.clicks, data.impressions), numerator: data.clicks, denominator: data.impressions },
+    leadRate: {
+      value: ratio(data.qualifiedLeads, data.organicSessions),
+      numerator: data.qualifiedLeads,
+      denominator: data.organicSessions,
+    },
+    pipelinePerLead: {
+      value: ratio(data.acceptedPipeline, data.qualifiedLeads),
+      numerator: data.acceptedPipeline,
+      denominator: data.qualifiedLeads,
+    },
+  });
+}
+```
+
+Authenticate this endpoint before exposing proprietary aggregates, validate a period and currency upstream, and never send emails, phones, names, free-text, or raw CRM records. Ratios across GSC, GA4, and CRM require documented time-zone/channel joins; they are diagnostic, not automatically causal.
+
+Pages Router: reuse the pure validation/calculation functions in `pages/api/seo-kpis.ts`, allow only POST, and apply the same server-side authorization.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Last click reveals the channel that caused the sale.”
+- **DEPRECATED:** “More organic traffic is always better.”
+- Changing key-event definitions without restating history or annotating the break.
+- Mixing GSC clicks, GA4 users/sessions, and CRM leads as though they share identity and time.
+- Counting branded demand as wholly incremental SEO impact.
+- Ignoring margin, refunds, spam leads, and sales acceptance.
+- Reporting percentages without numerators, denominators, or minimum sample.
+- Using rank-tool traffic estimates as booked revenue.
+- Hiding modeled/consent changes behind a smooth trend line.
+
+## Senior / production notes
+
+Maintain a metric registry in version control: name, plain-language meaning, formula, source fields, filters, time zone, attribution scope, freshness, owner, and known breaks. Snapshot semantic-layer releases and backfill only when the new definition can be reproduced honestly.
+
+Reconcile systems as a range, not forced equality. GSC is search-result evidence, GA4 is consent- and tag-dependent behavior, CRM is operational truth with its own missing/duplicate records, and finance owns recognized value. Create tests for channel mapping, event deduplication, currency, bot/internal traffic, and late-arriving outcomes.
+
+For incrementality, pre-register a rollout or matched holdout where feasible. Record contamination, seasonality, concurrent releases, and confidence. If no counterfactual exists, say “attributed” or “associated,” not “caused.”
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| KPI contract | Formula, scope, owner, source, freshness | Dashboard label only |
+| Event quality | Server-confirmed, deduplicated outcome | Click/refresh counted repeatedly |
+| Attribution | Model and lookback stated | Credit presented as causality |
+| Join | Time zone/channel/identity limits documented | Tools forced to equal |
+| Business value | Quality, margin, refunds considered | Traffic/rank called ROI |

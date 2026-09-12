@@ -1,0 +1,87 @@
+---
+title: WordPress caching and Core Web Vitals
+description: Layer page, object, browser, and edge caching without caching private responses; improve LCP, INP, and CLS with field evidence.
+module: 10-wordpress-seo
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Caching stores reusable work:
+
+- **Page cache** serves generated HTML without booting PHP for every anonymous request.
+- **Object cache** (for example Redis) stores database query results; it does not replace page cache.
+- **Browser cache** retains versioned static assets.
+- **CDN/edge cache** serves cacheable content near users.
+- **PHP OPcache** stores compiled bytecode.
+
+Core Web Vitals are field metrics: **LCP**, **INP**, and **CLS** at the 75th percentile, split by mobile/desktop where enough Chrome UX Report data exists. Lab Lighthouse is diagnostic, not the ranking dataset.
+
+## Why it matters
+
+Fast TTFB helps LCP, but caching alone cannot fix an oversized hero, long main-thread tasks, consent scripts, or layout shifts. Incorrect caching can leak carts, account pages, previews, nonces, or personalized HTML.
+
+<CorrectExample>
+Anonymous articles are page-cached. Logged-in users, previews, cart, checkout, account, and requests with session/cart cookies bypass it. CSS/images use content hashes and long browser TTLs. Changes purge only affected URLs. Field CWV and conversion guardrails decide whether optimization stays.
+</CorrectExample>
+
+<IncorrectExample why="Cache everything stores personalized HTML and stale nonces, while delayed scripts can break consent, analytics, or interaction semantics.">
+```txt
+cache: all HTML for 30 days
+vary: none
+bypass cookies: none
+optimization: delay every script until click
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+Prefer the cache layer provided and supported by the host: LiteSpeed Cache needs LiteSpeed/OpenLiteSpeed integration for server page cache; WP Rocket is a paid plugin; W3 Total Cache offers many layers but needs careful ownership; Cloudflare APO or host edge cache can own HTML at the edge. Do not stack two page-cache plugins.
+
+**Yoast, Rank Math, AIOSEO:** they do not provide full-page cache/CDN infrastructure. Purge caches after changing titles, canonicals, robots, redirects, or schema. Exclude sitemap and dynamic REST endpoints only if the cache product mishandles freshness.
+
+**Feature gap:** no general SEO suite replaces host FastCGI/LiteSpeed cache, Redis, CDN rules, or Real User Monitoring. SEOPress is no different here. Cache-plugin “SEO score” is not GSC/CrUX field evidence.
+
+For WooCommerce, exclude cart, checkout, account, password reset, preview, logged-in sessions, and the cookies documented by WooCommerce and the selected cache vendor.
+
+## Code implementation
+
+Example conservative NGINX FastCGI bypass:
+
+```nginx
+set $skip_cache 0;
+if ($request_method != GET) { set $skip_cache 1; }
+if ($request_uri ~* "^/(wp-admin|wp-login\.php|cart|checkout|my-account|wp-json)/") { set $skip_cache 1; }
+if ($http_cookie ~* "wordpress_logged_in_|woocommerce_items_in_cart|wp_woocommerce_session_") { set $skip_cache 1; }
+
+fastcgi_cache_bypass $skip_cache;
+fastcgi_no_cache $skip_cache;
+fastcgi_cache_valid 200 10m;
+```
+
+Treat this as a starting point: `if` use in NGINX and route names must be reviewed with the host. Preserve `Set-Cookie`; never cache responses marked private or `no-store`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Install a cache plugin and CWV is solved.”
+- **DEPRECATED:** “A Lighthouse 100 guarantees a ranking boost.”
+- Stacking plugin page cache, host cache, and edge HTML cache without purge ownership.
+- Caching logged-in or cart HTML.
+- Preloading the wrong image or every font.
+- Disabling heartbeat, REST, or cron globally to chase a synthetic score.
+
+## Senior / production notes
+
+Set budgets by template: TTFB, LCP resource bytes, main-thread blocking, CLS, and third-party cost. Measure cache hit ratio and `Age`/cache-status headers. Warm only high-value URLs; indiscriminate preload can overload origin. Use object-cache eviction and page-cache purge independently. Test plugin updates with cold and warm caches.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Headers | Anonymous repeat is HIT; private routes BYPASS | Cart/account HIT |
+| Content | Logged-out and logged-in state correct | User data or stale nonce leaked |
+| Field CWV | 28-day trend improves by template | Only one Lighthouse run improved |
+| Origin | Lower PHP/DB work at same load | Preloader saturates workers |
+| Functionality | Forms, consent, checkout work | Optimization delays required code |

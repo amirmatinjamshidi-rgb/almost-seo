@@ -1,0 +1,80 @@
+---
+title: WordPress image optimization plugins
+description: Build a measurable image pipeline for dimensions, responsive candidates, modern formats, compression, lazy loading, and safe cleanup.
+module: 10-wordpress-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Image optimization is a pipeline: upload policy → resize oversized originals → compression → AVIF/WebP when worthwhile → responsive `srcset`/`sizes` → explicit dimensions → delivery and caching. WordPress core creates image sub-sizes, responsive markup, loading hints, and supports modern formats when the server image library supports them. A plugin can automate conversion or remote delivery; it cannot choose the right crop or art direction.
+
+## Why it matters
+
+The LCP image is often the largest above-the-fold resource. Excess bytes delay it, missing dimensions cause CLS, and wrong `sizes` makes mobile download desktop candidates. Search also needs crawlable image URLs, useful context, and truthful alt text—not filename keyword stuffing.
+
+<CorrectExample>
+A 1600×900 hero is intentionally cropped, compressed, given width/height, responsive candidates, and high fetch priority when it is the LCP element. Below-fold images lazy-load. Originals are retained during a reversible conversion rollout.
+</CorrectExample>
+
+<IncorrectExample why="Lazy-loading the LCP image and serving a 5000px original delays discovery and transfer; fake alt text harms accessibility without creating relevance.">
+```html
+<img src="/uploads/IMG_0042.jpg" loading="lazy" alt="best cheap seo wordpress plugin buy now">
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+ShortPixel, Imagify, EWWW, Smush, and Optimole differ in local processing, cloud quota, backup, AVIF/WebP generation, and CDN delivery. Choose by measured output, privacy/residency needs, restoration path, and compatibility—not an affiliate table. Do not run two optimizers on upload.
+
+**Yoast, Rank Math, and AIOSEO:** SEO suites may expose image-sitemap or metadata conveniences, but they are not full compression pipelines. Keep attachment-page redirect/indexing decisions separate from whether the media file itself is useful.
+
+**Feature gap:** Rank Math’s Image SEO automation can fill missing attributes in some tiers, but generated alt text is not equivalent to editorial accessible text. Yoast and AIOSEO do not replace a codec/CDN optimizer. SEOPress only matters here for its sitemap/metadata controls, not image transcoding.
+
+Before bulk optimization: back up uploads and database, test representative transparent PNGs, product photos, screenshots, animated images, EXIF requirements, and visual quality.
+
+## Code implementation
+
+Render a responsive WordPress attachment with core APIs:
+
+```php
+$image_id = 123;
+echo wp_get_attachment_image(
+    $image_id,
+    'large',
+    false,
+    [
+        'class' => 'hero-image',
+        'loading' => 'eager',
+        'fetchpriority' => 'high',
+        'sizes' => '(max-width: 768px) 100vw, 1200px',
+    ]
+);
+```
+
+Do not set `fetchpriority="high"` on every image. For custom image sizes, register them deliberately and regenerate thumbnails on staging before production rollout.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “WebP is always smaller” or “AVIF is always best.” Compare at equivalent visual quality.
+- **DEPRECATED:** “Every image should lazy-load.”
+- Compressing an already optimized asset repeatedly.
+- Deleting originals before verifying restore and plugin lock-in.
+- Omitting `sizes`, width, or height.
+- Converting SVG through a raster plugin or allowing unsafe SVG uploads.
+
+## Senior / production notes
+
+Record source-of-truth ownership: local uploads, generated derivatives, or image CDN. Keep URL behavior stable if a vendor is removed. Strip EXIF only after legal/editorial review. Product color accuracy may need higher quality than blog decoration. Track bytes and LCP by template, not a site-wide average.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Network | Correct candidate and format for viewport | Full desktop original on mobile |
+| Layout | Intrinsic ratio reserved | CLS when image appears |
+| LCP | Hero eager/discoverable and suitably compressed | Hero lazy or CSS-background-only |
+| Restore | Original and rollback tested | Destructive conversion only |
+| Crawl/accessibility | 200 image URL, contextual truthful alt | Blocked CDN URL or stuffed alt |

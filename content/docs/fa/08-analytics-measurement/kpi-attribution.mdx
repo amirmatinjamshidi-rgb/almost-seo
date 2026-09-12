@@ -1,0 +1,144 @@
+---
+title: KPI و attribution
+description: سئو را با metric tree، scope روشن attribution و عدم‌قطعیت به outcome باکیفیت وصل کن — نه با یک عدد revenue در dashboard.
+module: 08-analytics-measurement
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+سیستم خوب اندازه‌گیری سئو، کار قابل کنترل را به outcome کسب‌وکار وصل می‌کند:
+
+1. **Input:** صفحهٔ بهبودیافته، defect فنی رفع‌شده، internal link منتشرشده.
+2. **Leading indicator:** indexation معتبر، impression مرتبط، engagement باکیفیت landing.
+3. **Output:** click non-brand، journey کمکی، lead باکیفیت، order و margin.
+4. **Guardrail:** کیفیت conversion، return/cancellation، performance صفحه و ترکیب brand/non-brand.
+
+KPI باید formula، scope، source، owner، freshness expectation و decision داشته باشد. «organic conversion» تا event، channel definition، attribution model، lookback، timezone، مرز consent و observed/modeled بودن را نگویی ناقص است.
+
+Attribution با یک قانون credit پخش می‌کند؛ causality ثابت نمی‌کند. session acquisition، first-user acquisition، advertising attribution، CRM source و experiment هرکدام می‌توانند سؤال متفاوت و معتبری جواب دهند. incrementality یک counterfactual معتبر مثل rollout مرحله‌ای یا holdout می‌خواهد، نه multi-touch chart خوشگل‌تر.
+
+## چرا مهم است
+
+بدون metric tree تیم چیزی را optimize می‌کند که آسان شمرده می‌شود: rank، traffic یا key event. نتیجه می‌تواند پاداش به branded demand کمپین دیگر، lead تکراری، order کم‌حاشیه یا تغییر consent modeling باشد. scope روشن اجازه می‌دهد finance، product و SEO روی assumption اختلاف داشته باشند، نه روی total بی‌توضیح.
+
+<CorrectExample title="درست">
+scorecard فصلی click non-brand روی landing ارگانیک، lead واجدشرایط server-confirmed و accepted pipeline به تفکیک landing group را می‌دهد. view session-scoped در GA4 و first-known-source در CRM هر دو با label روشن هستند، تغییر consent/model annotate شده و rollout مرحله‌ای content با گروه دست‌نخوردهٔ مشابه سنجیده می‌شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="last-click یک قانون گزارش است، branded demand الزاماً ساختهٔ سئو نیست، و ضرب traffic تخمینی در conversion rate فرضی revenue را اختراع می‌کند نه اندازه‌گیری.">
+تیم همهٔ organic purchase revenue در GA4 را incremental SEO revenue می‌خواند، «traffic value» ابزار rank را هم جمع می‌زند و conversion بی‌consent را با multiplier ثابت پر می‌کند. refund، lead quality یا reconciliation تعریف channel وجود ندارد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast روی discoverability اثر می‌گذارد؛ traffic-light آن KPI نیست.
+2. analytics/event را در یک layer حاکمیت‌شده بیرون از snippet scoring نگه دار.
+
+**Rank Math**
+
+1. dashboardهای Analytics می‌توانند بخشی از search و analytics data را کنار هم بگذارند.
+2. قبل از ارائهٔ total پلاگین به finance، تعریف را export کن؛ cache/report scope ممکن است با source فرق کند.
+
+**AIOSEO**
+
+1. Search Statistics در configuration واجدشرایط برای monitoring content/page کمک می‌کند.
+2. lead acceptance، margin، refund یا CRM attribution را نمی‌داند مگر جای دیگری عمداً join شده باشد.
+
+**SEOPress**
+
+1. SEOPress بسته به config می‌تواند analytics tag و event tracking مشخصی inject کند.
+2. semantic event و consent را validate کن، نه فقط ظاهرشدن یک hit.
+
+**جا خالی واقعی:** Rank Math و بعضی editionهای AIOSEO reporting یکپارچه SEO دارند؛ SEOPress با control روی tag/event فرق مادی دارد؛ Yoast روی optimization/integration تمرکز دارد. هیچ‌کدام warehouse، experimentation platform، دفتر finance یا causal attribution engine نیست.
+
+## پیاده‌سازی کد
+
+ratio را از input تجمیع‌شده و non-PII حساب کن و numerator/denominator را هم برگردان تا dashboard نتواند scope را پنهان کند. این route در App Router journey کاربر جمع نمی‌کند:
+
+```ts
+// app/api/seo-kpis/route.ts
+import { NextResponse } from "next/server";
+
+type KPIInput = {
+  impressions: number;
+  clicks: number;
+  organicSessions: number;
+  qualifiedLeads: number;
+  acceptedPipeline: number;
+};
+
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0;
+
+export async function POST(request: Request) {
+  const input = (await request.json()) as Partial<KPIInput>;
+  const keys: (keyof KPIInput)[] = [
+    "impressions",
+    "clicks",
+    "organicSessions",
+    "qualifiedLeads",
+    "acceptedPipeline",
+  ];
+  if (!keys.every((key) => isCount(input[key]))) {
+    return NextResponse.json({ error: "All metrics must be non-negative numbers" }, { status: 400 });
+  }
+
+  const data = input as KPIInput;
+  const ratio = (numerator: number, denominator: number) =>
+    denominator === 0 ? null : numerator / denominator;
+
+  return NextResponse.json({
+    scope: "aggregate-input-only",
+    ctr: { value: ratio(data.clicks, data.impressions), numerator: data.clicks, denominator: data.impressions },
+    leadRate: {
+      value: ratio(data.qualifiedLeads, data.organicSessions),
+      numerator: data.qualifiedLeads,
+      denominator: data.organicSessions,
+    },
+    pipelinePerLead: {
+      value: ratio(data.acceptedPipeline, data.qualifiedLeads),
+      numerator: data.acceptedPipeline,
+      denominator: data.qualifiedLeads,
+    },
+  });
+}
+```
+
+قبل از expose کردن aggregate محرمانه endpoint را authenticate کن، period و currency را upstream validate کن و هیچ ایمیل، موبایل، اسم، free-text یا raw CRM record نفرست. ratio بین GSC، GA4 و CRM نیاز به join مستند timezone/channel دارد؛ diagnostic است، خودکار causal نیست.
+
+Pages Router: function خالص validation/calculation را در `pages/api/seo-kpis.ts` reuse کن، فقط POST را بپذیر و همان authorization سروری را اعمال کن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «last click کانالی را نشان می‌دهد که فروش را ایجاد کرده.»
+- **DEPRECATED:** «organic traffic بیشتر همیشه بهتر است.»
+- تغییر تعریف key event بدون restate تاریخچه یا annotation شکست.
+- قاطی‌کردن click در GSC، user/session در GA4 و lead در CRM انگار identity/time مشترک دارند.
+- حساب‌کردن کل branded demand به‌عنوان impact incremental سئو.
+- ندیدن margin، refund، spam lead و sales acceptance.
+- درصد بدون numerator، denominator یا minimum sample.
+- استفاده از traffic estimate ابزار rank به‌عنوان revenue ثبت‌شده.
+- پنهان‌کردن تغییر modeling/consent پشت trend نرم.
+
+## نکته‌های سطح بالا / پروداکشن
+
+metric registry را در version control نگه دار: اسم، معنی ساده، formula، source field، filter، timezone، attribution scope، freshness، owner و break شناخته‌شده. release لایهٔ semantic را snapshot کن و فقط وقتی تعریف جدید صادقانه reproducible است backfill کن.
+
+سیستم‌ها را به‌صورت range reconcile کن، نه برابری اجباری. GSC شاهد search result است، GA4 رفتار وابسته به tag/consent، CRM حقیقت عملیاتی با رکورد missing/duplicate خودش و finance مالک recognized value. برای channel mapping، event dedup، currency، bot/internal traffic و late-arriving outcome تست بساز.
+
+برای incrementality اگر شد rollout یا matched holdout را از قبل ثبت کن. contamination، seasonality، release هم‌زمان و confidence را بنویس. اگر counterfactual نداری بگو «attributed» یا «associated»، نه «caused».
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| قرارداد KPI | formula، scope، owner، source، freshness | فقط label داشبورد |
+| کیفیت event | outcome تأیید سرور و dedup | click/refresh تکراری |
+| Attribution | model و lookback روشن | credit به اسم causality |
+| Join | محدودیت timezone/channel/identity مستند | ابزارها به زور برابر |
+| ارزش کسب‌وکار | quality، margin و refund دیده | traffic/rank به اسم ROI |

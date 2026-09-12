@@ -1,0 +1,15 @@
+{
+  "title": "WordPress SEO",
+  "defaultOpen": true,
+  "pages": [
+    "plugin-comparison-table",
+    "permalink-structure",
+    "caching-and-cwv",
+    "image-optimization-plugins",
+    "cdn-setup",
+    "gutenberg-vs-builders",
+    "woocommerce-seo",
+    "multisite-seo",
+    "migration-without-losing-rankings"
+  ]
+}

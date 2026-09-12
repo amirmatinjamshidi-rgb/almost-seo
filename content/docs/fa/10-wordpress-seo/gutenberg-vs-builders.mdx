@@ -1,0 +1,85 @@
+---
+title: Gutenberg در برابر page builderها برای SEO
+description: Block Editor و builder را با HTML رندرشده، performance، workflow، lock-in، accessibility و هزینهٔ migration بسنج؛ نه ادعای برند.
+module: 10-wordpress-seo
+topic_order: 6
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Gutenberg یعنی Block Editor و Site Editor در core وردپرس. builderهایی مثل Elementor، Divi، Beaver Builder، Bricks یا WPBakery سیستم دیداری، widget، asset و معمولاً دادهٔ layout اختصاصی اضافه می‌کنند. موتور جستجو editor logo را نمی‌بیند؛ HTML، link، media، metadata و رفتار رندرشده را می‌بیند.
+
+پس مقایسه باید per-template باشد: semantic output، DOM size، هزینه CSS/JS، accessibility، responsive image، heading، امکان ویرایش internal link، مالک schema و هزینهٔ خروج.
+
+## چرا مهم است
+
+Builder شاید publishing را سریع کند ولی wrapper/script اضافه کند. core block هم با block theme بد می‌تواند فونت سنگین و heading خراب بدهد. lock-in وقتی مسئله SEO می‌شود که تعویض builder shortcode، صفحهٔ خالی، URL عوض‌شده یا توقف چندماههٔ تحریریه بسازد.
+
+<CorrectExample title="درست">
+یک article، landing، archive و product واقعی را با هر گزینه prototype می‌کنیم. بایت سرد/گرم، DOM، long task مربوط به INP، heading accessible، workflow نویسنده، pattern reusable و محتوای exportشده را مقایسه می‌کنیم.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="یک synthetic score روی homepage دموی vendor، template تحریریه، interaction، accessibility و migration lock-in را نمی‌سنجد.">
+```txt
+انتخاب: Builder X
+مدرک: demo یک‌بار 99 گرفت
+exit test: هیچ
+محل ذخیرهٔ content: نامعلوم
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+قبل از widget سفارشی، core block، pattern، synced pattern، theme style و block locking را امتحان کن. در builder، widget pack، icon، font، animation و experiment بی‌مصرف را خاموش کن. بدون مرز ownership، builder را داخل block content لایه‌لایه نکن.
+
+**Yoast، Rank Math و AIOSEO:** با editorهای رایج integration دارند، ولی روی template واقعی ببین SEO field، primary term، schema، breadcrumb و content analysis خروجی نهایی را می‌فهمند یا نه. شاید plugin analysis متن dynamic widget را نبیند؛ اینکه Google می‌بیند به معنی دیدن ادیتور نیست.
+
+**جا خالی واقعی:** Rank Math روی integration عمیق Elementor تأکید دارد؛ Yoast از Gutenberg و builderهای اصلی پشتیبانی می‌کند؛ AIOSEO هم integrationهای متداول دارد. هیچ‌کدام widget inaccessible را درست یا runtime builder را حذف نمی‌کنند. SEOPress فقط وقتی مهم است که integration همان builder فرق واقعی تست‌شده بدهد.
+
+## پیاده‌سازی کد
+
+Block را server-render کن تا معنی بدون JavaScript client حاضر باشد:
+
+```php
+register_block_type(__DIR__ . '/build/related-guides', [
+    'render_callback' => function (array $attributes): string {
+        $items = get_posts(['post_type' => 'guide', 'numberposts' => 3]);
+        $links = array_map(
+            fn($item) => sprintf(
+                '<li><a href="%s">%s</a></li>',
+                esc_url(get_permalink($item)),
+                esc_html(get_the_title($item))
+            ),
+            $items
+        );
+        return '<nav aria-label="Related guides"><ul>' . implode('', $links) . '</ul></nav>';
+    },
+]);
+```
+
+Asset build را فقط جایی enqueue کن که block حاضر است؛ کل design system را global نفرست.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «Google محتوای page builder را index نمی‌کند.»
+- **DEPRECATED:** «Gutenberg خودکار lightweight است.»
+- انتخاب با score ادیتور، نه template رندرشده.
+- گفتن multiple H1 همیشه فاجعه است یا اصلاً مهم نیست؛ hierarchy روشن بساز.
+- load جهانی slider، icon pack و animation runtime.
+- rebuild بدون inventory محتوای اختصاصی builder.
+
+## نکته‌های سطح بالا / پروداکشن
+
+performance budget و block/widget مجاز تعریف کن. template و pattern را version کن. role، revision، translation، structured data، form و accessibility را تست کن. قبل تعویض، sample export و شکل ذخیره در DB/post content را ببین؛ فقط اگر URL واقعاً عوض شد redirect بساز.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| HTML | content/link معنادار بدون interaction | shell خالی تا JS |
+| Performance | budget template پاس | asset global و long task |
+| Semantics | heading، landmark و label سالم | div soup یا widget inaccessible |
+| Workflow plugin | field/output روی template واقعی کار می‌کند | تحلیلگر content را نمی‌بیند |
+| Exit test | content می‌ماند یا map مهاجرت دارد | shortcode/صفحهٔ خالی |

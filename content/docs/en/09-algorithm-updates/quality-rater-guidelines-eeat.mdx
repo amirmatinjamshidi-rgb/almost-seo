@@ -1,0 +1,154 @@
+---
+title: Quality Rater Guidelines and E-E-A-T
+description: "Use the rater guidelines as a quality lens: Trust is central, E-E-A-T is contextual, and raters do not directly score your pages for ranking."
+module: 09-algorithm-updates
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google’s **Search Quality Rater Guidelines** (QRG) train external raters to evaluate search-result quality. They help Google check whether proposed and existing systems appear to work. Raters do **not** control rankings, assign a ranking score to your URL, or feed a page’s rating directly into ranking algorithms. Google compares the process to restaurant feedback cards.
+
+The current official PDF available at this review is the September 11, 2025 edition, marked Copyright 2025. Do not invent a “2026 QRG” when Google has not published one. Recheck the [official QRG PDF](https://guidelines.raterhub.com/searchqualityevaluatorguidelines.pdf) when conducting an audit.
+
+The guidelines use **E-E-A-T** when considering Page Quality:
+
+- **Experience:** first-hand or life experience relevant to the purpose. A product owner’s test notes or a patient describing their own experience can be valuable.
+- **Expertise:** knowledge or skill needed for the subject. The required type and level depend on the task; electrical rewiring advice needs different expertise from a restaurant diary.
+- **Authoritativeness:** the extent to which the creator or site is known as a go-to source in context. Some topics have a uniquely official source; many do not.
+- **Trust:** whether the page is accurate, honest, safe, and reliable. **Trust is the central and most important member.** Apparent expertise cannot rescue a scam, hidden conflict, unsafe checkout, or fabricated evidence.
+
+E-E-A-T is not a plugin score or a direct ranking-factor checklist. Google says E-E-A-T itself is **not a specific ranking factor**; its automated systems use a mix of factors that can identify content demonstrating its aspects. Different pages need different combinations. A first-hand travel diary and an emergency medical protocol should not display the same proof.
+
+Use Google’s **Who, How, Why** framing:
+
+1. **Who** created or reviewed this content, where a reader would expect that information?
+2. **How** was it produced—tests, sources, original reporting, automation, review method?
+3. **Why** does it exist—to help an intended audience, or mainly to acquire search visits?
+
+## Why it matters
+
+Teams often turn E-E-A-T into decorative work: fake expert bylines, `Person` schema, author boxes, badges, and extra About-page adjectives. That can make trust worse when claims are unverifiable.
+
+The useful application is operational. Make responsibility visible, support factual claims, disclose material conflicts, keep commerce safe, correct errors, and show evidence appropriate to the page’s purpose. Strong Main Content, site/creator reputation, ownership information, and functional customer service matter together; no single widget substitutes for them.
+
+<CorrectExample>
+A hands-on espresso-machine review names the tester, explains the repeatable test method, publishes original photos and measurements, separates observed results from manufacturer claims, states that affiliate links may pay a commission, covers drawbacks, and links to the correction policy. The evidence supports the page’s purpose.
+</CorrectExample>
+
+<IncorrectExample why="The page decorates a copied review with unverifiable credentials and schema. Trust fails even though the page contains every E-E-A-T label.">
+```txt
+Reviewed by: Dr. Expert
+Credentials: "20 years of excellence"
+Method: not disclosed
+Images: manufacturer press kit
+Rating: 9.8/10
+Drawbacks: none
+Affiliate relationship: hidden
+Person schema: sameAs links to empty profiles
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Map the real author to the correct `Person` or Organization identity and maintain an author archive/profile where readers expect one.
+2. Yoast schema describes identity; it does not verify credentials, reputation, sources, or first-hand experience.
+
+**Rank Math**
+
+1. Configure Person/Organization and author schema from real editorial records. Do not create a fake reviewer user merely to add `reviewedBy`.
+2. Content AI and SEO scores do not measure E-E-A-T or QRG Page Quality.
+
+**AIOSEO**
+
+1. Use Author SEO fields only for accurate education, employer, role, and topical expertise. Link claims to evidence where appropriate.
+2. Add editorial, correction, ownership, contact, and affiliate-disclosure pages through the site—not only through schema.
+
+**Feature gap:** These plugins can emit identity metadata and schema. They cannot establish reputation, prove a test occurred, validate a medical review, or turn a byline into Trust. SEOPress is not materially different for this task. Your CMS needs editorial ownership, reviewer evidence, source fields, correction history, and access control.
+
+## Code implementation
+
+Render provenance for readers from structured editorial data. Do not hide it only in JSON-LD:
+
+```tsx
+// app/about/editorial/page.tsx
+type EditorialOwner = {
+  name: string;
+  role: string;
+  profileUrl: string;
+};
+
+const owner: EditorialOwner = {
+  name: "Mina Rahimi",
+  role: "Managing editor",
+  profileUrl: "/authors/mina-rahimi",
+};
+
+export default function EditorialPolicyPage() {
+  return (
+    <main>
+      <h1>How we publish</h1>
+      <p>
+        Each article has an accountable owner. Sources are checked against the
+        claim, material conflicts are disclosed, and substantive corrections
+        are recorded on the article.
+      </p>
+      <dl>
+        <dt>Editorial owner</dt>
+        <dd>
+          <a href={owner.profileUrl}>{owner.name}</a>, {owner.role}
+        </dd>
+        <dt>Corrections</dt>
+        <dd>
+          <a href="/about/corrections">Read our corrections policy</a>
+        </dd>
+        <dt>Contact</dt>
+        <dd>
+          <a href="/contact">Report a factual issue</a>
+        </dd>
+      </dl>
+    </main>
+  );
+}
+```
+
+This App Router page is a Server Component and produces crawlable, visible provenance without client JavaScript. On each article, render the author/reviewer, meaningful updated date, sources, method, and disclosures that the purpose requires. If you emit `Person` or `Article` JSON-LD, generate it from the same editorial record so visible and machine-readable claims cannot drift.
+
+Pages Router: use the same component under `pages/about/editorial.tsx`; fetch CMS data with `getStaticProps` or `getServerSideProps` according to its freshness. Router choice does not create E-E-A-T.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Quality raters visit my page and assign the score Google ranks it with.”
+- **DEPRECATED:** “E-E-A-T is one direct ranking factor with a measurable score.”
+- **DEPRECATED:** “Add an author box, `Person` schema, and an About page to pass E-E-A-T.”
+- **DEPRECATED:** Treating Experience as permission for personal anecdotes to override established expert consensus on clear YMYL advice.
+- Inventing degrees, reviewer approval, awards, test results, customer counts, or `sameAs` profiles.
+- Giving every article the same “medically reviewed” label without showing who reviewed what and when.
+- Hiding sponsorship or affiliate relationships behind a generic footer link.
+- Changing an updated date for cosmetic freshness without a substantive review.
+- Assuming a lack of public reputation is automatically negative for every small creator; context and purpose matter.
+
+## Senior / production notes
+
+Model **claims**, not just authors. High-impact claims should carry a source, source date, reviewer where needed, and a content owner. A general author bio does not prove each claim.
+
+Keep credentials scoped. A cardiologist is not automatically the right reviewer for tax law; a product enthusiast’s first-hand test may be more useful than a generic credential for a coffee grinder review. In clear YMYL advice, use qualified expertise and alignment with well-established consensus. First-person experience can still help when it is clearly presented as experience and remains safe.
+
+Trust also lives outside the article: secure payments, honest returns, reachable customer service, transparent ownership, independent reputation, corrections, and absence of deceptive design. Do not let schema state more than users can verify.
+
+Treat the QRG as a conceptual audit framework, not a secret list of ranking weights. Version the exact PDF used for training and revisit your checklist when Google updates it.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| QRG claim | Official PDF/version recorded | Invented “2026 guideline” |
+| Identity | Real creator/reviewer with relevant scope | Generic “Expert Team” |
+| Evidence | Sources, method, original proof, conflicts visible | Schema-only credentials |
+| Trust operations | Contact, corrections, ownership, safe transactions work | Decorative badges |
+| Consistency | Visible copy, CMS record, and JSON-LD agree | Fake or stale `Person` graph |
+| Rater language | Raters evaluate system quality indirectly | “Raters directly score rankings” |

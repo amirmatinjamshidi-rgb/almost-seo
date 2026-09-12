@@ -1,0 +1,80 @@
+---
+title: پلاگین‌های بهینه‌سازی تصویر وردپرس
+description: pipeline قابل‌اندازه‌گیری برای dimension، responsive candidate، فرمت مدرن، compression، lazy loading و rollback امن بساز.
+module: 10-wordpress-seo
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+بهینه‌سازی تصویر یک pipeline است: قانون upload ← resize اصل خیلی بزرگ ← compression ← AVIF/WebP اگر واقعاً به‌صرفه بود ← `srcset`/`sizes` responsive ← dimension صریح ← delivery و cache. core وردپرس sub-size، responsive markup و loading hint می‌سازد و اگر image library سرور پشتیبانی کند با فرمت مدرن کار می‌کند. پلاگین crop درست یا art direction را به‌جای ادیتور انتخاب نمی‌کند.
+
+## چرا مهم است
+
+LCP خیلی از صفحه‌ها همان تصویر بالای fold است. بایت اضافه آن را عقب می‌اندازد، dimension خالی CLS می‌سازد و `sizes` غلط باعث می‌شود موبایل فایل desktop بگیرد. Search هم URL crawlable، context و alt صادق می‌خواهد؛ نه keyword stuffing در filename.
+
+<CorrectExample title="درست">
+hero با اندازهٔ ۱۶۰۰×۹۰۰ آگاهانه crop و compress شده، width/height و candidate responsive دارد و اگر LCP است fetch priority بالا می‌گیرد. تصویر پایین fold lazy است. تا وقتی rollout قابل‌برگشت ثابت نشده اصل فایل می‌ماند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="lazy کردن LCP و فرستادن original پنج‌هزارپیکسلی discovery/transfer را عقب می‌اندازد؛ alt جعلی هم accessibility را خراب می‌کند.">
+```html
+<img src="/uploads/IMG_0042.jpg" loading="lazy" alt="best cheap seo wordpress plugin buy now">
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+ShortPixel، Imagify، EWWW، Smush و Optimole در local/cloud processing، quota، backup، AVIF/WebP و CDN delivery فرق دارند. با output اندازه‌گیری‌شده، privacy/residency، restore و compatibility انتخاب کن؛ نه affiliate table. دو optimizer را روی upload اجرا نکن.
+
+**Yoast، Rank Math و AIOSEO:** شاید image-sitemap یا metadata بدهند، ولی compression pipeline نیستند. تصمیم attachment-page redirect/noindex را از مفید بودن خود media file جدا نگه دار.
+
+**جا خالی واقعی:** Image SEO در بعضی tierهای Rank Math attribute خالی را auto-fill می‌کند، اما alt تولیدی جای متن accessible انسانی نیست. Yoast و AIOSEO codec/CDN optimizer نیستند. SEOPress فقط اگر کنترل sitemap/metadata آن فرق لازم را بدهد مطرح است، نه برای transcoding.
+
+قبل از bulk: upload و DB backup؛ PNG شفاف، product photo، screenshot، animation، EXIF و quality را نمونه‌ای تست کن.
+
+## پیاده‌سازی کد
+
+Attachment responsive را با API core رندر کن:
+
+```php
+$image_id = 123;
+echo wp_get_attachment_image(
+    $image_id,
+    'large',
+    false,
+    [
+        'class' => 'hero-image',
+        'loading' => 'eager',
+        'fetchpriority' => 'high',
+        'sizes' => '(max-width: 768px) 100vw, 1200px',
+    ]
+);
+```
+
+روی همهٔ عکس‌ها `fetchpriority="high"` نگذار. اگر image size سفارشی داری، آگاهانه register کن و regenerate thumbnail را اول staging انجام بده.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «WebP همیشه کوچک‌تر است» یا «AVIF همیشه بهتر است.» quality برابر را مقایسه کن.
+- **DEPRECATED:** «همهٔ تصویرها باید lazy باشند.»
+- compression چندبارهٔ فایل بهینه.
+- پاک کردن original قبل از تست restore.
+- حذف `sizes`، width یا height.
+- عبور دادن SVG از raster optimizer یا upload ناامن SVG.
+
+## نکته‌های سطح بالا / پروداکشن
+
+source of truth را ثبت کن: upload محلی، derivative یا image CDN. اگر vendor حذف شد URL باید پایدار بماند. EXIF را فقط بعد از review حقوقی/تحریریه پاک کن. دقت رنگ محصول ممکن است quality بیشتری از تصویر تزئینی بخواهد. بایت و LCP را per-template ببین.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Network | candidate/format مناسب viewport | original دسکتاپ روی موبایل |
+| Layout | نسبت تصویر از قبل رزرو | CLS هنگام ظاهر شدن |
+| LCP | hero eager و کم‌حجم | hero lazy یا فقط CSS background |
+| Restore | original و rollback تست شده | conversion تخریبی |
+| Crawl/accessibility | URL 200 و alt صادق | CDN blocked یا alt stuffed |

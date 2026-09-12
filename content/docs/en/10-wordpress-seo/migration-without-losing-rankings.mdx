@@ -1,0 +1,98 @@
+---
+title: Migrate WordPress without losing rankings
+description: Migrate hosts, domains, HTTPS, themes, or platforms with unchanged URLs where possible, staging noindex, redirect maps, rollback, DNS control, and GSC monitoring.
+module: 10-wordpress-seo
+topic_order: 9
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A migration changes hosting, domain, protocol, URL structure, theme, CMS, or several at once. Risk grows with simultaneous variables. The safest option for a host-only migration is **unchanged public URLs and output**. For unavoidable URL changes, every valuable old URL needs an exact destination, usually a server/edge 301.
+
+A migration plan includes inventory, staging isolation, backups, restore rehearsal, redirect map, launch checks, DNS/TTL, monitoring, and a timed rollback decision—not only file transfer.
+
+## Why it matters
+
+Search engines must recrawl and reconcile redirects, canonicals, internal links, sitemaps, hreflang, structured data, and content. Missing one template can remove thousands of URLs. “Rankings never dip” cannot be promised; controlled scope and fast correction reduce avoidable loss.
+
+<CorrectExample>
+Two weeks before launch, TTL is lowered within the DNS provider’s allowed minimum. Staging requires authentication and also sends `noindex`. A full crawl and analytics/GSC export become the baseline. URLs stay unchanged where possible; changed URLs have reviewed one-hop mappings. Files/database are backed up and restore is timed. Old infrastructure remains available through the rollback window.
+</CorrectExample>
+
+<IncorrectExample why="A public staging site can be indexed, chained redirects dilute diagnostics, and destroying the old database removes rollback.">
+```txt
+staging.example.com: public, indexable
+all old URLs → homepage
+DNS TTL changed at launch
+old server/database: deleted immediately
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+1. Clone to staging without sending transactional email, payments, webhooks, or real cache purges.
+2. Protect staging with HTTP authentication/IP access. Add WordPress “discourage search engines”/`noindex` as a second layer, not the only lock.
+3. Search-replace domains with a serialization-aware tool and reviewed dry run. Never use raw SQL replace on serialized data.
+4. Preserve uploads, attachment paths, users, order state, timezone, permalinks, robots, cron, and environment secrets.
+
+**Yoast, Rank Math, and AIOSEO:** export settings/redirects, run their migration/importer only on staging, and compare canonicals, schema, sitemaps, social metadata, and primary terms. Keep one plugin active as output owner.
+
+**Feature gap:** plugins can store/import redirects, but DNS, TLS, host cache, database consistency, mail, object storage, and rollback are infrastructure. SEOPress PRO is useful when its redirect importer/exporter matches the map; it still does not replace server-level launch control.
+
+For a domain move, verify old and new GSC properties, submit the new sitemap, and use Google’s Change of Address tool when its documented conditions apply.
+
+## Code implementation
+
+Prefer exact redirects and preserve paths:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name old.example.com;
+
+    location = /legacy-guide/ {
+        return 301 https://www.example.com/guides/current-guide/;
+    }
+
+    location / {
+        return 301 https://www.example.com$request_uri;
+    }
+}
+```
+
+Before a serialization-aware WP-CLI replacement, take and verify a backup, then inspect a dry run:
+
+```bash
+wp search-replace 'https://old.example.com' 'https://www.example.com' \
+  --all-tables-with-prefix --precise --recurse-objects --dry-run
+```
+
+Do not include destructive database commands in a launch runbook. A reviewed backup ID and restore command owned by the host/database platform belong there instead.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “301 redirects preserve exactly 100% of rankings instantly.”
+- **DEPRECATED:** “Disallow staging in robots.txt prevents indexing.” It can hide the `noindex`.
+- Changing host, domain, URLs, theme, and content simultaneously.
+- Redirecting all misses to home or stacking HTTP→HTTPS→www→new path chains.
+- Forgetting DNS TTL propagation, certificate issuance, email records, or CDN origin.
+- Removing old hosting before log/GSC stabilization and rollback expiry.
+
+## Senior / production notes
+
+Define rollback triggers before launch: error rate, missing-template percentage, checkout failure, redirect coverage, or severe traffic anomaly. Rollback must restore application, database consistency, files, DNS/CDN origin, and queued jobs—not just code. Freeze publishing or reconcile writes made during cutover.
+
+Keep the old domain, redirects, and certificates long-term. Annotate analytics, watch GSC Page indexing/Crawl stats/Sitemaps and server logs by template, and compare conversions—not only sessions.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Crawl diff | Status, canonical, robots, headings, schema match plan | Missing template or mass noindex |
+| Redirect map | One hop to relevant 200 successor | Chain, loop, home redirect |
+| Staging | Auth-protected and noindex | Public/indexable |
+| DNS/TLS | Resolvers converge; cert/origin healthy | Mixed origin or bad certificate |
+| GSC/logs | Both properties monitored; new sitemap processed | Blind launch |
+| Rollback | Timed restore and decision owner | Old system destroyed |

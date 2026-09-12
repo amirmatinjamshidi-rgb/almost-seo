@@ -1,0 +1,11 @@
+{
+  "title": "Analytics and measurement",
+  "defaultOpen": true,
+  "pages": [
+    "search-console-deep-dive",
+    "ga4-for-seo",
+    "bing-webmaster-tools",
+    "rank-tracking-pitfalls",
+    "kpi-attribution"
+  ]
+}

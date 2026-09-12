@@ -1,0 +1,148 @@
+---
+title: Google algorithm and system history
+description: Read update history as changes to many ranking and spam systems, not as a list of animals, penalties, or guaranteed recovery recipes.
+module: 09-algorithm-updates
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+“The Google algorithm” is shorthand. Search uses multiple automated **ranking systems**, page-level signals, and some site-wide signals and classifiers. A named update can mean a broad reassessment, an improvement to a spam-detection system, or a change to a specialized system. Those are not interchangeable:
+
+| Change | What Google documents | What it does not establish |
+| --- | --- | --- |
+| **Core update** | A broad change to ranking algorithms and systems, announced on the Search Status Dashboard | A penalty aimed at your site or one page element |
+| **Spam update** | A notable improvement to automated spam detection, including systems such as SpamBrain | That every loser is spam or every winner is clean |
+| **Reviews system** | A system intended to reward insightful, original reviews by people who know the subject | A star-schema bonus or an affiliate penalty |
+| **Manual action** | A human-reviewed policy action shown in Search Console | The normal explanation for a core-update decline |
+
+A useful, documented history is shorter than most SEO folklore:
+
+- **PageRank** was among Google’s original core systems and still forms part of evolved link-analysis systems.
+- **Panda** was announced in 2011 and became part of core ranking systems in 2015. **Penguin** was announced in 2012 and integrated into core systems in 2016.
+- **Hummingbird** was a major overall ranking improvement in August 2013. RankBrain, neural matching, BERT, passage ranking, freshness, deduplication, and other systems solve different retrieval or ranking needs; they are not one linear replacement chain.
+- The **helpful content system** was announced in 2022. In March 2024 it became part of core ranking systems; treating every later movement as a separate “HCU classifier update” is outdated.
+- Google’s dashboard records “product reviews update” and later “reviews update” rollouts. The current reviews system covers high-quality reviews of products, services, destinations, games, movies, and other subjects. The last named rollout is not a promise that this system stays unchanged between announcements.
+
+Use Google’s [ranking systems guide](https://developers.google.com/search/docs/appearance/ranking-systems-guide) for system status and the [Search Status Dashboard history](https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history) for announced rollouts. Do not copy an old industry timeline and call it current.
+
+## Why it matters
+
+Wrong classification produces wrong remediation. A broad core-update movement calls for query/page comparison and an honest quality assessment. A spam-update movement calls for a spam-policy audit. A review page with no testing needs evidence and decision value, not a changed publication date.
+
+Correlation is only a lead. Seasonality, demand, SERP layout, migrations, indexing failures, competitors, and measurement changes can overlap an announced rollout. Google explicitly recommends confirming that a core update finished, waiting at least a full week, and then comparing suitable pre- and post-update periods in Search Console.
+
+<CorrectExample>
+The dashboard shows a completed core update. The team compares Web Search separately from Images, segments brand and non-brand queries, and finds that buying-guide pages lost while support pages stayed flat. Independent reviewers sample the affected guides against Google’s people-first questions. The release plan improves weak comparisons, adds original test evidence, fixes unclear ownership, and leaves unaffected winners alone.
+</CorrectExample>
+
+<IncorrectExample why="The team inferred causation from one date, treated a broad reassessment as a penalty, and deployed unrelated site-wide changes without a baseline.">
+```txt
+Traffic fell on Tuesday.
+An SEO weather tool was red on Wednesday.
+Diagnosis: "the Helpful Content penalty"
+Fix: change every H1, delete 40% of posts, buy links, update all dates
+Promise: rankings return at the next update
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Export affected URL, query, and content-type data from Search Console; Yoast’s traffic-light score cannot diagnose an update.
+2. Use revisions and a staging environment for meaningful page improvements. Do not bulk-change titles, dates, or schema merely because a rollout happened.
+
+**Rank Math**
+
+1. Rank Tracker and analytics integrations can help create cohorts, but correlation in a dashboard is not root-cause analysis.
+2. Content AI scores and Instant Indexing do not reverse core or spam systems.
+
+**AIOSEO**
+
+1. Search Statistics can surface declining pages where configured. Validate them directly in Search Console and against the official rollout window.
+2. Redirect only when consolidation is editorially justified; a post-update decline does not make the old URL broken.
+
+**Feature gap:** No WordPress SEO plugin identifies which Google system changed, files a “recovery,” or measures page quality. SEOPress is not materially different here: it can expose metadata and analytics, not Google’s classifiers. Keep the diagnosis in a versioned incident log with dashboard links, cohorts, hypotheses, and releases.
+
+## Code implementation
+
+Make the incident log reproducible instead of hard-coding a guessed cause into your application:
+
+```tsx
+// app/seo-change-log/page.tsx
+type SearchEvent = {
+  label: string;
+  source: string;
+  status: "confirmed" | "internal";
+  observation: string;
+};
+
+const events: SearchEvent[] = [
+  {
+    label: "Confirmed Google rollout",
+    source: "https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history",
+    status: "confirmed",
+    observation: "Use the exact start and end dates from the dashboard.",
+  },
+  {
+    label: "Template release",
+    source: "/changelog",
+    status: "internal",
+    observation: "Record deployment time, affected routes, and rollback owner.",
+  },
+];
+
+export default function SeoChangeLogPage() {
+  return (
+    <main>
+      <h1>Search change log</h1>
+      <ul>
+        {events.map((event) => (
+          <li key={`${event.status}-${event.label}`}>
+            <a href={event.source}>{event.label}</a>: {event.observation}
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+```
+
+This is valid App Router code: `page.tsx` is a Server Component by default. Store real internal events in your database or repository and copy official rollout dates from the dashboard at analysis time. Do not maintain a speculative `penalty: true` field.
+
+Pages Router: render the same data from `pages/seo-change-log.tsx`; use `getServerSideProps` only if the incident data must be fetched per request. The analytical rule does not change between routers.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “There is one Google algorithm and every named update replaces the previous one.”
+- **DEPRECATED:** “A core update is a penalty; remove the affected page element to recover.”
+- **DEPRECATED:** Calling every post-2024 decline “HCU” as though the old helpful content system still runs as a separately announced update.
+- **DEPRECATED:** “The next core update guarantees recovery.” Google makes no recovery promise or fixed timetable for a site.
+- Reading volatility sensors as official confirmation instead of checking the Search Status Dashboard.
+- Mixing core, spam, manual-action, indexing, and security incidents into one “algorithm hit” bucket.
+- Treating a reviews-system assessment as a word-count target. Google’s review guidance emphasizes evidence, original research, useful comparisons, benefits, drawbacks, and decision factors—not length.
+- Changing `lastModified` or the visible date without a substantive revision.
+
+## Senior / production notes
+
+Maintain three timelines: **official events**, **your releases**, and **observed metrics**. Never merge them into a causal story until the segmentation supports it. Annotate analytics with migrations, canonicals, robots changes, feed changes, large content launches, and consent/measurement changes.
+
+For a core-update review, lock the comparison window only after rollout completion, preserve raw Search Console exports, and split by search type, country, device, directory, template, intent, and query class. Compare unaffected control cohorts. Averages can hide a directory collapse.
+
+For a spam update, map evidence to the current [spam policies](https://developers.google.com/search/docs/essentials/spam-policies): link spam, cloaking, doorway abuse, expired-domain abuse, site-reputation abuse, or scaled content abuse where applicable. Do not “improve E-E-A-T” as a substitute for removing policy violations.
+
+For reviews, preserve test notes, original media, measurements, conflicts of interest, affiliate disclosures, and methodology. Product schema can make a page eligible for a rich result; it does not prove the review was performed.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Event source | Official dashboard start/end status saved | SEO weather screenshot only |
+| Cohorts | Pages, queries, search types, and controls compared | Site-wide clicks only |
+| Diagnosis | Evidence distinguishes core, spam, technical, and demand causes | “Algorithm penalty” |
+| Release | User-facing, reviewable improvements with an owner | Bulk date/H1/schema churn |
+| Claims | No guaranteed effect or recovery date | “Back after the next update” |
+| Follow-up | Stable weekly comparison after rollout | Daily reaction during rollout |

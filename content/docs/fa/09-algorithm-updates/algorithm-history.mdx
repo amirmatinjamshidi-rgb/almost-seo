@@ -1,0 +1,148 @@
+---
+title: تاریخچهٔ الگوریتم‌ها و سیستم‌های گوگل
+description: تاریخ آپدیت را تغییر چند سیستم ranking و spam بخوان، نه فهرست حیوان‌ها، پنالتی‌ها و نسخه‌های تضمینی recovery.
+module: 09-algorithm-updates
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+«الگوریتم گوگل» یک اسم جمع‌وجور است. Search با چندین **ranking system** خودکار، سیگنال‌های سطح صفحه و بعضی سیگنال‌ها و classifierهای سطح سایت کار می‌کند. یک آپدیت نام‌دار ممکن است تغییر گستردهٔ ارزیابی، بهتر شدن سیستم تشخیص spam، یا تغییر یک سیستم تخصصی باشد. این‌ها را یکی نگیر:
+
+| نوع تغییر | چیزی که گوگل مستند کرده | چیزی که از آن نمی‌فهمیم |
+| --- | --- | --- |
+| **Core update** | تغییر گسترده در الگوریتم‌ها و سیستم‌های ranking، با اعلان در Search Status Dashboard | پنالتی مخصوص سایت تو یا یک المان صفحه |
+| **Spam update** | بهبود قابل‌توجه تشخیص خودکار spam، از جمله سیستم‌هایی مثل SpamBrain | هر بازنده spam بوده یا هر برنده پاک است |
+| **Reviews system** | پاداش بهتر به review تحلیلی و اصل که آدمِ وارد نوشته | امتیاز اضافه از ستارهٔ schema یا جریمهٔ affiliate |
+| **Manual action** | اقدام policy با بررسی انسانی که در Search Console دیده می‌شود | توضیح معمول افت در core update |
+
+تاریخ مفید و مستند خیلی کوتاه‌تر از قصه‌های رایج SEO است:
+
+- **PageRank** جزو سیستم‌های core اولیه بود و شکل تکامل‌یافتهٔ link analysis هنوز بخشی از سیستم‌های core است.
+- **Panda** در ۲۰۱۱ اعلام شد و در ۲۰۱۵ وارد سیستم‌های core شد. **Penguin** در ۲۰۱۲ اعلام و در ۲۰۱۶ با سیستم‌های core یکپارچه شد.
+- **Hummingbird** در اوت ۲۰۱۳ یک بهبود بزرگ در سیستم ranking کلی بود. RankBrain، neural matching، BERT، passage ranking، freshness و deduplication کارهای متفاوتی دارند؛ این‌ها نسل‌های یک خط ساده نیستند که هرکدام قبلی را خاموش کرده باشد.
+- **Helpful content system** در ۲۰۲۲ معرفی شد و در مارس ۲۰۲۴ بخشی از سیستم‌های core شد. اینکه هر نوسان بعدی را آپدیت جداگانهٔ «HCU classifier» صدا کنیم دیگر دقیق نیست.
+- در dashboard ابتدا rolloutهای «product reviews update» و بعد «reviews update» ثبت شده‌اند. راهنمای فعلی reviews system از review محصول، سرویس، مقصد، بازی، فیلم و موضوع‌های دیگر حرف می‌زند. نبودن اعلان تازه یعنی تضمینی نداریم که سیستم بین اعلان‌ها بی‌تغییر مانده است.
+
+برای وضعیت سیستم‌ها سراغ [ranking systems guide](https://developers.google.com/search/docs/appearance/ranking-systems-guide) برو و برای rolloutهای اعلام‌شده [تاریخچهٔ Search Status Dashboard](https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history) را ببین. timeline قدیمی وبلاگ‌ها را سند روز حساب نکن.
+
+## چرا مهم است
+
+اگر نوع مسئله را غلط بگیری، درمان هم غلط می‌شود. حرکت هم‌زمان با core update به مقایسهٔ query/page و ممیزی بی‌تعارف کیفیت نیاز دارد. حرکت هم‌زمان با spam update اول policy audit می‌خواهد. صفحهٔ review بدون تست، evidence و کمک به تصمیم می‌خواهد؛ عوض کردن تاریخ انتشار درمانش نیست.
+
+هم‌زمانی فقط سرنخ است. فصل، افت تقاضا، تغییر SERP، migration، خرابی index، رقبا و تغییر measurement ممکن است هم‌زمان با rollout باشند. توصیهٔ خود گوگل این است که پایان core update را تأیید کنی، دست‌کم یک هفته کامل صبر کنی و بعد بازهٔ مناسب قبل و بعد را در Search Console مقایسه کنی.
+
+<CorrectExample title="درست">
+Dashboard می‌گوید core update تمام شده. تیم Web Search را جدا از Images می‌بیند، query برند و non-brand را جدا می‌کند و می‌فهمد راهنماهای خرید افت کرده‌اند اما صفحه‌های پشتیبانی ثابت‌اند. چند reviewer مستقل راهنماهای افت‌کرده را با سؤال‌های people-first گوگل می‌سنجند. release بعدی مقایسه‌های ضعیف را درست می‌کند، مدرک تست واقعی اضافه می‌کند و مالکیت مبهم را روشن می‌کند؛ به برنده‌های سالم دست نمی‌زند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="از یک هم‌زمانی نتیجهٔ قطعی گرفته شده، ارزیابی گسترده پنالتی فرض شده و تغییرهای نامرتبط بدون baseline روی کل سایت رفته‌اند.">
+```txt
+سه‌شنبه traffic افت کرد.
+چهارشنبه ابزار weather قرمز بود.
+تشخیص: "Helpful Content penalty"
+درمان: تغییر همه H1ها، حذف ۴۰٪ محتوا، خرید لینک، تازه‌کردن همه تاریخ‌ها
+قول: در آپدیت بعدی برمی‌گردیم
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. URL، query و content typeهای آسیب‌دیده را از Search Console export کن؛ چراغ Yoast آپدیت را تشخیص نمی‌دهد.
+2. بهبود واقعی را با revisions و staging انجام بده. صرفاً به‌خاطر rollout، title و تاریخ و schema را گروهی عوض نکن.
+
+**Rank Math**
+
+1. Rank Tracker و اتصال analytics برای ساختن cohort کمک می‌کنند، اما correlation در dashboard تحلیل علت نیست.
+2. Content AI score و Instant Indexing سیستم core یا spam را برنمی‌گردانند.
+
+**AIOSEO**
+
+1. Search Statistics، اگر تنظیم شده باشد، صفحه‌های رو به افت را نشان می‌دهد. بازه را در Search Console و dashboard رسمی دوباره چک کن.
+2. فقط وقتی دلیل تحریریه‌ای برای ادغام داری redirect بده؛ افت رتبه URL را خراب نمی‌کند.
+
+**جا خالی واقعی:** هیچ پلاگین SEO وردپرس نمی‌فهمد کدام سیستم گوگل عوض شده، «recovery» ثبت نمی‌کند و کیفیت صفحه را اندازه نمی‌گیرد. SEOPress هم اینجا تفاوت مادی ندارد: metadata و analytics می‌دهد، نه classifier گوگل. تشخیص را در incident log نسخه‌دار با لینک dashboard، cohort، فرضیه و release نگه دار.
+
+## پیاده‌سازی کد
+
+به‌جای چسباندن علت حدسی به اپ، change log قابل‌بازتولید بساز:
+
+```tsx
+// app/seo-change-log/page.tsx
+type SearchEvent = {
+  label: string;
+  source: string;
+  status: "confirmed" | "internal";
+  observation: string;
+};
+
+const events: SearchEvent[] = [
+  {
+    label: "Confirmed Google rollout",
+    source: "https://status.search.google.com/products/rGHU1u87FJnkP6W2GwMi/history",
+    status: "confirmed",
+    observation: "Start and end dates come from the official dashboard.",
+  },
+  {
+    label: "Template release",
+    source: "/changelog",
+    status: "internal",
+    observation: "Record deploy time, affected routes, and rollback owner.",
+  },
+];
+
+export default function SeoChangeLogPage() {
+  return (
+    <main>
+      <h1>Search change log</h1>
+      <ul>
+        {events.map((event) => (
+          <li key={`${event.status}-${event.label}`}>
+            <a href={event.source}>{event.label}</a>: {event.observation}
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+```
+
+این کد App Router کار می‌کند؛ `page.tsx` به‌صورت پیش‌فرض Server Component است. رویداد داخلی واقعی را در repository یا database خودت نگه دار و تاریخ rollout را موقع تحلیل از dashboard رسمی بردار. فیلد خیالی `penalty: true` نساز.
+
+Pages Router: همین داده را در `pages/seo-change-log.tsx` render کن؛ فقط اگر داده باید در هر request خوانده شود `getServerSideProps` لازم است. قاعدهٔ تحلیل با router عوض نمی‌شود.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «یک الگوریتم گوگل داریم و هر آپدیت نام‌دار قبلی را جایگزین می‌کند.»
+- **DEPRECATED:** «Core update پنالتی است؛ المان ضربه‌خورده را بردار تا برگردی.»
+- **DEPRECATED:** نامیدن هر افت بعد از ۲۰۲۴ به‌عنوان HCU، انگار helpful content system قدیمی هنوز rollout جدا دارد.
+- **DEPRECATED:** «Core update بعدی recovery را تضمین می‌کند.» گوگل برای سایت تو قول یا زمان ثابت نمی‌دهد.
+- ابزار volatility را اعلان رسمی فرض کردن و dashboard را ندیدن.
+- ریختن core، spam، manual action، indexing و security incident در یک سطل «algorithm hit».
+- تبدیل reviews system به target تعداد کلمه. راهنمای گوگل evidence، تحقیق اصل، مقایسهٔ مفید، مزایا/معایب و عامل تصمیم را می‌خواهد، نه طول.
+- تغییر `lastModified` یا تاریخ نمایشی بدون اصلاح معنادار.
+
+## نکته‌های سطح بالا / پروداکشن
+
+سه timeline جدا نگه دار: **رویداد رسمی**، **release خودت** و **metric مشاهده‌شده**. تا segmentation پشت داستانت را نگرفته، این سه را رابطهٔ علت و معلولی نکن. migration، canonical، robots، feed، انتشار حجیم و تغییر consent/measurement را annotate کن.
+
+برای core update فقط بعد از اتمام rollout پنجرهٔ مقایسه را قفل کن، export خام Search Console را نگه دار و بر اساس search type، کشور، device، directory، template، intent و query class برش بزن. cohort سالم را control بگذار؛ average کل سایت ممکن است فروپاشی یک directory را قایم کند.
+
+برای spam update، evidence را به [spam policies](https://developers.google.com/search/docs/essentials/spam-policies) فعلی وصل کن: link spam، cloaking، doorway abuse، expired-domain abuse، site-reputation abuse یا scaled content abuse. پاک نکردن تخلف و گفتن «E-E-A-T را بهتر می‌کنیم» درمان نیست.
+
+برای review، test note، media اصل، measurement، conflict of interest، affiliate disclosure و methodology را نگه دار. Product schema فقط eligibility یک rich result را ممکن می‌کند؛ ثابت نمی‌کند محصول را تست کرده‌ای.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| منبع رویداد | وضعیت start/end رسمی ذخیره شده | فقط اسکرین‌شات weather |
+| Cohort | page، query، search type و control مقایسه شده | فقط clicks کل سایت |
+| تشخیص | core، spam، مشکل فنی و تقاضا جدا شده | «algorithm penalty» |
+| Release | بهبود مفید، قابل review و مالک‌دار | تغییر گروهی تاریخ/H1/schema |
+| ادعا | بدون تضمین نتیجه یا تاریخ recovery | «آپدیت بعدی برمی‌گردد» |
+| پیگیری | مقایسهٔ هفتگی پایدار بعد rollout | واکنش روزانه وسط rollout |

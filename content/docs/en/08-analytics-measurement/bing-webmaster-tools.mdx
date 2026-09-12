@@ -1,0 +1,144 @@
+---
+title: Bing Webmaster Tools
+description: Use Bing diagnostics for Bing, keep sitemaps healthy, and notify real URL changes through IndexNow without confusing submission with indexing.
+module: 08-analytics-measurement
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Bing Webmaster Tools (BWT) reports Microsoft search performance, crawling, indexing, sitemaps, backlinks, and site diagnostics. Verify the canonical host—prefer DNS verification for durable ownership—and give people least-privilege access.
+
+Three discovery mechanisms have different jobs:
+
+- Crawlable internal links explain site structure.
+- XML sitemaps list canonical URLs and meaningful `lastmod` changes.
+- **IndexNow** notifies participating engines when a URL is added, materially updated, or deleted.
+
+IndexNow is a change notification, not an indexing command or ranking boost. A successful `200`/`202` means the submission was accepted for processing, not that the URL was crawled or indexed. The protocol supports up to 10,000 URLs in one POST, but send changes close to publication rather than repeatedly blasting the whole corpus.
+
+Bing also has direct Webmaster APIs. OAuth 2.0 is the recommended access method. Microsoft’s official notice gives **August 31, 2026** as the retirement date for legacy SOAP and POX APIs. Because this review is after that date while some documentation still carries future-tense wording, treat those protocols as retired and confirm a supported REST/JSON path before integration.
+
+## Why it matters
+
+Google-only monitoring misses Microsoft-specific crawl, index, malware, and query evidence. IndexNow can shorten discovery of fast-changing inventory or deleted URLs, but it cannot rescue a blocked, duplicate, thin, or non-canonical page.
+
+<CorrectExample>
+Publishing `/products/blue-grinder` commits the canonical page, internal link, sitemap `lastmod`, and then queues one IndexNow notification. Deleting it returns 410 (or an appropriate 301), removes it from the sitemap, updates links, and sends one more notification. BWT is checked for crawl/index state.
+</CorrectExample>
+
+<IncorrectExample why="Repeated submission wastes capacity and does not override quality, canonical, robots, or HTTP signals; acceptance is not proof of indexing.">
+A cron submits every URL every five minutes, including redirects, parameter duplicates, `noindex` pages, and URLs on another host. The team reports HTTP 200 from IndexNow as “100% indexed.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast provides Bing verification and XML sitemaps.
+2. It does not natively make every content change an IndexNow workflow in all editions; verify installed capabilities before assuming submission.
+
+**Rank Math**
+
+1. Rank Math’s Instant Indexing module supports IndexNow. Submit only canonical changed URLs.
+2. Do not bulk-submit archives and parameters merely because the button exists.
+
+**AIOSEO**
+
+1. AIOSEO can expose IndexNow integration depending on edition/version.
+2. Keep sitemap inclusion, robots, canonical, and submission policy aligned.
+
+**SEOPress**
+
+1. SEOPress supports IndexNow in current product configurations; validate the key and latest submission log.
+2. Exclude non-public post types and generated filter URLs.
+
+**Feature gap:** Rank Math, AIOSEO, and SEOPress can automate IndexNow; Yoast’s core workflow is primarily verification/sitemaps. Exact menus and plan gates change, so test one publish/update/delete cycle instead of documenting UI from memory.
+
+## Code implementation
+
+Protect your publishing hook and accept only same-host HTTP(S) URLs. The ownership key must be publicly retrievable at the declared `keyLocation`, but your internal submission token must never be public.
+
+```ts
+// app/api/indexnow/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const expected = process.env.INDEXNOW_SUBMISSION_TOKEN;
+  if (!expected || request.headers.get("authorization") !== `Bearer ${expected}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const host = process.env.INDEXNOW_HOST;
+  const key = process.env.INDEXNOW_KEY;
+  if (!host || !key) {
+    return NextResponse.json({ error: "IndexNow is not configured" }, { status: 503 });
+  }
+
+  const input = (await request.json()) as { urls?: unknown };
+  if (!Array.isArray(input.urls) || input.urls.length === 0 || input.urls.length > 100) {
+    return NextResponse.json({ error: "Provide 1–100 URLs" }, { status: 400 });
+  }
+
+  const urls = input.urls.filter((value): value is string => {
+    if (typeof value !== "string") return false;
+    try {
+      const url = new URL(value);
+      return url.hostname === host && (url.protocol === "https:" || url.protocol === "http:");
+    } catch {
+      return false;
+    }
+  });
+  if (urls.length !== input.urls.length) {
+    return NextResponse.json({ error: "Invalid or cross-host URL" }, { status: 400 });
+  }
+
+  const response = await fetch("https://api.indexnow.org/indexnow", {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+    body: JSON.stringify({
+      host,
+      key,
+      keyLocation: `https://${host}/indexnow-key.txt`,
+      urlList: urls,
+    }),
+    cache: "no-store",
+  });
+  return new NextResponse(null, { status: response.status });
+}
+```
+
+Add `app/indexnow-key.txt/route.ts` with a `GET` that returns `INDEXNOW_KEY` as `text/plain`; this public value proves host ownership, while `INDEXNOW_SUBMISSION_TOKEN` protects your private hook. Queue, deduplicate, retry `429` with backoff, and log status—not key or authorization headers.
+
+Pages Router: implement the same validation in `pages/api/indexnow.ts` and serve the key from `public/indexnow-key.txt` during deployment.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Submitting a URL guarantees indexing.”
+- **DEPRECATED:** Building new integrations on the SOAP/POX protocols with an announced retirement date in the past.
+- Resubmitting unchanged URLs on a timer.
+- Sending staging, cross-host, redirected, canonicalized-away, or `noindex` URLs.
+- Publishing a key at one URL but declaring another `keyLocation`.
+- Putting the private publishing-hook token in browser JavaScript.
+- Replacing sitemaps and internal links with IndexNow.
+- Treating BWT numbers as Google data.
+
+## Senior / production notes
+
+Trigger notifications from the publish transaction/outbox after the public response and canonical are live. Model events as `created`, `updated`, and `deleted`; deduplicate by canonical URL and content version. Keep dead-letter retries bounded.
+
+Monitor acceptance status separately from Bing crawl/index outcomes. Rotate compromised API credentials and verify ownership again. BWT API keys are user-level, not site-level, so OAuth with narrow scopes is preferable for multi-user products.
+
+Official references: [Bing URL submission guidance](https://www.bing.com/webmasters/help/url-submission-62f2860b), [IndexNow protocol](https://www.indexnow.org/documentation), and [Bing API access](https://learn.microsoft.com/en-us/bingwebmaster/getting-access).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Ownership | Key location returns exact key | 404, HTML, or mismatched key |
+| Queue | Real changes once; same-host canonical URLs | Whole sitemap every cron |
+| Response | Acceptance logged as submission | `200` reported as indexed |
+| Discovery | Links + sitemap + IndexNow agree | Submission replaces architecture |
+| Security | Hook authenticated; logs redact credentials | Public endpoint submits arbitrary URLs |

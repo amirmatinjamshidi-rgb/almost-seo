@@ -1,0 +1,80 @@
+---
+title: CDN setup for WordPress
+description: Put static assets—and only intentionally cacheable HTML—behind a CDN with correct DNS, TLS, cache keys, purging, redirects, and origin protection.
+module: 10-wordpress-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A CDN proxies or serves content from edge locations. Static files are the low-risk first layer. Full-page edge caching can reduce TTFB but requires explicit cache keys, bypass cookies, purge rules, and origin behavior. A CDN does not move your canonical host automatically and does not fix slow uncached PHP.
+
+## Why it matters
+
+Correct edge caching reduces latency and origin load. Wrong setup can create duplicate asset hosts, cache private WordPress pages, strip query parameters, loop HTTPS redirects, block search bots, or serve stale robots/canonicals after a release.
+
+<CorrectExample>
+DNS is lowered before cutover. TLS works edge-to-origin. Static hashed files cache for a year; HTML has a short policy with cart/login bypass. The cache key includes host and relevant variants, ignores tracking parameters only after testing, and purges changed URLs. Origin is reachable only by trusted paths where practical.
+</CorrectExample>
+
+<IncorrectExample why="Flexible edge HTTPS with an HTTP origin can loop or weaken transport; caching all cookies and paths can expose private pages.">
+```txt
+TLS mode: edge-only
+Cache rule: /* for everyone
+Cache key: path only
+Origin: public IP with no TLS
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+Cloudflare, Fastly, Bunny, Akamai, and host CDNs have different purge and HTML-cache models. Use one authoritative proxy/CDN. Configure WordPress `home` and `siteurl` to the public HTTPS origin; do not rewrite canonical URLs to a disposable CDN hostname.
+
+**Yoast, Rank Math, and AIOSEO:** purge after metadata, sitemap, schema, or redirect changes. Their generated canonicals should use the public site domain. None configures DNS, certificate validation, WAF, or an edge cache safely for you.
+
+**Feature gap:** SEO plugins own page signals; CDN/host layers own delivery. SEOPress adds no special exception. Some cache plugins integrate purge APIs, but that integration is not proof that login, preview, WooCommerce, REST, and locale cache variation are correct.
+
+Exclude `/wp-admin/`, `/wp-login.php`, previews, authenticated sessions, cart, checkout, account, password-reset flows, and unsafe methods from HTML caching.
+
+## Code implementation
+
+Static assets can use immutable caching; HTML should be conservative:
+
+```nginx
+location ~* \.(?:css|js|woff2|png|jpg|jpeg|webp|avif|svg)$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+
+location / {
+    add_header Cache-Control "public, max-age=0, s-maxage=300, stale-while-revalidate=30";
+    try_files $uri $uri/ /index.php?$args;
+}
+```
+
+Only use `immutable` with versioned asset URLs. At the CDN, bypass HTML cache when WordPress/WooCommerce session cookies exist and preserve the `Host`, scheme, and client IP headers expected by the origin.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “A CDN automatically improves rankings.”
+- **DEPRECATED:** “Use a CDN subdomain as canonical because it is faster.”
+- Caching 301/404 responses too long during migration.
+- Dropping query strings that select a real resource.
+- Blocking verified crawlers based only on user-agent strings.
+- Purging everything on every edit, creating an origin stampede.
+
+## Senior / production notes
+
+Document DNS provider, proxy owner, certificate renewal, origin authentication, WAF exceptions, cache key, TTL matrix, purge API, and emergency bypass. Log edge and origin request IDs. Prevent cache poisoning: normalize host, reject unexpected methods/headers, and include true representation variants in the key.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| DNS/TLS | Expected proxy, full valid chain to origin | Mixed content or redirect loop |
+| Cache status | Static HIT; private HTML BYPASS | Account/cart HIT |
+| Canonical | Public site host | CDN asset hostname |
+| Purge | Edited title/robots visible promptly | Stale SEO output |
+| Resilience | Origin protected and bypass documented | Public origin or no rollback |

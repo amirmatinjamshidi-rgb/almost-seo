@@ -1,0 +1,196 @@
+---
+title: YMYL standards
+description: Apply stronger evidence and governance in proportion to potential harm—not a blanket medical-or-finance label or an SEO badge.
+module: 09-algorithm-updates
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Your Money or Your Life (YMYL)** describes topics that could significantly affect or harm a reader, people affected by that reader, groups, or society. The official Quality Rater Guidelines organize the potential harm into:
+
+- **Health or safety:** physical, mental, emotional, online, or other safety.
+- **Financial security:** a person’s ability to support themselves or their family.
+- **Government, civics, and society:** elections, public institutions, public-interest decisions, and impacts on groups.
+- **Other significant harm:** serious effects on people or society that do not fit the first three labels.
+
+YMYL is a **spectrum**, not a binary content-type flag. Ask whether inaccurate information or poor advice could cause significant harm in this context:
+
+| Context | Risk reading | Appropriate standard |
+| --- | --- | --- |
+| “How often should I wash jeans?” | Usually not YMYL | Ordinary accuracy and useful experience |
+| “How often should I replace a toothbrush?” | Health-adjacent; small errors usually cause limited harm | Careful sourcing; avoid turning preference into diagnosis |
+| “These symptoms mean you can wait instead of seeking emergency care” | Clear YMYL | Qualified medical review, current authoritative sources, safe escalation language |
+| Buying ordinary pencils | Usually not YMYL commerce | Honest product and transaction information |
+| Buying prescription medicine | Clear YMYL commerce | Licensed seller, safety/legal controls, accurate medicine information |
+
+The standard is **proportional to potential harm**. “Money” in a page does not automatically make it clear YMYL; “not medical advice” does not make dangerous medical instructions safe.
+
+Experience and expertise have different jobs. A person may credibly describe their own recovery experience. Diagnosis, dosing, emergency action, legal obligations, and high-impact financial instructions may require qualified expertise and reliable sources. For clear YMYL, first-hand experience should remain clearly framed as experience, be safe, and not contradict well-established expert consensus.
+
+## Why it matters
+
+Google says its systems give more weight to content aligned with strong E-E-A-T for YMYL topics. The operational reason is bigger than SEO: an inaccurate dose, unsafe electrical instruction, fraudulent investment claim, or wrong evacuation route can hurt someone.
+
+A proportional model prevents both failures:
+
+- **Under-control:** an anonymous AI draft publishes emergency advice with stale or missing sources.
+- **Over-control:** every recipe, budget spreadsheet, fitness diary, and pencil review requires the same expensive medical/legal review, so the workflow becomes theater.
+
+<CorrectExample>
+A page about recognizing possible heart-attack symptoms is owned by a health editor, reviewed by a clinician with relevant scope, cites current authoritative guidance at the claim level, states the review date, separates general information from diagnosis, and tells a person with warning signs to contact local emergency services. The escalation wording works for the served locale.
+</CorrectExample>
+
+<IncorrectExample why="A disclaimer cannot cure unsupported diagnosis, unsafe delay advice, anonymous ownership, or fabricated urgency statistics. The controls are far below the possible harm.">
+```txt
+Title: Chest pain? Stay home and try these five hacks
+Author: Admin
+Sources: none
+Reviewed: automatically
+Disclaimer: This is not medical advice.
+CTA: Buy our supplement before calling a doctor.
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Assign a real author and reviewer through your editorial workflow; the SEO author identity is not clinical, legal, or financial approval.
+2. Keep important YMYL pages out of auto-publish flows. Revisions, scheduled reviews, and role permissions matter more than a green analysis score.
+
+**Rank Math**
+
+1. Do not treat Article schema, author schema, FAQ schema, or Content AI as a YMYL approval mechanism.
+2. If custom fields hold reviewer, review date, jurisdiction, or sources, validate required fields before publishing—not after indexing.
+
+**AIOSEO**
+
+1. Author SEO can display accurate credentials, but credentials must be relevant and verifiable.
+2. Link visible medical/legal/financial claims to suitable sources. A global disclaimer in the footer is not claim support.
+
+**Feature gap:** Yoast, Rank Math, AIOSEO, and SEOPress do not classify harm, verify credentials, check clinical consensus, enforce jurisdiction, or recall stale advice. SEOPress adds no materially different YMYL control. Implement risk level, reviewer scope, source review, expiry, approval, and emergency-localization fields in the CMS/workflow.
+
+## Code implementation
+
+Enforce proportional publishing controls on the server. This example uses an exhaustive switch so a new risk level cannot silently bypass review:
+
+```tsx
+// app/guidance/[slug]/page.tsx
+import { notFound } from "next/navigation";
+
+type RiskLevel = "ordinary" | "sensitive" | "clear-ymyl";
+
+type Guidance = {
+  title: string;
+  body: string;
+  riskLevel: RiskLevel;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  sourceUrls: string[];
+};
+
+const guidanceBySlug: Record<string, Guidance> = {
+  "wash-denim": {
+    title: "How to wash denim",
+    body: "Follow the garment label and use a suitable wash cycle.",
+    riskLevel: "ordinary",
+    sourceUrls: [],
+  },
+};
+
+async function getGuidance(slug: string): Promise<Guidance | undefined> {
+  return guidanceBySlug[slug];
+}
+
+function canPublish(item: Guidance): boolean {
+  switch (item.riskLevel) {
+    case "ordinary":
+      return item.body.trim().length > 0;
+    case "sensitive":
+      return item.sourceUrls.length > 0;
+    case "clear-ymyl":
+      return Boolean(
+        item.reviewedBy &&
+          item.reviewedAt &&
+          item.sourceUrls.length > 0,
+      );
+    default: {
+      const exhaustiveCheck: never = item.riskLevel;
+      return exhaustiveCheck;
+    }
+  }
+}
+
+export default async function GuidancePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const item = await getGuidance(slug);
+
+  if (!item || !canPublish(item)) notFound();
+
+  return (
+    <article>
+      <h1>{item.title}</h1>
+      <p>{item.body}</p>
+      {item.reviewedBy && (
+        <p>
+          Reviewed by {item.reviewedBy}
+          {item.reviewedAt ? ` on ${item.reviewedAt}` : null}
+        </p>
+      )}
+      <h2>Sources</h2>
+      <ul>
+        {item.sourceUrls.map((url) => (
+          <li key={url}>
+            <a href={url}>{url}</a>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+```
+
+The App Router’s `params` is a promise in current Next.js, and `notFound()` prevents incomplete records from shipping as usable advice. In production, `getGuidance` must also enforce publication state, reviewer scope, jurisdiction, source freshness, and scheduled re-review. A non-empty source array is a gate, not proof that the source supports the claim.
+
+Pages Router: perform the same server-side gate in `getServerSideProps` or at build time in `getStaticProps`, returning `notFound: true` for unapproved records. Never rely on a client-side component to hide unsafe content after the HTML was sent.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “All health, money, legal, news, and ecommerce pages are equally YMYL.”
+- **DEPRECATED:** “A disclaimer removes YMYL risk.”
+- **DEPRECATED:** “MedicalReview schema or an expert author box makes advice trustworthy.”
+- **DEPRECATED:** “Personal experience is never acceptable on YMYL topics.” It can be valuable when clearly scoped, safe, and appropriate to purpose.
+- Treating YMYL as a keyword list instead of assessing possible significant harm.
+- Using a famous but irrelevant reviewer whose expertise does not cover the claim.
+- Citing a homepage or long PDF without mapping the source to the claim.
+- Serving US emergency numbers, tax rules, drug names, or legal duties to every locale.
+- Letting an old review date imply current approval after sources or consensus changed.
+- Publishing generated summaries of YMYL sources without a responsible human owner.
+
+## Senior / production notes
+
+Create a risk register at the **claim and template** level. Record harm type, audience, jurisdiction, source owner, reviewer scope, approval date, next review trigger, and recall path. “Blog = medium risk” is too coarse; one article may contain both harmless context and an emergency instruction.
+
+Use stronger gates as harm rises: dual approval, credential verification, source-level citations, shorter review intervals, change alerts from authoritative sources, legal/clinical sign-off where appropriate, and a kill switch. Keep an immutable approval log without exposing private reviewer data.
+
+Localization is a safety control. Persian content may serve users in several jurisdictions; medicine availability, emergency services, financial regulation, and legal advice can differ. State scope rather than pretending one answer is universal.
+
+Monitor corrections, complaints, failed transactions, regulator notices, and source changes. Search traffic is not the safety metric. Never promise that stronger YMYL controls will produce rankings or recover a core-update loss.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Risk assessment | Potential harm, audience, and context documented | Keyword says “health,” so blanket label |
+| Expertise | Reviewer scope fits the high-impact claim | Impressive but unrelated title |
+| Evidence | Current authoritative source supports each key claim | Citation decoration |
+| Publishing gate | Server blocks incomplete/expired approval | Client hides it after render |
+| Locale | Jurisdiction and emergency path are correct | One-country advice everywhere |
+| Operations | Re-review trigger, correction, and recall tested | Publish once and forget |

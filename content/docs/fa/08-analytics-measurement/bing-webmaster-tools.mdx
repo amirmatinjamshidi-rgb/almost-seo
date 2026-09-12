@@ -1,0 +1,144 @@
+---
+title: Bing Webmaster Tools
+description: عیب‌یابی Bing را برای خود Bing بخوان، sitemap را سالم نگه دار، و تغییر واقعی URL را با IndexNow خبر بده بدون اینکه submission را indexing حساب کنی.
+module: 08-analytics-measurement
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Bing Webmaster Tools یا BWT عملکرد در Microsoft Search، crawl، indexing، sitemap، backlink و diagnostic سایت را گزارش می‌کند. canonical host را verify کن—برای مالکیت بادوام DNS بهتر است—و دسترسی آدم‌ها را least-privilege بده.
+
+سه راه discovery سه کار متفاوت دارند:
+
+- internal link قابل crawl ساختار سایت را توضیح می‌دهد.
+- XML sitemap فهرست URL canonical و تغییر واقعی `lastmod` را می‌دهد.
+- **IndexNow** به موتورهای عضو خبر می‌دهد URL اضافه، واقعاً آپدیت یا حذف شده.
+
+IndexNow اعلان تغییر است، نه دستور index و نه boost رتبه. پاسخ موفق `200`/`202` یعنی submission برای processing پذیرفته شده؛ نه اینکه crawl یا index شده. protocol در یک POST تا ۱۰هزار URL می‌پذیرد، ولی تغییر را نزدیک زمان انتشار بفرست، نه اینکه کل corpus را مدام blast کنی.
+
+Bing برای دسترسی مستقیم Webmaster API هم دارد و OAuth 2.0 روش پیشنهادی است. notice رسمی مایکروسافت **۳۱ اوت ۲۰۲۶** را تاریخ retirement برای APIهای قدیمی SOAP و POX اعلام کرده. چون زمان این review بعد از آن تاریخ است ولی بعضی صفحه‌های مستندات هنوز لحن آینده دارند، این protocolها را retired حساب کن و قبل از integration مسیر REST/JSON پشتیبانی‌شده را تأیید کن.
+
+## چرا مهم است
+
+مانیتورینگ فقط-گوگل، شاهد مخصوص crawl، index، malware و query مایکروسافت را از دست می‌دهد. IndexNow می‌تواند discovery محصول سریع‌التغییر یا URL حذف‌شده را جلو بیندازد، اما صفحهٔ blocked، duplicate، thin یا non-canonical را نجات نمی‌دهد.
+
+<CorrectExample title="درست">
+انتشار `/products/blue-grinder` اول صفحهٔ canonical، internal link و `lastmod` sitemap را live می‌کند، بعد یک notification در queue می‌گذارد. حذفش 410 (یا 301 درست) می‌دهد، از sitemap و لینک‌ها پاک می‌شود و یک notification دیگر می‌رود. state خزش/index در BWT جدا چک می‌شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="submission تکراری ظرفیت را هدر می‌دهد و quality، canonical، robots یا HTTP را override نمی‌کند؛ acceptance هم مدرک indexing نیست.">
+cron هر پنج دقیقه همهٔ URLها را می‌فرستد: redirect، duplicate پارامتری، `noindex` و حتی host دیگر. تیم HTTP 200 از IndexNow را «۱۰۰٪ indexed» گزارش می‌کند.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast verification بینگ و XML sitemap می‌دهد.
+2. در همهٔ editionها هر تغییر content را به workflow خودکار IndexNow تبدیل نمی‌کند؛ قابلیت نصب‌شده را verify کن.
+
+**Rank Math**
+
+1. ماژول Instant Indexing در Rank Math از IndexNow پشتیبانی می‌کند. فقط URL canonical تغییرکرده را بفرست.
+2. چون دکمه bulk هست archive و parameter را submit نکن.
+
+**AIOSEO**
+
+1. AIOSEO بسته به edition/version می‌تواند integration با IndexNow داشته باشد.
+2. sitemap inclusion، robots، canonical و سیاست submission باید هم‌جهت باشند.
+
+**SEOPress**
+
+1. SEOPress در configurationهای فعلی IndexNow دارد؛ key و آخرین submission log را تست کن.
+2. post type غیرعمومی و URL فیلتر تولیدی را exclude کن.
+
+**جا خالی واقعی:** Rank Math، AIOSEO و SEOPress می‌توانند IndexNow را automate کنند؛ کار اصلی Yoast بیشتر verification/sitemap است. منو و plan gate عوض می‌شود، پس یک چرخهٔ publish/update/delete را واقعاً تست کن و UI را از حافظه مستند نکن.
+
+## پیاده‌سازی کد
+
+publish hook را محافظت کن و فقط URL با همان host و HTTP(S) بپذیر. ownership key باید در `keyLocation` اعلام‌شده public باشد، اما submission token داخلی هرگز public نیست.
+
+```ts
+// app/api/indexnow/route.ts
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const expected = process.env.INDEXNOW_SUBMISSION_TOKEN;
+  if (!expected || request.headers.get("authorization") !== `Bearer ${expected}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const host = process.env.INDEXNOW_HOST;
+  const key = process.env.INDEXNOW_KEY;
+  if (!host || !key) {
+    return NextResponse.json({ error: "IndexNow is not configured" }, { status: 503 });
+  }
+
+  const input = (await request.json()) as { urls?: unknown };
+  if (!Array.isArray(input.urls) || input.urls.length === 0 || input.urls.length > 100) {
+    return NextResponse.json({ error: "Provide 1–100 URLs" }, { status: 400 });
+  }
+
+  const urls = input.urls.filter((value): value is string => {
+    if (typeof value !== "string") return false;
+    try {
+      const url = new URL(value);
+      return url.hostname === host && (url.protocol === "https:" || url.protocol === "http:");
+    } catch {
+      return false;
+    }
+  });
+  if (urls.length !== input.urls.length) {
+    return NextResponse.json({ error: "Invalid or cross-host URL" }, { status: 400 });
+  }
+
+  const response = await fetch("https://api.indexnow.org/indexnow", {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+    body: JSON.stringify({
+      host,
+      key,
+      keyLocation: `https://${host}/indexnow-key.txt`,
+      urlList: urls,
+    }),
+    cache: "no-store",
+  });
+  return new NextResponse(null, { status: response.status });
+}
+```
+
+در `app/indexnow-key.txt/route.ts` یک `GET` بگذار که `INDEXNOW_KEY` را با `text/plain` برگرداند؛ این مقدار public مالکیت host را ثابت می‌کند، ولی `INDEXNOW_SUBMISSION_TOKEN` private hook را نگهبانی می‌کند. queue، dedup، retry با backoff برای `429` و log status لازم است—key و authorization header را log نکن.
+
+Pages Router: همین validation را در `pages/api/indexnow.ts` بگذار و key را هنگام deploy از `public/indexnow-key.txt` serve کن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «submit URL یعنی index تضمینی.»
+- **DEPRECATED:** ساخت integration جدید روی SOAP/POX که تاریخ retirement اعلام‌شده‌اش گذشته.
+- ارسال دوبارهٔ URL بدون تغییر روی timer.
+- فرستادن staging، cross-host، redirect، canonicalized-away یا `noindex`.
+- publish key در یک URL و اعلام `keyLocation` دیگر.
+- گذاشتن token خصوصی publish hook در JavaScript مرورگر.
+- جایگزین‌کردن sitemap و internal link با IndexNow.
+- خواندن عدد BWT به‌عنوان دادهٔ گوگل.
+
+## نکته‌های سطح بالا / پروداکشن
+
+notification را از publish transaction/outbox و بعد از liveشدن response عمومی و canonical trigger کن. event را `created`، `updated` و `deleted` مدل کن؛ با canonical URL و content version dedup کن. dead-letter retry باید سقف داشته باشد.
+
+acceptance status را جدا از outcome خزش/index بینگ مانیتور کن. credential لو‌رفته را rotate و مالکیت را دوباره verify کن. API key در BWT user-level است، نه site-level؛ برای محصول چندکاربره OAuth با scope محدود بهتر است.
+
+منابع رسمی: [راهنمای URL submission بینگ](https://www.bing.com/webmasters/help/url-submission-62f2860b)، [protocol ایندکس‌نو](https://www.indexnow.org/documentation)، و [دسترسی API بینگ](https://learn.microsoft.com/en-us/bingwebmaster/getting-access).
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| مالکیت | key location دقیقاً key را می‌دهد | 404، HTML یا key متفاوت |
+| Queue | تغییر واقعی، یک‌بار، same-host canonical | کل sitemap در هر cron |
+| Response | acceptance به اسم submission | `200` به اسم indexed |
+| Discovery | لینک + sitemap + IndexNow هم‌جهت | submission جای معماری |
+| امنیت | hook احراز هویت؛ credential redact | endpoint عمومی برای URL دلخواه |

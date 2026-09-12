@@ -1,0 +1,85 @@
+---
+title: Gutenberg vs page builders for SEO
+description: Compare Block Editor and page builders by rendered HTML, performance, workflow, lock-in, accessibility, and migration cost—not brand claims.
+module: 10-wordpress-seo
+topic_order: 6
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Gutenberg—the WordPress Block Editor and Site Editor—is core. Page builders such as Elementor, Divi, Beaver Builder, Bricks, or WPBakery add visual systems, widgets, assets, and often proprietary layout data. Search engines receive the rendered HTML, links, media, metadata, and behavior—not the editor logo.
+
+The SEO comparison is therefore template-specific: semantic output, DOM size, CSS/JS cost, accessibility, responsive images, headings, internal-link editability, schema ownership, and exit cost.
+
+## Why it matters
+
+A builder can accelerate publishing while adding wrappers and scripts. Core blocks can be fast while a poorly built block theme still ships huge fonts and broken headings. Lock-in becomes an SEO problem when switching leaves shortcodes, missing content, changed URLs, or weeks without editorial updates.
+
+<CorrectExample>
+The team prototypes one representative article, landing page, archive, and product template in both candidates. It compares cold/warm bytes, DOM, INP tasks, accessible headings, author workflow, reusable patterns, and exported content before choosing.
+</CorrectExample>
+
+<IncorrectExample why="A homepage-only synthetic score ignores editorial templates, interaction cost, accessibility, and migration lock-in.">
+```txt
+Decision: Builder X
+Evidence: vendor demo scored 99 once
+Exit test: none
+Content stored as: unknown
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+Use core blocks, patterns, synced patterns, theme styles, and block locking before adding custom widgets. In a builder, disable unused widget packs, icons, fonts, animations, and per-page experiments. Do not nest a builder inside block content without a defined ownership boundary.
+
+**Yoast, Rank Math, and AIOSEO:** all support mainstream editing surfaces to varying degrees, but verify that SEO fields, primary terms, schema controls, breadcrumbs, and content analysis see the final content. Analysis may miss text rendered by dynamic widgets; Google seeing it does not guarantee the plugin editor can analyze it.
+
+**Feature gap:** Rank Math advertises deep Elementor integration; Yoast supports Gutenberg and major builders; AIOSEO integrates with common builders. None can repair inaccessible custom widgets or eliminate builder runtime cost. SEOPress is relevant only if its chosen builder integration supplies a workflow difference you actually test.
+
+## Code implementation
+
+Register a server-rendered block that keeps meaningful HTML available without client JavaScript:
+
+```php
+register_block_type(__DIR__ . '/build/related-guides', [
+    'render_callback' => function (array $attributes): string {
+        $items = get_posts(['post_type' => 'guide', 'numberposts' => 3]);
+        $links = array_map(
+            fn($item) => sprintf(
+                '<li><a href="%s">%s</a></li>',
+                esc_url(get_permalink($item)),
+                esc_html(get_the_title($item))
+            ),
+            $items
+        );
+        return '<nav aria-label="Related guides"><ul>' . implode('', $links) . '</ul></nav>';
+    },
+]);
+```
+
+Keep imports/build assets scoped to blocks that are present; do not enqueue the whole design system globally.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Google cannot index page-builder content.”
+- **DEPRECATED:** “Gutenberg is automatically lightweight.”
+- Choosing by edit-screen score instead of rendered templates.
+- Multiple H1s treated as either fatal or completely irrelevant; use a clear hierarchy.
+- Loading sliders, icon packs, and animation runtimes site-wide.
+- Rebuilding production without inventorying builder-specific content.
+
+## Senior / production notes
+
+Define performance budgets and allowed blocks/widgets. Version templates and reusable patterns. Test role permissions, revisions, translations, structured data, forms, and accessibility. Before switching, export a sample and inspect post content/database representation; create redirects only if URLs truly change.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Rendered HTML | Meaningful content/links without interaction | Empty shell until client script |
+| Performance | Template budgets pass in field/lab | Huge global assets and long tasks |
+| Semantics | Headings, landmarks, labels are usable | Div soup or inaccessible widgets |
+| Plugin workflow | SEO fields/output work on real templates | Editor analysis misses key content |
+| Exit test | Content survives deactivation or has migration plan | Shortcodes/blank pages |

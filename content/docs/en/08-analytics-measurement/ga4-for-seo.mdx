@@ -1,0 +1,145 @@
+---
+title: GA4 for SEO
+description: Measure post-click organic behavior with an event plan, consent, and privacy controls — never force GA4 sessions to equal Search Console clicks.
+module: 08-analytics-measurement
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google Analytics 4 (GA4) is an **event-based, post-click** measurement system. For SEO, useful dimensions include landing page, session default channel group, source/medium, device, and country; useful events represent outcomes such as `generate_lead`, `purchase`, or a carefully defined activation.
+
+“Organic traffic” is not a KPI by itself. Build a measurement plan:
+
+1. Business question: did organic landing pages create qualified outcomes?
+2. Event: what observable action proves the outcome?
+3. Parameters: only non-PII context needed to explain it.
+4. Owner and QA: who notices when the event breaks?
+5. Retention and consent: what may legally and contractually be collected?
+
+GA4 and GSC will not reconcile one-to-one. They use different scopes, time zones, attribution, identity, consent, bot filtering, canonical logic, and processing. GA4 reporting can include modeled data that is not present in the BigQuery event export.
+
+## Why it matters
+
+SEO work can increase clicks while reducing lead quality, or keep clicks flat while improving conversion. Landing-page outcomes expose that difference. Bad tracking, however, can reward navigation noise, leak personal data in URLs, and turn attribution into false precision.
+
+<CorrectExample>
+The team defines `generate_lead` only after a server-confirmed valid form submission. It sends `form_type: "enterprise_demo"` and `landing_group: "comparison"`—not name, email, phone, free-text, or the full query string. Consent state is applied before tags collect data.
+</CorrectExample>
+
+<IncorrectExample why="A button click is not a confirmed lead, repeated clicks inflate outcomes, and sending form fields or email-bearing URLs to Analytics violates policy and creates privacy risk.">
+Every click on “Submit” fires a conversion before validation. The payload includes email, phone, and `page_location` containing `?email=person@example.com`.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast is not a GA4 implementation or consent platform.
+2. Use one tag owner (GTM, theme integration, or a dedicated analytics plugin), not duplicate insertion.
+
+**Rank Math**
+
+1. Rank Math Analytics can connect Google services for reporting; verify whether it also inserts tracking in your installed configuration.
+2. Do not enable a second GA4 tag because the dashboard looks empty during processing.
+
+**AIOSEO**
+
+1. AIOSEO’s search reports are not a substitute for GA4 event design.
+2. Keep webmaster verification, SEO reporting, and analytics collection responsibilities explicit.
+
+**SEOPress**
+
+1. SEOPress can add GA tracking and expose consent/privacy controls depending on version and configuration.
+2. Test the actual network requests before and after consent; a toggle label is not evidence.
+
+**Feature gap:** SEOPress materially differs by offering first-party tag insertion controls; the other SEO plugins mainly report or integrate with Google services. None replaces a legally reviewed CMP, server-side validation, or a versioned event specification.
+
+## Code implementation
+
+A GA measurement ID is public configuration, not a secret. This App Router component defaults storage consent to denied, never sends URL query strings, and tracks client navigations only after consent is updated elsewhere by your CMP:
+
+```tsx
+// app/analytics.tsx
+"use client";
+
+import Script from "next/script";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+
+declare global {
+  interface Window {
+    dataLayer: unknown[];
+    gtag: (...args: unknown[]) => void;
+  }
+}
+
+export function Analytics({ measurementId }: { measurementId: string }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    window.gtag?.("event", "page_view", {
+      page_location: `${window.location.origin}${pathname}`,
+      page_path: pathname,
+      page_title: document.title,
+    });
+  }, [pathname]);
+
+  return (
+    <>
+      <Script id="ga-consent" strategy="beforeInteractive">
+        {`window.dataLayer=window.dataLayer||[];
+window.gtag=function(){dataLayer.push(arguments);}
+gtag('consent','default',{
+  analytics_storage:'denied',
+  ad_storage:'denied',
+  ad_user_data:'denied',
+  ad_personalization:'denied'
+});`}
+      </Script>
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`}
+        strategy="afterInteractive"
+      />
+      <Script id="ga-config" strategy="afterInteractive">
+        {`gtag('js',new Date());gtag('config','${measurementId}',{send_page_view:false});`}
+      </Script>
+    </>
+  );
+}
+```
+
+Render it from `app/layout.tsx` only when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set. Your CMP must call `gtag("consent", "update", ...)` with the user’s actual choices; do not hard-code granted. If you use `user_id`, send only a non-PII authenticated identifier as configuration and set it to `null` after sign-out.
+
+Pages Router: mount the same component in `pages/_app.tsx` and subscribe to `router.events.routeChangeComplete`; keep `send_page_view: false` to avoid duplicates.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Universal Analytics bounce rate definitions carry over unchanged.”
+- **DEPRECATED:** “GSC clicks must equal GA4 organic sessions.”
+- Treating every scroll, CTA click, or thank-you-page refresh as a key event.
+- Sending email, phone, names, precise location, free text, or PII in URLs/event parameters.
+- Assuming GA4 web data redaction protects Measurement Protocol or Data Import; it does not.
+- Loading the tag before consent defaults are established.
+- Comparing last-click, data-driven, session, and first-user scopes as if they were one attribution model.
+- Ignoring internal traffic, cross-domain setup, referral exclusions, and duplicate tags.
+
+## Senior / production notes
+
+Version an event contract with trigger, deduplication key, allowed parameters, consent requirement, owner, and sample payload. Validate important outcomes on the server and send only the minimum non-PII category data needed.
+
+Audit DebugView and browser network requests, but remember DebugView is not a production total. Reconcile GA4 UI, Data API, and BigQuery at their documented scopes; cardinality, identity, modeled data, and processing can differ.
+
+Google prohibits sending PII to Analytics. Data redaction is a safety net, not permission or complete prevention. Consent requirements vary by jurisdiction and use; involve counsel. Official references: [PII policy](https://support.google.com/analytics/answer/7686480), [data redaction](https://support.google.com/analytics/answer/13544947), and [Consent Mode reference](https://support.google.com/analytics/answer/13802165).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Consent | Defaults set before collection; choices update state | Consent hard-coded granted |
+| Payload | Allowlisted non-PII parameters | Form fields/full query string |
+| Navigation | One `page_view` per intended view | Initial and route views doubled |
+| Outcome | Server-confirmed and deduplicated | Button click called revenue |
+| Reconciliation | Scope differences documented | GA4 forced to match GSC |

@@ -1,0 +1,99 @@
+---
+title: مقایسهٔ پلاگین‌های سئوی وردپرس
+description: بین Yoast، Rank Math، AIOSEO و SEOPress بر اساس قابلیت واقعی، مالکیت، پلن و هزینهٔ عملیاتی انتخاب کن؛ نه نمرهٔ داشبورد.
+module: 10-wordpress-seo
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+پلاگین SEO در وردپرس **control plane متادیتا** است: title، canonical، robots، XML sitemap، schema، breadcrumb و social metadata. استراتژی سئو، cache، CDN یا تضمین index شدن نیست.
+
+فقط یک پلاگین را مالک اصلی خروجی کن. جدول زیر بر اساس مستندات محصول vendorها در سپتامبر ۲۰۲۶ است؛ بسته‌بندی مرتب عوض می‌شود، پس «پولی» ممکن است پلن Premium یا add-on جدا باشد.
+
+| قابلیت | Yoast SEO | Rank Math | AIOSEO | SEOPress |
+| --- | --- | --- | --- | --- |
+| پشتیبانی schema | گراف متصل خودکار در free؛ قابلیت تخصصی بسته به Premium/add-on | typeهای داخلی؛ generator/template پیشرفته و بعضی فیلدهای تخصصی در PRO | گراف/type پایه؛ امکانات پیشرفته وابسته به tier | schema خودکار پایه در free؛ type دستی/خودکار پیشرفته در PRO |
+| Redirect manager | Premium؛ در بعضی bundleهای پولی هم هست | ماژول داخلی؛ automation/analytics پیشرفته وابسته به tier | Redirection Manager پولی و tier-dependent | PRO با regex و import/export |
+| 404 monitor | در core مانیتور request/log ندارد؛ server log یا ابزار جدا | مانیتور simple داخلی؛ logging پیشرفته tier-dependent | همراه ابزار پولی redirect | PRO |
+| Local SEO module | قابلیت Local پولی و در suiteهای پولی فعلی bundle؛ license را چک کن | تنظیم Local موجود؛ multi-location/block پیشرفته PRO | ماژول/tier پولی Local SEO | PRO |
+| WooCommerce SEO | محصول/add-on پولی مخصوص | integration پایه؛ WooCommerce SEO پیشرفته PRO | قابلیت‌های WooCommerce وابسته به tier پولی | PRO |
+| Content analysis | readability + SEO؛ پیشنهاد بیشتر در محصول پولی | score/checklist؛ Content AI سرویس/quota جدا | TruSEO checklist؛ assistant پیشرفته tier-dependent | content analysis؛ AI/ابزار پیشرفته در پلن پولی |
+| کنترل sitemap | XML sitemap و کنترل type/taxonomy؛ news/video تخصصی پولی | کنترل XML؛ news/video در PRO | Smart XML؛ news/video وابسته به tier | XML/HTML/image؛ news/video در PRO |
+| Breadcrumb | خروجی + schema؛ شاید integration قالب کد/block بخواهد | خروجی + schema و shortcode/block/widget | خروجی + schema؛ template/primary term پیشرفته پولی | قابلیت پایه وابسته به نسخه؛ breadcrumb قابل‌سفارشی‌سازی پیشرفته در PRO |
+| Social preview | social metadata؛ preview دیداری وابسته به محصول/tier | social metadata و preview UI | social metadata و کنترل preview؛ جزئیات tier-dependent | Open Graph/X metadata؛ workflow preview وابسته به edition |
+| مدل قیمت | core رایگان؛ subscription و محصول/bundle تخصصی | core رایگان؛ PRO/Business/Agency؛ Content AI جدا | core رایگان؛ چند پلن سالانه | core رایگان؛ PRO subscription با مرز add-on کمتر |
+| اثر performance/bloat | mature ولی tableهای indexables و analysis UI دارد؛ اندازه بگیر | modular؛ روشن کردن analytics، AI، 404 log و همهٔ moduleها هزینه دارد | suite گسترده؛ module بی‌مصرف را خاموش و query را اندازه بگیر | معمولاً stack جمع‌وجور؛ PRO باز هم cron/table اضافه می‌کند |
+
+«Lightweight» benchmark عمومی نیست. اثر واقعی به module روشن، hook قالب، اندازه DB، cron، object cache و retention لاگ 404 بستگی دارد.
+
+## چرا مهم است
+
+دو suite می‌توانند canonical متناقض، schema تکراری، sitemap رقیب و دو redirect engine بسازند. مهاجرت فقط به‌خاطر چراغ سبز content score ممکن است primary term، redirect یا schema metadata را جا بگذارد.
+
+<CorrectExample title="درست">
+یک پلاگین مالک title، canonical، robots، schema، social card، breadcrumb و sitemap است. Redirect یا همان‌جاست یا edge/server؛ نه هر دو. تیم tier، module خاموش، مالک داده و روش export/rollback را نوشته.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="سه control plane خروجی تکراری می‌سازند و معلوم نیست canonical، sitemap یا redirect واقعی دست کیست.">
+```txt
+Yoast: canonical + sitemap + schema
+Rank Math: canonical + sitemap + 404 redirects
+AIOSEO: Product schema + redirects
+Theme: یک Product JSON-LD دیگر
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast:** گراف پیش‌فرض قوی و workflow آشنا؛ redirect و Local/WooCommerce تخصصی وابسته به محصول پولی. score آن ranking factor نیست.
+
+**Rank Math:** UI ماژولار، redirect/404 monitor داخلی و کنترل schema زیاد. Analytics، Content AI و logging بی‌مالک را خاموش کن؛ امکانات پیشرفته و multi-location ممکن است PRO بخواهند.
+
+**AIOSEO:** suite گسترده با sitemap، schema، breadcrumb، social، Local/WooCommerce و محصول redirect. قبل از قول به مشتری tier دقیق را ببین.
+
+**جا خالی واقعی:** Yoast core مانیتور native برای requestهای 404 ندارد؛ Rank Math داخل پلاگین دارد؛ AIOSEO و SEOPress ابزار مشابه را به محصول پولی وصل می‌کنند. SEOPress وقتی فرق واقعی دارد که conditional schema، export redirect یا bundle جمع‌وجورتر PRO را لازم داری؛ نه اینکه چهارمین پلاگین نصبش کنی.
+
+برای مهاجرت: backup فایل/DB، export پلاگین قدیم، import در staging، مقایسهٔ source، بعد deactivate—نه delete—تا پایان rollback window.
+
+## پیاده‌سازی کد
+
+برای پیدا کردن emitter تکراری در QA:
+
+```js
+const html = await fetch(process.env.QA_URL).then((response) => response.text());
+const canonicals = html.match(/rel=["']canonical["']/gi) ?? [];
+const jsonLdBlocks = html.match(/application\/ld\+json/gi) ?? [];
+
+if (canonicals.length !== 1) throw new Error(`Expected one canonical, got ${canonicals.length}`);
+console.log({ jsonLdBlocks: jsonLdBlocks.length });
+```
+
+چند JSON-LD block می‌تواند معتبر باشد؛ entity و `@id` را نگاه کن. ایراد ownership متناقض/تکراری است، نه صرفاً تعداد بیشتر از یک.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «نمرهٔ ۱۰۰ پلاگین یعنی رتبه.»
+- **DEPRECATED:** «schema plugin بیشتر یعنی rich result بیشتر.»
+- مقایسهٔ قیمت دقیق یا screenshot قدیمی بعد از تغییر package.
+- فعال کردن sitemap وردپرس core، پلاگین و CDN با هم.
+- نگه داشتن بی‌نهایت لاگ 404 روی سایت bot-heavy.
+- روشن کردن همهٔ moduleها چون پولشان را داده‌ای.
+
+## نکته‌های سطح بالا / پروداکشن
+
+ماتریس مالکیت بنویس: metadata، schema، redirect، sitemap، breadcrumb، social، analytics و retention 404. قبل/بعد نصب، TTFB سرد و گرم، query فرانت، latency ادیتور، cron و رشد table را اندازه بگیر. قابلیت Premium زیرساخت نیست؛ cache هاست و CDN جدا هستند.
+
+این صفحه قیمت دقیق نمی‌دهد چون مالیات، promo، تعداد سایت و bundle عوض می‌شوند. release note و admin همان نسخهٔ نصب‌شده داور آخر است.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| View source | یک canonical، یک مالک robots، گراف منسجم | tag متناقض یا Product تکراری |
+| Sitemap | یک index با typeهای خواسته‌شده | core و plugin هر دو submit |
+| Redirect | یک hop و target درست | loop یا chain بین CDN/plugin |
+| عملیات | module، tier، export و retention مستند | «پلاگین خودش SEO می‌کند» |
+| Performance | delta واقعی داخل budget | اعتماد به ادعای lightweight |

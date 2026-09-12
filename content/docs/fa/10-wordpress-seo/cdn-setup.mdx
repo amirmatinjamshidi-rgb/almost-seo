@@ -1,0 +1,80 @@
+---
+title: راه‌اندازی CDN برای وردپرس
+description: asset استاتیک و فقط HTML عمداً cacheable را پشت CDN ببر؛ DNS، TLS، cache key، purge، redirect و origin protection را درست نگه دار.
+module: 10-wordpress-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+CDN محتوا را از edge نزدیک کاربر proxy یا serve می‌کند. asset استاتیک شروع کم‌ریسک است. full-page edge cache می‌تواند TTFB را کم کند، ولی cache key، bypass cookie، purge و رفتار origin باید صریح باشند. CDN canonical host را خودکار جابه‌جا نمی‌کند و PHP کندِ uncached را درمان نمی‌کند.
+
+## چرا مهم است
+
+تنظیم درست latency و load origin را کم می‌کند. تنظیم غلط می‌تواند asset host تکراری، cache شدن صفحه خصوصی، حذف query parameter، loop HTTPS، block شدن bot یا robots/canonical کهنه بعد release بسازد.
+
+<CorrectExample title="درست">
+قبل cutover، DNS TTL پایین آمده. TLS از edge تا origin معتبر است. فایل hash‌شده یک سال cache می‌شود؛ HTML policy کوتاه و bypass login/cart دارد. cache key شامل host و variant واقعی است. tracking parameter فقط بعد تست ignore می‌شود و purge URL تغییرکرده را می‌زند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="HTTPS فقط روی edge با origin بی‌TLS می‌تواند loop یا transport ضعیف بسازد؛ cache همهٔ path/cookie اطلاعات خصوصی لو می‌دهد.">
+```txt
+TLS: فقط edge
+Cache rule: /* برای همه
+Cache key: فقط path
+Origin: IP عمومی بدون TLS
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+Cloudflare، Fastly، Bunny، Akamai و CDN هاست مدل purge/HTML متفاوت دارند. یک proxy/CDN اصلی داشته باش. `home` و `siteurl` وردپرس public HTTPS باشند؛ canonical را به hostname موقت CDN rewrite نکن.
+
+**Yoast، Rank Math و AIOSEO:** بعد از تغییر metadata، sitemap، schema یا redirect cache را purge کن. canonical باید دامنهٔ عمومی سایت باشد. هیچ‌کدام DNS، certificate، WAF یا edge cache را برایت امن تنظیم نمی‌کنند.
+
+**جا خالی واقعی:** SEO plugin مالک signal صفحه است؛ CDN/host مالک delivery. SEOPress اینجا استثنا نیست. purge API در cache plugin ثابت نمی‌کند login، preview، WooCommerce، REST و locale variation درست‌اند.
+
+`/wp-admin/`، `/wp-login.php`، preview، authenticated session، cart، checkout، account، password reset و method ناامن را از HTML cache خارج کن.
+
+## پیاده‌سازی کد
+
+asset versioned می‌تواند immutable باشد؛ HTML محافظه‌کار:
+
+```nginx
+location ~* \.(?:css|js|woff2|png|jpg|jpeg|webp|avif|svg)$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+
+location / {
+    add_header Cache-Control "public, max-age=0, s-maxage=300, stale-while-revalidate=30";
+    try_files $uri $uri/ /index.php?$args;
+}
+```
+
+`immutable` فقط برای URL نسخه‌دار. در CDN با cookie سشن bypass کن و `Host`، scheme و client IP موردنیاز origin را درست پاس بده.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «CDN خودکار رتبه را بالا می‌برد.»
+- **DEPRECATED:** «چون CDN سریع است hostname آن را canonical کن.»
+- cache طولانی 301/404 هنگام migration.
+- انداختن query stringی که واقعاً resource را عوض می‌کند.
+- block bot فقط با user-agent ادعایی.
+- purge-all برای هر edit و ساختن origin stampede.
+
+## نکته‌های سطح بالا / پروداکشن
+
+DNS provider، مالک proxy، renewal certificate، auth origin، WAF exception، cache key، TTL matrix، purge API و emergency bypass را مستند کن. request ID edge/origin داشته باش. برای جلوگیری از cache poisoning، host را normalize، method/header عجیب را reject و variant واقعی را داخل key کن.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| DNS/TLS | proxy درست و chain کامل تا origin | mixed content یا loop |
+| Cache status | static HIT؛ private BYPASS | account/cart HIT |
+| Canonical | public site host | hostname asset CDN |
+| Purge | title/robots جدید سریع دیده می‌شود | خروجی SEO کهنه |
+| تاب‌آوری | origin محافظت و bypass مستند | origin عمومی یا بدون rollback |

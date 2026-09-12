@@ -1,0 +1,196 @@
+---
+title: استانداردهای YMYL
+description: کنترل evidence و governance را به‌اندازهٔ آسیب احتمالی بالا ببر؛ نه با برچسب یکسان پزشکی/مالی یا badge سئو.
+module: 09-algorithm-updates
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Your Money or Your Life (YMYL)** موضوعی است که می‌تواند به خواننده، آدم‌های متأثر از تصمیم او، گروه‌ها یا جامعه آسیب جدی بزند. Quality Rater Guidelines رسمی، آسیب احتمالی را این‌طور دسته‌بندی می‌کند:
+
+- **Health or safety:** سلامت جسم، روان، احساس، امنیت آنلاین و شکل‌های دیگر ایمنی.
+- **Financial security:** توان آدم برای تأمین خودش یا خانواده.
+- **Government, civics, and society:** انتخابات، نهادهای عمومی، تصمیم‌های منفعت عمومی و اثر روی گروه‌ها.
+- **Other significant harm:** آسیب مهم به مردم یا جامعه که در سه دستهٔ اول جا نمی‌شود.
+
+YMYL یک **spectrum** است، نه checkbox دوحالتهٔ content type. سؤال درست این است: اطلاعات نادقیق یا advice بد در همین context می‌تواند آسیب مهم بسازد؟
+
+| Context | برداشت ریسک | استاندارد مناسب |
+| --- | --- | --- |
+| «شلوار جین را چند وقت یک‌بار بشویم؟» | معمولاً YMYL نیست | دقت عادی و تجربهٔ مفید |
+| «مسواک را چند وقت یک‌بار عوض کنیم؟» | نزدیک سلامت؛ خطای کوچک معمولاً آسیب محدودی دارد | source دقیق؛ preference را diagnosis نکن |
+| «با این علائم به اورژانس نرو و صبر کن» | YMYL روشن | medical review مرتبط، source معتبر و روز، escalation امن |
+| خرید مداد معمولی | معمولاً commerce غیر YMYL | اطلاعات محصول و transaction صادقانه |
+| خرید داروی نسخه‌ای | commerce روشن YMYL | فروشندهٔ مجاز، کنترل حقوقی/ایمنی، اطلاعات دقیق دارو |
+
+استاندارد باید **متناسب با آسیب احتمالی** باشد. دیدن کلمهٔ پول یک صفحه را خودکار clear YMYL نمی‌کند؛ جملهٔ «این توصیهٔ پزشکی نیست» هم دستور خطرناک را امن نمی‌کند.
+
+Experience و expertise دو کار دارند. آدم می‌تواند تجربهٔ recovery خودش را معتبر تعریف کند. diagnosis، dose، اقدام اورژانسی، تکلیف حقوقی و دستور مالی پراثر ممکن است expertise دارای صلاحیت و source قابل‌اعتماد بخواهد. در clear YMYL، تجربهٔ دست‌اول باید روشن بماند که تجربه است، امن باشد و خلاف expert consensus جاافتاده نرود.
+
+## چرا مهم است
+
+گوگل می‌گوید سیستم‌هایش برای موضوع YMYL به محتوای هم‌سو با E-E-A-T قوی وزن بیشتری می‌دهند. دلیل عملی بزرگ‌تر از SEO است: dose غلط، راهنمای سیم‌کشی ناامن، وعدهٔ سرمایه‌گذاری متقلبانه یا مسیر تخلیهٔ غلط واقعاً آدم را آسیب می‌زند.
+
+مدل proportional جلوی هر دو شکست را می‌گیرد:
+
+- **کنترل کم:** draft ناشناس AI، advice اورژانسی با source قدیمی یا بدون source منتشر می‌کند.
+- **کنترل نمایشی:** برای هر دستور غذا، شیت بودجه، خاطرهٔ ورزش و review مداد همان medical/legal review گران را می‌خواهی و workflow تبدیل به تئاتر می‌شود.
+
+<CorrectExample title="درست">
+صفحهٔ تشخیص نشانه‌های احتمالی حملهٔ قلبی content owner حوزهٔ سلامت دارد، clinician با scope مرتبط آن را review کرده، برای claimهای اصلی راهنمای authoritative و جاری لینک شده، تاریخ review معلوم است، اطلاعات عمومی را از diagnosis جدا می‌کند و به فرد دارای نشانهٔ خطر می‌گوید با emergency service محل خودش تماس بگیرد. متن escalation برای locale سرویس‌داده‌شده درست است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Disclaimer تشخیص بی‌مدرک، توصیه به تأخیر خطرناک، مالکیت ناشناس یا آمار ساختگی را درمان نمی‌کند. کنترل خیلی پایین‌تر از آسیب احتمالی است.">
+```txt
+Title: درد قفسه سینه؟ خانه بمان و این پنج hack را امتحان کن
+Author: Admin
+Sources: ندارد
+Reviewed: automatically
+Disclaimer: این توصیه پزشکی نیست.
+CTA: قبل از تماس با پزشک supplement ما را بخر.
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. نویسنده و reviewer واقعی را در workflow تحریریه assign کن؛ identity نویسنده در SEO به‌معنای تأیید clinical، legal یا financial نیست.
+2. صفحه‌های مهم YMYL را از auto-publish بیرون نگه دار. revisions، scheduled review و role permission از چراغ سبز analyzer مهم‌ترند.
+
+**Rank Math**
+
+1. Article schema، author schema، FAQ schema یا Content AI را approval مکانیزم YMYL حساب نکن.
+2. اگر reviewer، review date، jurisdiction و source در custom field است، قبل از publish required بودنشان را validate کن، نه بعد از index.
+
+**AIOSEO**
+
+1. Author SEO می‌تواند credential درست را نشان بدهد، ولی credential باید مرتبط و قابل verify باشد.
+2. claim پزشکی/حقوقی/مالی visible را به source مناسب وصل کن. disclaimer عمومی footer پشتوانهٔ claim نیست.
+
+**جا خالی واقعی:** Yoast، Rank Math، AIOSEO و SEOPress آسیب را classify نمی‌کنند، credential را verify نمی‌کنند، consensus پزشکی را نمی‌سنجند، jurisdiction را enforce نمی‌کنند و advice قدیمی را recall نمی‌کنند. SEOPress کنترل مادی متفاوتی ندارد. risk level، reviewer scope، source review، expiry، approval و emergency localization را در CMS/workflow بساز.
+
+## پیاده‌سازی کد
+
+کنترل proportional را سمت server enforce کن. switch زیر exhaustive است تا risk level جدید یواشکی از review رد نشود:
+
+```tsx
+// app/guidance/[slug]/page.tsx
+import { notFound } from "next/navigation";
+
+type RiskLevel = "ordinary" | "sensitive" | "clear-ymyl";
+
+type Guidance = {
+  title: string;
+  body: string;
+  riskLevel: RiskLevel;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  sourceUrls: string[];
+};
+
+const guidanceBySlug: Record<string, Guidance> = {
+  "wash-denim": {
+    title: "How to wash denim",
+    body: "Follow the garment label and use a suitable wash cycle.",
+    riskLevel: "ordinary",
+    sourceUrls: [],
+  },
+};
+
+async function getGuidance(slug: string): Promise<Guidance | undefined> {
+  return guidanceBySlug[slug];
+}
+
+function canPublish(item: Guidance): boolean {
+  switch (item.riskLevel) {
+    case "ordinary":
+      return item.body.trim().length > 0;
+    case "sensitive":
+      return item.sourceUrls.length > 0;
+    case "clear-ymyl":
+      return Boolean(
+        item.reviewedBy &&
+          item.reviewedAt &&
+          item.sourceUrls.length > 0,
+      );
+    default: {
+      const exhaustiveCheck: never = item.riskLevel;
+      return exhaustiveCheck;
+    }
+  }
+}
+
+export default async function GuidancePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const item = await getGuidance(slug);
+
+  if (!item || !canPublish(item)) notFound();
+
+  return (
+    <article>
+      <h1>{item.title}</h1>
+      <p>{item.body}</p>
+      {item.reviewedBy && (
+        <p>
+          Reviewed by {item.reviewedBy}
+          {item.reviewedAt ? ` on ${item.reviewedAt}` : null}
+        </p>
+      )}
+      <h2>Sources</h2>
+      <ul>
+        {item.sourceUrls.map((url) => (
+          <li key={url}>
+            <a href={url}>{url}</a>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+```
+
+در App Router فعلی `params` یک promise است و `notFound()` نمی‌گذارد رکورد ناقص به‌شکل advice قابل‌استفاده منتشر شود. در پروداکشن، `getGuidance` باید publication state، scope reviewer، jurisdiction، تازگی source و re-review زمان‌بندی‌شده را هم enforce کند. پر بودن source array فقط gate است؛ ثابت نمی‌کند source واقعاً claim را پشتیبانی می‌کند.
+
+Pages Router: همین gate سمت server را در `getServerSideProps` یا هنگام build در `getStaticProps` بگذار و برای رکورد تأییدنشده `notFound: true` برگردان. به component کلاینت تکیه نکن که محتوای ناامن را بعد از فرستادن HTML قایم کند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «همهٔ صفحه‌های health، money، legal، news و ecommerce به یک اندازه YMYL هستند.»
+- **DEPRECATED:** «Disclaimer ریسک YMYL را برمی‌دارد.»
+- **DEPRECATED:** «MedicalReview schema یا author box متخصص advice را trustworthy می‌کند.»
+- **DEPRECATED:** «تجربهٔ شخصی هیچ‌وقت در YMYL قابل‌قبول نیست.» اگر scope روشن، امن و مناسب purpose باشد می‌تواند ارزشمند باشد.
+- استفاده از keyword list به‌جای سنجش آسیب جدی احتمالی.
+- reviewer مشهور ولی نامرتبط که expertise او claim را پوشش نمی‌دهد.
+- لینک دادن به homepage یا PDF بلند بدون mapping بین source و claim.
+- نشان دادن شمارهٔ اورژانس، tax rule، نام دارو یا تکلیف حقوقی یک کشور به همهٔ localeها.
+- استفاده از review date قدیمی به‌عنوان تأیید امروز، بعد از تغییر source یا consensus.
+- انتشار خلاصهٔ generated از sourceهای YMYL بدون owner انسانی مسئول.
+
+## نکته‌های سطح بالا / پروداکشن
+
+risk register را در سطح **claim و template** بساز. harm type، audience، jurisdiction، source owner، reviewer scope، approval date، trigger بازبینی و مسیر recall را ثبت کن. «Blog = medium risk» خیلی گنده است؛ یک مقاله می‌تواند هم context بی‌خطر داشته باشد هم دستور اورژانسی.
+
+هرچه آسیب بالاتر می‌رود gate را قوی‌تر کن: dual approval، credential verification، citation در سطح source، فاصلهٔ review کوتاه‌تر، alert تغییر source معتبر، sign-off حقوقی/clinical هر جا لازم و kill switch. approval log تغییرناپذیر داشته باش، بدون اینکه دادهٔ خصوصی reviewer را لو بدهی.
+
+Localization کنترل ایمنی است. محتوای فارسی ممکن است به چند jurisdiction سرویس بدهد؛ موجودی دارو، emergency service، regulation مالی و advice حقوقی فرق می‌کنند. scope را بگو؛ جواب یک کشور را universal جا نزن.
+
+correction، complaint، transaction شکست‌خورده، اخطار regulator و تغییر source را monitor کن. Search traffic معیار safety نیست. هیچ‌وقت قول نده کنترل قوی‌تر YMYL رتبه می‌آورد یا افت core update را recover می‌کند.
+
+## چطور مطمئن شوی
+
+| بررسی | قبول | رد |
+| --- | --- | --- |
+| Risk assessment | آسیب احتمالی، audience و context ثبت شده | چون keyword health دارد برچسب blanket |
+| Expertise | scope reviewer با claim پراثر می‌خواند | title قشنگ ولی نامرتبط |
+| Evidence | source authoritative و جاری هر claim کلیدی را پشتیبانی می‌کند | citation تزئینی |
+| Publishing gate | server approval ناقص/منقضی را block می‌کند | client بعد render قایم می‌کند |
+| Locale | jurisdiction و emergency path درست است | advice یک کشور همه‌جا |
+| عملیات | trigger بازبینی، correction و recall تست شده | یک‌بار publish و فراموش |
