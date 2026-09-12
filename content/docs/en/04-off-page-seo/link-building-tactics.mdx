@@ -1,0 +1,119 @@
+---
+title: Link building tactics
+description: Outreach that can be defended — digital PR, original assets, resource pages — versus tactics that only look like work in a backlink crawler.
+module: 04-off-page-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Tactics are how you *ask* for citations after you have something worth citing. The durable ones share a pattern: a real editor or webmaster has a reader problem, your URL solves it, the link is optional and earned.
+
+Patterns that still exist in 2026 without being a scheme *by themselves*:
+
+- **Digital PR / data journalism** — original numbers, surveys, lab methods, public datasets. Pitch the story, not the anchor.
+- **Resource / documentation citations** — official docs, university lists, government pages that already curate links. Update requests, not “add my casino.”
+- **Broken-link replacement** — you offer a live equivalent when their href `404`s. Still editorial; they can say no.
+- **Unlinked mention follow-up** — they named you; you ask for a URL. One email, not a blast.
+- **Partnership and integration docs** — software that actually integrates, with a crawlable docs URL.
+
+Patterns that are **spam policies** or adjacent (detail in link schemes): PBNs, paid guest-post networks, comment/profile/wiki spam, expired-domain 301 funnels, site-reputation-abuse articles on a host rented for keywords.
+
+HARO-style journalist queues and “link insertion” vendors sit on a spectrum. If money buys the URL and the article would not exist otherwise, qualify it (`sponsored`) or skip it.
+
+## Why it matters
+
+A tactics list without a quality bar becomes a procurement problem: agencies deliver volume, legal inherits a scheme. Pick three channels your brand can repeat for a year.
+
+<CorrectExample>
+You published a reproducible crawl-log method. Pitch:
+
+```txt
+Subject: Crawl waste on faceted URLs — method + dataset
+
+Hi [Editor], we released a method and CSV for measuring Googlebot
+hits on filter URLs vs canonical guides. Happy to walk through
+limitations. URL: https://www.example.com/research/crawl-log-study
+```
+
+If they cite you, the href is their choice. No required anchor text in the contract.
+</CorrectExample>
+
+<IncorrectExample why="Paying for a sitewide footer on 200 blogs is a link scheme even if an invoice says “advertising.”">
+```html
+<footer>
+  <a href="https://www.example.com/best-vpn">Best VPN 2026</a>
+  ·
+  <a href="https://www.example.com/best-casino">Best casino</a>
+</footer>
+```
+
+Copied onto every post of a “guest post” network you found on Telegram.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. After a PR URL goes live, confirm Yoast canonical on *your* cited page still points at itself.
+2. Do not create a thin “for outreach” post that Yoast then scores green. The asset has to be the product.
+
+**Rank Math**
+
+1. Rank Math schema on a study (Article / Dataset if it fits) can help *understanding*. It does not create the journalist’s link.
+2. Disable “auto-post to social” as a substitute for pitching humans.
+
+**AIOSEO**
+
+1. Same: social preview cards for the asset you will pitch. Wrong `og:url` wastes the click from the journalist.
+2. Do not mass-publish 30 “contributor” posts on your own blog to simulate PR.
+
+**Feature gap:** Outreach lives in email/CRM, not in Yoast. SEOPress / Rank Math / AIOSEO cannot run a digital-PR program. If they offer “get backlinks” style upsells, ignore them.
+
+## Code implementation
+
+Ship the asset as a stable, shareable URL. Optional: a citation block so journalists copy a correct href.
+
+```tsx
+export function CiteThis({ url, title }: { url: string; title: string }) {
+  const snippet = `<a href="${url}">${title}</a>`;
+  return (
+    <aside>
+      <h2>Cite this study</h2>
+      <pre>{snippet}</pre>
+    </aside>
+  );
+}
+```
+
+App Router: put `CiteThis` on the server-rendered study page. Pages Router: same component in the page. Do not hide the only copy of the dataset behind a client modal with empty first HTML.
+
+UTM on the pitched URL: fine for analytics. Canonical should strip tracking so Google does not index `?utm_source=pitch`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Comment-spam and forum profiles as a “starter” link diet.
+- **DEPRECATED:** Reciprocal link pages (“our friends”) as a strategy.
+- **DEPRECATED:** Infographics as a 2012-style guaranteed link magnet.
+- Buying “insert link into old post” at scale without `sponsored`.
+- Pitching exact-match anchors in the first sentence of every email.
+- Creating a new subdomain per campaign so each “property” can link to `/`.
+
+## Senior / production notes
+
+Capacity: one researcher + one pitcher beats a 40-blog roster you do not read. Keep a **placement log** (date, host, URL, paid/unpaid, `rel`, target URL) in git or a sheet. You will need it for disavow decisions and for legal.
+
+International: a Persian publisher citing `/fa/` and an English publisher citing `/en/` is correct hreflang hygiene, not “duplicate links.”
+
+If sales already buys sponsorships, SEO’s job is the `rel` and the landing URL — not pretending those links are editorial.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Placement log vs live href | Target URL `200` | Link to a 404 / homepage dump |
+| Publisher | Real masthead, real byline | Network of empty WP blogs |
+| Contract | Anchor optional; paid → `sponsored` | “10 dofollow posts / week” |
+| GSC new referring hosts | Names you pitched or expect | Random TLDs overnight |

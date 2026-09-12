@@ -1,0 +1,114 @@
+---
+title: Disavow
+description: When Google’s disavow tool is the right last resort — and when it makes a toxic profile worse or does nothing.
+module: 04-off-page-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+The **disavow** file tells Google: “If you were going to count these links, please do not.” It is submitted in Search Console for a **property you verified**. It is **not** a robots.txt, not a `nofollow` on someone else’s page, and not a way to hide spam **on your own host**.
+
+Google’s own guidance has been consistent for years: **most sites do not need a disavow file.** Systems already ignore a lot of junk. You reach for it when:
+
+- You have a **manual action** for unnatural links, or a clear unpaid spam attack you cannot get removed, **and**
+- The remaining links are ones you do **not** control (other hosts).
+
+Syntax (Google’s documented format): one URL or `domain:` per line, `#` comments allowed. Submit, wait; there is no SLA.
+
+Never disavow your **own** URLs to “clean the index.” That is `noindex` / `404` / `410` / redirects (Module 03). Never disavow links you **paid for** as a substitute for qualifying them going forward plus cleanup.
+
+## Why it matters
+
+A sloppy disavow can ask Google to ignore the few remaining editorial citations (wrong domain, over-broad `domain:`). A missing disavow after a documented link-scheme cleanup can leave a manual action open. Both are operational errors, not ranking tricks.
+
+<CorrectExample>
+Manual action “unnatural links to your site.” You already asked publishers to remove what they will. Residual PBN hosts you never owned:
+
+```txt
+# GSC disavow file — unnatural links, reviewed 2026-09
+domain:cheap-guestpost-network.example
+domain:pbn-node-14.example
+http://expired-blog.example/best-vpn-insert
+```
+
+Uploaded on the exact GSC property that matches the host. Placement log updated. Review requested **after** the site stopped buying posts.
+</CorrectExample>
+
+<IncorrectExample why="Disavow is not a broom for your own spam URLs, and blasting every referring domain you do not recognize will hit real citations.">
+```txt
+domain:nytimes.com
+domain:wikipedia.org
+domain:example.com
+```
+
+Plus a crawler export of 50,000 hrefs dumped unreviewed because “toxic score > 70.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast has no disavow uploader. Use GSC.
+2. After a hack/spam plugin outbreak **on your host**, delete/410 those posts (Module 03). Do not disavow `https://yoursite.com/spam-page`.
+
+**Rank Math**
+
+1. Rank Math’s 404 monitor and “instant indexing” are unrelated.
+2. If Rank Math lists “backlinks” from a partner API, do not auto-disavow from that list.
+
+**AIOSEO**
+
+1. Same: no GSC disavow API in the plugin that replaces a human review.
+2. Redirecting inbound spam URLs on *your* site to `/` does not replace disavow of *their* hosts — and 301-to-home is still a bad cleanup (Module 03).
+
+**Feature gap:** Zero of Yoast / Rank Math / AIOSEO / SEOPress submit a disavow file. Third-party “toxic score” plugins will happily generate a 10,000-line file. That is the gap: automation without judgment.
+
+## Code implementation
+
+Do not ship disavow inside Next.js. Keep the file in version control **off the public web root** (it is not a ranking asset; leaking it is not a crisis, but `public/disavow.txt` helps nobody):
+
+```ts
+// scripts/validate-disavow.ts — CI lint, not a route
+const LINE = /^(#.*|domain:[a-z0-9.-]+|https?:\/\/\S+)$/i;
+
+export function assertDisavow(text: string) {
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (!LINE.test(line)) throw new Error(`Bad disavow line: ${line}`);
+  }
+}
+```
+
+App Router / Pages Router: no `/disavow` route. If you must document internals, `noindex` that doc.
+
+Never write a Route Handler that fetches a “toxic links” API and posts to GSC. There is no supported public “push disavow” API for that loop.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Disavow as routine monthly hygiene for every site.
+- **DEPRECATED:** Disavow your own hacked URLs.
+- **DEPRECATED:** “Toxic score” thresholds as Google’s list.
+- Disavowing a domain because it is a competitor (they can still cite you; that is not an attack).
+- Re-uploading an empty file and assuming the previous disavow vanished instantly — replacements replace; confirm in GSC UI.
+- Using disavow instead of `rel="sponsored"` on links you still pay for.
+
+## Senior / production notes
+
+Process: export referring hosts from GSC (not only a third-party crawler) → classify **keep / remove-request / disavow** → send removal emails where a real editor exists → disavow the rest of the scheme residue → **then** request review if a manual action exists.
+
+Negative SEO panic (“competitor pointed 1 million links”) is usually overstated; systems discount obvious junk. Act when there is a manual action or a clearly paid network in *your* history.
+
+Keep diffs of the disavow file in git with the ticket ID. Future you will not remember why `domain:foo` is there.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC disavow tool | File accepted; property matches host | Uploaded on the `www` property for an apex-only problem (or reverse) |
+| Sample lines | Hosts you do not control; scheme residue | Your own domain; NYT “because DA” |
+| Manual action | Review after cleanup + disavow | Review while still buying posts |
+| Own spam URLs | 410/404/redirect | Listed in disavow |

@@ -1,0 +1,106 @@
+---
+title: XML sitemap
+description: چه چیزی داخل sitemap است، lastmod چطور باید رفتار کند، و Next.js و وردپرس چطور فهرست URL قابل اعتماد برای گوگل بسازند.
+module: 03-technical-seo
+topic_order: 4
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+XML sitemap **فهرست hint** URLهای canonical است که می‌خواهی کشف شوند. گوگل قول crawl یا ایندکس هر loc را نمی‌دهد. sitemap خوب:
+
+- فقط URL **ایندکس‌پذیر**: `200`، نه `noindex`، نه canonical به دیگری، نه پشت لاگین.
+- URL **مطلق** `https` روی هاست ترجیحی.
+- با **sitemap index** بشکن وقتی از ۵۰٬۰۰۰ URL یا ۵۰ MB uncompressed گذشتی (سقف مستند).
+- `lastmod` فقط وقتی تغییر واقعی محتوای آن URL را نشان می‌دهد، در datetime دبلیوسه‌سی.
+
+`priority` و `changefreq` عملاً برای گوگل نادیده است. مهندسی رویشان خرج نکن.
+
+افزونهٔ تصویر/ویدیو/news وقتی آن نوع محتوا درجه یک است وجود دارد. پیش‌فرض، sitemap عمومی URL است.
+
+## چرا مهم است
+
+سایت بزرگ با sitemap به Googlebot URL با لینک داخلی ضعیف (مقالهٔ جدید، محصول عمیق) را می‌گوید. sitemap آلوده گوگل را یاد می‌دهد فهرست loc آشغال است و کشف چیزی که برایت مهم است کند می‌شود.
+
+<CorrectExample title="درست">
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.example.com/guides/espresso-machines</loc>
+    <lastmod>2026-09-01</lastmod>
+  </url>
+</urlset>
+```
+
+`robots.txt` خط `Sitemap: https://www.example.com/sitemap.xml` دارد. گزارش sitemap در GSC نسبت submitted = indexed معقول است، نه ۲ میلیون submitted / ۴۰ هزار indexed.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="۴۰۴، آشغال پارامتر، و URLهای noindex را به‌عنوان موجودی رسمی سایت تبلیغ کردی.">
+sitemap شامل `/page?id=1&session=abc` است، duplicate HTTP و HTTPS، URLهایی که جای دیگر `301` می‌شوند، و ۱۲۰۰۰ آرشیو تگ که دیروز در پلاگین noindex کردی و rebuild یادت رفت.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Site features ← XML sitemaps روشن. ریشه معمولاً `/sitemap_index.xml`.
+2. Search Appearance: اگر نوع `noindex` است، Yoast باید از sitemap حذفش کند. بعد از noindex گروهی، sitemap را fetch کن و تأیید کن.
+
+**Rank Math**
+
+1. Sitemap Settings per نوع. دستهٔ خالی را exclude کن.
+2. sitemap خبر/ویدیو فقط اگر واقعاً ناشر خبر/ویدیو هستی و قوانین آن برنامه را داری.
+
+**AIOSEO**
+
+1. Sitemaps ← General. اگر پیوست landing نیست «include all images» را خاموش کن.
+2. HTML sitemap جایگزین XML نیست.
+
+**جا خالی واقعی:** ایندکس sitemap یواست قابل پیش‌بینی است. Rank Math/AIOSEO نوع اضافه (news، video، RSS) می‌گذارند که مردم «برای احتیاط» روشن می‌کنند. XML در SEOPress می‌تواند تصویر per پست بچسباند؛ برای جستجوی تصویر مفید، اگر هر GIF تزئینی لیست شود نویز.
+
+## پیاده‌سازی کد
+
+```ts
+import type { MetadataRoute } from "next";
+import { getIndexableUrls } from "@/lib/content";
+
+export default async function sitemap(): MetadataRoute.Sitemap {
+  const pages = await getIndexableUrls();
+
+  return pages.map((p) => ({
+    url: p.canonical,
+    lastModified: p.updatedAt,
+    alternates: p.languages,
+  }));
+}
+```
+
+فیلتر در `getIndexableUrls()`: published، `robots.index !== false`، canonical خودش. Pages Router: `pages/sitemap.xml.tsx` سفارشی یا `public/sitemap.xml` تولیدشده در CI. برای ناشر روزانه sitemap استاتیک کهنه commit نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** `priority` / `changefreq` به‌عنوان پیچ رتبه یا crawl.
+- **DEPRECATED:** «اگر در sitemap است، ایندکس می‌شود.»
+- لیست کردن هم `www` هم apex، یا واریانت اسلش و بی‌اسلش.
+- `lastmod` هر rebuild با `now()` تا گوگل یاد بگیرد نادیده بگیرد.
+- sitemap فقط روی استیجینگ، در robots.txt پرود جا مانده.
+
+## نکته‌های سطح بالا / پروداکشن
+
+sitemap را بر اساس نوع پارتیشن کن (`/sitemap-guides.xml`، `/sitemap-products.xml`) تا GSC نشان دهد کدام قالب می‌شکند. وقتی بخشی را noindex می‌کنی، **همان رلیز حذفش کن** — sitemap و robots meta باید با هم برسند.
+
+برای سایت hreflang، یا هر URL لوکیل را با `xhtml:link` alternate بگذار (مثل `app/sitemap.ts` همین دانشنامه) یا sitemap per-locale بده و متقارن نگه دار. فقط `en` را لیست نکن و امیدوار باش `fa` کشف شود.
+
+sitemap خبر پنجرهٔ تازگی دارد؛ مقالهٔ یک‌ساله را آنجا نریز.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| GSC Sitemaps | fetch شده؛ URL submitted همان‌هایی است که می‌خواهی | «Couldn’t fetch»؛ discovered-not-indexed عظیم |
+| نمونهٔ ۲۰ loc | همه `200`، self-canonical، ایندکس‌پذیر | 3xx/4xx/noindex در نمونه |
+| robots.txt | خط `Sitemap:` هست | خط نیست یا URL HTTP |
+| diff با رلیز قبل | lastmod فقط روی URL ویرایش‌شده جابه‌جا شده | کل فایل امروز lastmod خورده |

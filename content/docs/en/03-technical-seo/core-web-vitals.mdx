@@ -1,0 +1,118 @@
+---
+title: Core Web Vitals
+description: INP, LCP, and CLS as page-experience signals — field data vs lab, and what actually moves them in WordPress and Next.js.
+module: 03-technical-seo
+topic_order: 6
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Core Web Vitals (CWV) are **field** metrics Google uses in page experience. As of 2026 the three are:
+
+- **LCP** (Largest Contentful Paint) — loading: when the main content likely appeared.
+- **INP** (Interaction to Next Paint) — responsiveness: replaced FID. Tracks latency of clicks/taps/keys throughout the page life.
+- **CLS** (Cumulative Layout Shift) — visual stability.
+
+Thresholds are documented on web.dev / Search Central (good / needs improvement / poor). **CrUX / GSC** is what ranking systems see, not your Lighthouse score on a quiet laptop. Lab (Lighthouse, WebPageTest) is for debugging.
+
+CWV is a **tie-breaker-scale** signal among many, not a substitute for relevance. A “poor” URL can still rank; a “good” URL can still not.
+
+## Why it matters
+
+INP regressions from third-party tags, LCP images without dimensions, and CLS from injected ads are the usual production failures. You fix the template, not one hero blog post.
+
+<CorrectExample>
+LCP image in HTML with dimensions and a modern format; fonts with `font-display`; no layout shift from banners:
+
+```html
+<img
+  src="/hero.avif"
+  width="1200"
+  height="630"
+  fetchpriority="high"
+  alt="Espresso machine on a bench"
+/>
+```
+
+INP: heavy work off the main thread; click handlers not blocked by 400 ms analytics bundles. Field INP in GSC “good” for the URL group.
+</CorrectExample>
+
+<IncorrectExample why="Lab is green on desktop while mobile field INP/LCP stay poor — Google uses the field.">
+Hero is a CSS background on a 4 MB PNG, Web Fonts block, cookie banner shifts the H1 80 px, and GTM loads six tags on first input. Lighthouse desktop 98. GSC mobile “poor.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast is not a CWV plugin. It will not fix LCP. Use a caching/CDN plugin plus image pipeline (core WebP, or a dedicated optimizer).
+2. Do not stack Yoast + three “speed” plugins that all minify.
+
+**Rank Math**
+
+1. Instant Indexing / schema features do not move INP.
+2. Rank Math’s “remove unused CSS” style claims overlap badly with Autoptimize/LiteSpeed. Pick one optimizer.
+
+**AIOSEO**
+
+1. Same: SEO plugin ≠ performance stack.
+2. AIOSEO extra frontend JS (some TOC/analytics widgets) can hurt INP — disable unused modules.
+
+**Feature gap:** None of Yoast / Rank Math / AIOSEO / SEOPress replace a CDN, image CDN, or INP profiling. SEOPress has no special CWV advantage.
+
+## Code implementation
+
+```tsx
+import type { Metadata } from "next";
+import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Espresso machines",
+};
+
+export default function Page() {
+  return (
+    <main>
+      <h1>Espresso machines</h1>
+      <Image
+        src="/hero.avif"
+        alt="Espresso machine on a bench"
+        width={1200}
+        height={630}
+        priority
+      />
+    </main>
+  );
+}
+```
+
+App Router: keep LCP in the **server** HTML. Client islands for widgets. Measure INP with web-vitals / CrUX. Pages Router: same `next/image` + `priority` on the LCP image; avoid `useEffect` hero swap.
+
+Do not confuse `loading="lazy"` on the LCP image — that delays LCP.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** FID as the responsiveness vital (replaced by INP).
+- **DEPRECATED:** “Need 100 Lighthouse or you will not rank.”
+- **DEPRECATED:** AMP as the only path to page experience.
+- Optimizing desktop while GSC is mobile-only for the URL group.
+- Hosting videos autoplay with unsized players (CLS).
+
+## Senior / production notes
+
+Report at **origin and URL-group** level. A sitewide cookie banner can fail CLS for every template. Third-party INP: tag manager on interaction, not on load, when legal allows.
+
+SSR/RSC helps LCP TTFB + HTML; it does not automatically fix INP if you hydrate a 300 kB client tree.
+
+Set performance budgets in CI (Lighthouse CI) **and** watch GSC CWV weekly. They disagree; field wins arguments.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC → Core Web Vitals | URL groups “good” | Mobile poor, desktop ignored |
+| CrUX / PSI field | Same story as GSC | Only lab green |
+| Performance panel | LCP element is the intended hero | LCP is a cookie logo |
+| Interaction trace | INP under documented “good” | Long tasks on first click |

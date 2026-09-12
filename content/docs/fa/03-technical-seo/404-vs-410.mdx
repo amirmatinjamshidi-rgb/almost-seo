@@ -1,0 +1,124 @@
+---
+title: ۴۰۴ در مقابل ۴۱۰
+description: وقتی URL موقتاً نیست و وقتی برای همیشه رفته — کد وضعیت، صفحهٔ خطای سفارشی، و Googlebot باید چه ببیند.
+module: 03-technical-seo
+topic_order: 10
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+- **404 Not Found** — این URL *الان* سندی ندارد. گوگل دوباره crawl می‌کند؛ اگر 404 بماند به‌تدریج از ایندکس می‌افتد.
+- **410 Gone** — این URL عمداً حذف شده. گوگل ممکن است زودتر بیندازد. وقتی **برنمی‌گردانی** (حذف حقوقی، SKU متوقف بدون ریدایرکت).
+- **Soft 404** — HTTP `200` (یا `302` به catch-all) با «پیدا نشد» یا هوم‌پیج نازک. گوگل باز هم خطا حساب می‌کند و سیگنال صادق را از دست می‌دهی.
+
+صفحهٔ خطای سفارشی باید هنوز **404/410** بفرستد، مفید باشد (سرچ، hub)، و با `noindex` وضعیت را قاطی نکند (وضعیت همان سیگنال است). قالب را `200` نده.
+
+اگر معادل نزدیک هست، به‌جای 404 **301**. 404 برای غیاب واقعی است.
+
+## چرا مهم است
+
+فروشگاه و خبر مدام URL حذف می‌کنند. 301 به والد مرتبط کاربر را نگه می‌دارد. 404 روی هزاران صفحهٔ افیلیت منقضی درست است. `200` روی آن صفحات الگوی «thin doorway» را می‌سازد.
+
+<CorrectExample title="درست">
+محصول حذف‌شده بدون جانشین:
+
+```http
+HTTP/1.1 410 Gone
+Content-Type: text/html; charset=utf-8
+```
+
+HTML می‌گوید رفته، به hub دسته لینک می‌دهد، جعبهٔ سرچ. loc در sitemap همان deploy حذف شده.
+
+محصول حذف‌شده با جانشین: **301** به SKU جدید، نه 410.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot فکر می‌کند هوم‌پیج سند هزاران URL قدیمی است؛ به کاربر دروغ گفته می‌شود.">
+مسیر ناشناخته `302` به `/`. یا وردپرس قالب 404 را با `200 OK` می‌دهد چون پلاگین «pretty 404» وضعیت را بازنویسی کرده.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast وضعیت 410 نمی‌گذارد. برای Gone از پلاگین ریدایرکت یا قانون سرور استفاده کن.
+2. اگر پست را trash کنی، WP permalink قدیم را 404 می‌کند — وقتی جایگزین هست **قبل از حذف** 301 بگذار.
+
+**Rank Math**
+
+1. Redirections می‌تواند 410 بفرستد. برای URL مرده‌ای که قبلاً 200 بوده.
+2. مانیتور 404 لاگ است، تعمیر نیست. همهٔ 404ها را به `/` 301 نکن.
+
+**AIOSEO**
+
+1. addon Redirects: در بعضی نسخه‌ها گزینهٔ 410 هست — وضعیت واقعی را با `curl` ببین.
+2. همان ضدالگو: «همهٔ 404 را به هوم‌پیج.»
+
+**جا خالی واقعی:** مانیتور 404 در Rank Math از همه دیدنی‌تر است. Yoast Premium ریدایرکت دارد؛ 410 راحت فراموش می‌شود. لاگ 404 در SEOPress شبیه است. هیچ‌کدام نباید 404 را خودکار به خانه بفرستند.
+
+## پیاده‌سازی کد
+
+```tsx
+import { notFound, permanentRedirect } from "next/navigation";
+
+export default async function ProductPage({ params }: { params: Promise<{ sku: string }> }) {
+  const { sku } = await params;
+  const product = await getProduct(sku);
+
+  if (!product) notFound();
+  if (product.status === "discontinued" && product.successor) {
+    permanentRedirect(product.successor);
+  }
+
+  return <ProductView product={product} />;
+}
+```
+
+`notFound()` فقط 404 است. برای 410 واقعی، وضعیت را در Route Handler بگذار (صفحهٔ App Router `Response` دلخواه برنمی‌گرداند):
+
+```ts
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ sku: string }> },
+) {
+  const { sku } = await params;
+  const product = await getProduct(sku);
+  if (product?.status === "discontinued" && !product.successor) {
+    return new Response(goneHtml(sku), {
+      status: 410,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+  return new Response(null, { status: 404 });
+}
+```
+
+App Router: `notFound()` را صدا کن تا `not-found.tsx` پاسخ **404** بدهد، نه محصول خالی با 200.
+
+Pages Router: در `getServerSideProps` مقدار `res.statusCode = 404` / `410`. هرگز با ارسال 200 ننویس `{ props: { notFound: true } }`.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «410 فردا حتماً از ایندکس می‌افتد.» سریع‌تر معمول است، SLA نیست.
+- **DEPRECATED:** soft 404 به‌عنوان برد UX.
+- 404 کردن URL که هنوز داخلی لینک می‌دهی.
+- `noindex` با `200` به‌جای 404 برای پست حذف‌شده (URL آشغال قابل crawl می‌ماند).
+- 404 سفارشی که doorway کلمهٔ نامرتبط است.
+
+## نکته‌های سطح بالا / پروداکشن
+
+پایپلاین: unpublish ← اگر جانشین هست 301 ← وگرنه 410 یا 404 ← sitemap را بینداز ← لینک داخلی را بردار. «Not found (404)» در مقابل «Soft 404» را در GSC دنبال کن. Soft 404 گزارشی است که رویش عمل می‌کنی.
+
+برای آشغال پارامتر (`/foo?session=`) **404** یا disallow در robots + بدون لینک داخلی را ترجیح بده، نه ۱۰٬۰۰۰ قانون 410.
+
+بین‌المللی: URL رفته در `en` ولی زنده در `fa` نباید 410 ساده‌لوح CDN برای همهٔ لوکیل‌ها شریک شود.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| `curl -I` URL حذف‌شده | 404 یا 410 | 200 / 302 خانه |
+| GSC Page indexing | تعداد 404/410 با حذف‌ها می‌خواند | جهش soft 404 |
+| Sitemap | loc رفته | loc هنوز لیست است |
+| 404 روی صفحه | مفید، همان هاست، وضعیت واقعی | صفحهٔ «oops» ایندکس‌شده با 200 |

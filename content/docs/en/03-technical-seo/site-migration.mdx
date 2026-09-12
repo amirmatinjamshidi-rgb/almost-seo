@@ -1,0 +1,102 @@
+---
+title: Site migration
+description: Moving hosts, paths, or CMS without dropping the index — maps, 301s, sitemaps, and the GSC sequence that actually works.
+module: 03-technical-seo
+topic_order: 14
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A migration is any change that makes **old URLs stop being the document**: domain, HTTPS, CMS, folder, trailing slash, language prefix, merge of two sites.
+
+Google needs: a **1:1 (or many:1) map** to the best equivalent, **permanent redirects**, updated **internal links**, **canonicals**, **sitemaps**, and **GSC** on the new property. Keep the old host answering 301s as long as it receives links (years, not a weekend).
+
+Types: same-URL lift (HTTP→HTTPS), path change, domain change, merge, split (country sites). Difficulty is the map quality, not the CMS brand.
+
+Do not launch the new tree while the old tree still `200`s the same titles (duplicates). Do not 404 the old tree on day one “because the sitemap is new.”
+
+## Why it matters
+
+Migrations are the highest-stakes technical SEO project. Traffic graphs that fall 80% are usually missed 301s, robots on the new host, or canonicals still pointing at the old domain.
+
+<CorrectExample>
+Spreadsheet (in git): `old_url,new_url,status`. Every old money URL `curl`s to one 301/308. New URLs `200`, self-canonical, in sitemap. GSC Change of Address used **only** for domain moves, after both properties verify. Old sitemap can list old URLs that 301 (or you submit the new sitemap on the new property). Internal links on the new site point at new URLs.
+</CorrectExample>
+
+<IncorrectExample why="Googlebot finds two live sites or a forest of 404s; signals never finish consolidating.">
+New site ships; old URLs 404; canonicals mixed HTTP/HTTPS; `Disallow: /` leftover on new robots.txt; GSC never added the new property; 302s “until we are sure.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. After URL change, regenerate sitemaps. Confirm canonicals use the new `home`.
+2. Premium redirect import from the CSV map. Export backups.
+
+**Rank Math**
+
+1. Redirections → import. Set 301, not 302.
+2. Instant Indexing on new URLs after robots is open — still not a replacement for 301s from the old host.
+
+**AIOSEO**
+
+1. Redirects addon import. Same CSV discipline.
+2. Update webmaster-tools verification on the **new** host.
+
+**Feature gap:** Plugins move tags; they do not move DNS or TLS. SEOPress import is similar. For domain moves, server/CDN 301s from the **old** host matter more than the WP plugin on the new host.
+
+## Code implementation
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/old-guides/:slug",
+        destination: "/guides/:slug",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+App Router: `metadataBase` = new origin. `sitemap.ts` emits **new** canonicals only. Keep an edge map for legacy hosts.
+
+Pages Router: same `redirects()`. Do not rely on client `router.replace`.
+
+Cutover runbook (order matters): freeze content → deploy new → enable 301s on old → submit sitemaps → watch logs/GSC → fix misses → only then delete leftover 200s on old paths.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Google recrawls everything in 48 hours if you ping.”
+- **DEPRECATED:** Change of Address as a fix for path-only moves (it is for domain changes).
+- Rel=canonical alone instead of 301 when the old URL should die.
+- Launching with staging `noindex` still on.
+- Redirecting all old URLs to `/` to “keep PageRank.”
+
+## Senior / production notes
+
+Classify URLs: keep, redirect, 410. Content that dies should not 301 to irrelevant hubs (soft-404-like).
+
+Measure: % of Googlebot hits on old host that 301, indexed URL count old vs new, top landing pages before/after (brand queries first, then head terms — they recover on different clocks).
+
+If you change CMS **and** IA at once, you cannot tell which broke. Split when the business allows.
+
+hreflang pairs must move together or you ship broken clusters.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Sample 100 old money URLs | 301 to correct 200 | 404, home, loops |
+| GSC both properties | New sitemap fetched; 404s explained | New site “excluded by robots” |
+| Logs | Googlebot follows 301s | Still 200 on old duplicates |
+| Internal crawl new site | No leftover old hosts | Absolute links to dead domain |

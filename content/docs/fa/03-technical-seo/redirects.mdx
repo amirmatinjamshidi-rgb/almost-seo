@@ -1,0 +1,110 @@
+---
+title: ریدایرکت
+description: "301، 302، 307، زنجیره و حلقه — جابه‌جایی URL بدون نشت بودجهٔ crawl یا دوپاره کردن سیگنال."
+module: 03-technical-seo
+topic_order: 9
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+ریدایرکت به کلاینت و Googlebot می‌گوید «این URL جای دیگر است.» کد وضعیت:
+
+- **301 / 308** — دائمی. وقتی جایگزین خانهٔ canonical جدید است.
+- **302 / 307** — موقت. برای A/B، آزمایش geolocation، slug کوتاه‌عمر. گوگل ممکن است URL اصلی را بیشتر در ایندکس نگه دارد.
+
+**زنجیره** (`A` به `B` به `C`) crawl را می‌سوزاند و چیزی را که آدم bookmark می‌کند رقیق می‌کند. **حلقه** (`A` به `B` به `A`) قطعی است. **soft 404** که با متن «پیدا نشد» `200` می‌دهد ریدایرکت نیست؛ دروغ است.
+
+پرش هاست و پروتکل (HTTP به HTTPS، apex به www) مال لبه است، یک hop. بعد یک hop از مسیر قدیم به مسیر جدید.
+
+گوگل برای ریدایرکت دائمی درست‌پیاده‌شده سیگنال را ادغام می‌کند. آنی نیست و بهانهٔ زنجیر پنج مهاجرت CMS تاریخی نیست.
+
+## چرا مهم است
+
+مهاجرت با نقشهٔ ریدایرکت زنده می‌ماند یا می‌میرد. «بعداً 301 می‌گذاریم» همان است که ترافیک ارگانیک از صخره می‌افتد و Googlebot درخت خالی جدید را ایندکس می‌کند.
+
+<CorrectExample title="درست">
+مسیر قدیم، **یک** 301 به canonical نهایی HTTPS. لینک داخلی از قبل به مقصد به‌روز شده (ریدایرکت تور ایمنی است، نه IA):
+
+```http
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/guides/espresso-machines
+```
+
+نقشه فایلی در git: `from,to,status`. hop اضافه از apex HTTP وسط کار نیست.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot hop می‌سوزاند؛ کاربر دیر می‌رسد؛ بعضی بات‌ها سر hop ۵ می‌ایستند.">
+`/blog/2021/post` به `/blog/post` به `/posts/post` به `/guides/post` به نسخهٔ HTTPS www، به‌علاوهٔ 302 جامانده چون «شاید برگردیم.»
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast Premium مدیر ریدایرکت دارد. Yoast هسته ندارد. اگر Premium داری نقشه را export کن؛ ریدایرکت را فقط در MySQL بدون بکاپ نگذار.
+2. عوض کردن permalink در Settings وردپرس بدون پلاگین ریدایرکت لینک ورودی را **می‌شکند**.
+
+**Rank Math**
+
+1. Rank Math ← Redirections. 301 در مقابل 302 دراپ‌داونی است که مردم روی 302 می‌گذارند.
+2. حذف خودکار ریدایرکت بعد از N ضربه برای بک‌لینک قدیمی footgun است.
+
+**AIOSEO**
+
+1. addon Redirects. همان: دائمی در مقابل موقت، و قانون «regex» که کل `/blog` را قورت می‌دهد.
+2. ماژول ریدایرکت Rank Math و AIOSEO را همزمان روشن نکن.
+
+**جا خالی واقعی:** UI ریدایرکت Rank Math بین استک‌های تقریباً رایگان بیشترین استفاده را دارد. Yoast Premium می‌خواهد. Redirections در SEOPress تواناست؛ regex هنوز راه 301 کردن کل سایت به `/` است. برای بیش از ۱۰ هزار قانون نقشهٔ سرور/CDN را ترجیح بده.
+
+## پیاده‌سازی کد
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/blog/espresso-machines",
+        destination: "/guides/espresso-machines",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+App Router: `redirect()` در صفحهٔ سرور بسته به `permanent` در `next.config` برابر **307/308** است؛ در Server Actions / `redirect()` از `next/navigation` پیش‌فرض ریدایرکت موقت است — برای مهاجرت SEO صفحات GET از آن استفاده نکن. برای مهاجرت `next.config` یا middleware/`proxy.ts` با **308** را ترجیح بده.
+
+Pages Router: ریدایرکت `next.config.js` یا `_middleware` — همان قانون «یک hop، دائمی».
+
+در ده‌ها هزار قانون، نقشهٔ nginx/CDN را در CI بساز، نه آرایهٔ غول `redirects()`.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «302 همیشه PageRank کمتری پاس می‌دهد پس هیچ‌وقت استفاده نکن.» وقتی تغییر **واقعاً** موقت است 302 بگذار؛ URL فصلی که دوباره استفاده می‌کنی را 301 نکن.
+- **DEPRECATED:** meta-refresh به‌عنوان ریدایرکت SEO.
+- فقط `location.href` جاوااسکریپت (برای Googlebot کند و غیرقابل اعتماد).
+- هر ناشناخته را به `/` ریدایرکت کردن (کارخانهٔ soft-404).
+- sitemap قدیمی که هنوز URL پیش از ریدایرکت را لیست می‌کند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+طبقه‌بندی: 1:1 دقیق، پوشهٔ regex، و «رفته» (`410` — موضوع بعد). بعد از هر رلیز طول زنجیره را در کراولر اندازه بگیر.
+
+ریدایرکت geolocation که Googlebot را در یک کشور گیر می‌اندازد با SEO بین‌المللی می‌جنگد. hreflang + بنر، نه 302 سخت با IP، مگر محصول واقعاً نمی‌تواند بفرستد.
+
+query string: تصمیم بگیر `/page?ref=twitter` به `/page` 301 شود یا نه. پیش‌فرض: canonicalize، قانون ریدایرکت per UTM منفجر نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| `curl -I` URL قدیم | یک 301/308 به URL نهایی | زنجیرهٔ 302؛ حلقه |
+| crawl نقشه | صفر زنجیره با hop بیشتر از ۱ | A به B به C |
+| GSC Page indexing | URL قدیم «Page with redirect» | soft 404 / duplicate |
+| crawl لینک داخلی | لینک به مقصد می‌زند | لینک سایت‌واید هنوز به 301 می‌خورد |

@@ -1,0 +1,104 @@
+---
+title: HTTPS and mixed content
+description: TLS as the default web, HSTS, and mixed content that breaks lock icons — and sometimes crawling — in WordPress and Next.js.
+module: 03-technical-seo
+topic_order: 8
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google Search treats **HTTPS** as the expected transport. HTTP URLs should **301** to HTTPS on the preferred host. Mixed content is an HTTPS document that still loads HTTP images, scripts, or iframes. Browsers block or warn; Googlebot may not get the same assets you tested in an old browser.
+
+HSTS (`Strict-Transport-Security`) tells browsers to skip HTTP on subsequent visits. `preload` is a separate, hard-to-reverse commitment — only after you are sure every subdomain that must stay HTTP is not on the preload list.
+
+Certificates: valid chain, not expired, matching host (www vs apex).
+
+## Why it matters
+
+HTTP duplicates split signals if they still `200`. Mixed scripts can break rendering. Mixed images can leave Googlebot with missing LCP assets. Users bounce from interstitial warnings.
+
+<CorrectExample>
+```http
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/guides
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+```
+
+Every `src`, `href`, and canonical in HTML is `https://`. CMS `home` URL is HTTPS. CDN origin speaks TLS.
+</CorrectExample>
+
+<IncorrectExample why="Users and bots see two sites; scripts fail on modern Chrome; canonicals disagree.">
+Site “is on HTTPS” but `wp_options` `siteurl` is `http://`, canonicals print HTTP, and the hero is `http://cdn.old-host.com/hero.jpg`. HTTP still `200`s the full page.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Search Appearance / site represents: Twitter/OG URLs follow `home`. Fix WordPress Address and Site Address first.
+2. Yoast canonicals will stay HTTP if core URLs are HTTP.
+
+**Rank Math**
+
+1. General Settings → links. Enable www/https canonicalization only after DNS and certs work.
+2. Rank Math cannot replace Really Simple SSL / server redirects; it only prints tags.
+
+**AIOSEO**
+
+1. Webmaster Tools / RSS: same dependency on core URLs.
+2. Mixed content scanners in security plugins overlap — pick one fixer.
+
+**Feature gap:** None of the SEO plugins terminate TLS. SEOPress has an “HTTP to HTTPS” notice; still a server job. Really Simple SSL is not a ranking plugin; it rewrites URLs.
+
+## Code implementation
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: { remotePatterns: [{ protocol: "https", hostname: "cdn.example.com" }] },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "example.com" }],
+        destination: "https://www.example.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+Prefer **edge/CDN** HTTP→HTTPS rather than app-level only. App Router `metadataBase` must be `https://`. Pages Router: `next.config` redirects + `assetPrefix` HTTPS.
+
+Never `next/image` an `http://` source on an HTTPS page.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “HTTPS is a huge ranking boost.” It is expected; the remaining HTTP sites are the exception.
+- **DEPRECATED:** Ignoring mixed content because “Googlebot does not use Chrome.” Rendering still needs assets.
+- HSTS preload on day one of a migration.
+- Wildcard cert missing `www` or the reverse.
+- Canonical HTTPS but sitemap HTTP.
+
+## Senior / production notes
+
+Chain: DNS → cert (ACM/Let’s Encrypt) → 301 HTTP→HTTPS → 301 apex↔www → HSTS after a week of clean reports → optional preload.
+
+Third-party widgets on HTTP kill the lock. Tag managers that inject HTTP pixels: fix or drop.
+
+Internal links in old posts: bulk rewrite in the DB, not only a plugin “fix mixed content” filter that rewrites HTML on every request (CPU tax).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| `curl -I http://www.example.com/` | `301` to HTTPS | `200` HTML on HTTP |
+| Browser console | No mixed content | Blocked HTTP scripts/images |
+| GSC URL Inspection | Preferred HTTPS URL | Duplicate HTTP indexed |
+| Certificate | Valid, correct SAN | Name mismatch / expired |

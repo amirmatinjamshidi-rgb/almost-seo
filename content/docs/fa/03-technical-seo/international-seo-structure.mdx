@@ -1,0 +1,116 @@
+---
+title: ساختار سئوی بین‌المللی
+description: "ccTLD، زیردامنه، زیرشاخه، hreflang و x-default — یک معماری بردار و جفت لوکیل را صادق نگه دار."
+module: 03-technical-seo
+topic_order: 15
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+سئوی بین‌المللی یعنی **کدام URL برای کدام زبان/منطقه است** و چطور مجموعه را به گوگل می‌گویی.
+
+الگوی رایج URL:
+
+- **ccTLD** (`example.de`) — قوی‌ترین hint جغرافی، بالاترین هزینهٔ ops.
+- **زیردامنه** (`de.example.com`) — هاست جدا، robots/sitemap جدا.
+- **زیرشاخه** (`example.com/de/`) — یک هاست، crawl ساده‌تر، کاری که همین دانشنامه می‌کند (`/en/`، `/fa/`).
+
+حاشیه‌نویسی `hreflang` (HTML، هدر HTTP، یا sitemap) باید **متقابل** باشد: اگر `en` به `fa` اشاره کند، `fa` به `en`. کد زبان-منطقه را درست بگذار (`en-US`، `fa-IR`). `x-default` URL پیش‌فرض برای لوکیل بی‌تطابق است (اغلب انتخاب زبان یا زبان پیش‌فرض داک)، نه «بهترین ترجمه.»
+
+hreflang به‌تنهایی جهش رتبه نیست. **alternateها را خوشه می‌کند** تا گوگل URL درست را بدهد. محتوا هنوز باید با لوکیل بخواند.
+
+ریدایرکت خودکار با IP/Accept-Language که Googlebot را در یک کشور گیر بیندازد با این سیستم می‌جنگد.
+
+## چرا مهم است
+
+بدون ساختار، گوگل یک زبان را ایندکس می‌کند و آن یکی را نادیده می‌گیرد، یا انگلیسی را به کاربر فارسی نشان می‌دهد (و برعکس). hreflang شکسته نادیده گرفته می‌شود؛ برای حاشیه‌نویسی پول دادی که کسی استفاده نمی‌کند.
+
+<CorrectExample title="درست">
+هر URL لوکیل self-canonical. hreflang متقابل شامل `x-default`:
+
+```html
+<link rel="canonical" href="https://www.example.com/fa/docs/03-technical-seo/robots-txt" />
+<link rel="alternate" hreflang="en" href="https://www.example.com/en/docs/03-technical-seo/robots-txt" />
+<link rel="alternate" hreflang="fa" href="https://www.example.com/fa/docs/03-technical-seo/robots-txt" />
+<link rel="alternate" hreflang="x-default" href="https://www.example.com/en/docs/03-technical-seo/robots-txt" />
+```
+
+همان slug مسیر بعد از پیشوند لوکیل. `lang` و `dir` در HTML می‌خوانند (`fa` + `rtl`). sitemap هر دو URL را با همان مجموعهٔ alternate لیست می‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="خوشه نامعتبر است؛ گوگل حاشیه‌نویسی را می‌اندازد. کاربر زبان غلط می‌گیرد.">
+فقط صفحات `en` شامل hreflangاند. صفحات `fa` لینک برگشت ندارند. همهٔ canonical به `en` اشاره می‌کنند. geo-302 هر بات را به `/de/` می‌فرستد. کپی نازک ماشین‌ترجمه‌شده برای پنجاه لوکیل بدون ارزش یکتا.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast SEO Premium + یکپارچگی WPML/Polylang، hreflang می‌دهد. view-source را روی **هر دو** زبان ببین، نه فقط پیش‌فرض.
+2. پلاگین hreflang دوم هم نصب نکن.
+
+**Rank Math**
+
+1. hreflang Rank Math در ادیتور پست / sitemap. اگر هر دو شلیک کنند با تگ خود WPML تضاد دارد.
+2. `x-default` باید URL واقعی باشد، نه hopper 302.
+
+**AIOSEO**
+
+1. addon زبان / hreflang sitemap. همان ریسک تضاد.
+2. `og:locale` در Open Graph باید با صفحه بخواند، نه زبان پیش‌فرض سایت.
+
+**جا خالی واقعی:** WPML+Yoast جفت رایج است. Rank Math و AIOSEO هر کدام می‌خواهند مالک hreflang باشند. SEOPress + Polylang جفت معتبر دیگر است — **یک** emitter. هر دو لوکیل را با `curl` تست کن.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+const path = "/docs/03-technical-seo/robots-txt";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: `https://www.example.com/fa${path}`,
+    languages: {
+      en: `https://www.example.com/en${path}`,
+      fa: `https://www.example.com/fa${path}`,
+      "x-default": `https://www.example.com/en${path}`,
+    },
+  },
+};
+```
+
+App Router: سگمنت `[lang]`، `html lang` + `dir` روی layout لوکیل (کار همین سایت). `proxy.ts` / middleware نباید Googlebot را با کشور 302 کند.
+
+Pages Router: `next-i18n-router` یا `locale` در `getStaticPaths`؛ باز هم URL متقابل.
+
+محتوا: واقعاً ترجمه کن. انگلیسی یکسان زیر `/fa/` خوشهٔ duplicate است، نه سئوی بین‌المللی.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** ccTLD پر از کلمه به‌عنوان میان‌بر (`best-seo-germany.de` doorway).
+- **DEPRECATED:** `hreflang` به‌عنوان جایگزین محتوای یکتا.
+- قاطی کردن زیرشاخهٔ `/fa/` با `example.ir` دوم بدون pairing.
+- استفاده از `fa-FA` (نامعتبر) به‌جای `fa` یا `fa-IR`.
+- سوییچر زبان فقط-JS بدون `href` قابل crawl.
+
+## نکته‌های سطح بالا / پروداکشن
+
+هزینهٔ ops معمولاً «خلوص SEO» را می‌برد. زیرشاخه روی یک هاست برای بیشتر داک محصول می‌برد. ccTLD وقتی قانون/هاستینگ/برند می‌خواهد.
+
+**برابری filename/slug** را نگه دار (`robots-txt.mdx` در هر دو درخت) تا alternate هیچ‌وقت 404 نشود. ترجمهٔ غایب نباید hreflang به 404 بزند؛ جفت را حذف کن یا صریح fallback بگذار.
+
+هدف‌گیری بین‌المللی GSC (میراث) جایگزین hreflang نیست. ccTLD از قبل hint جغرافی دارد.
+
+این سایت: `hideLocale: "never"`، `x-default` به `en`. `/` را به‌عنوان کپی سوم انگلیسی اختراع نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source هر دو لوکیل | hreflang متقابل | یک‌طرفه |
+| hreflang / Page indexing در GSC | سیل «no return tag» نیست | خطا روی هر URL |
+| سوییچر زبان | `<a href>` به لوکیل دیگر | فقط JS |
+| `curl -A Googlebot` | geo-302 نیست | URL کشور اجباری |

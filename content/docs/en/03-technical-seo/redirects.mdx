@@ -1,0 +1,110 @@
+---
+title: Redirects
+description: "301, 302, 307, chains, and loops — how to move URLs without leaking crawl budget or splitting signals."
+module: 03-technical-seo
+topic_order: 9
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A redirect tells clients and Googlebot “this URL is elsewhere.” Status codes:
+
+- **301 / 308** — permanent. Use when the replacement is the new canonical home.
+- **302 / 307** — temporary. Use for A/B, geolocation experiments, short-lived slugs. Google may keep the original URL in the index longer.
+
+**Chains** (`A → B → C`) waste crawl and dilute what humans bookmark. **Loops** (`A → B → A`) are outages. **Soft 404s** that `200` with “not found” text are not redirects; they are lying.
+
+Host and protocol jumps (HTTP→HTTPS, apex→www) belong at the edge, one hop. Then one hop from old path to new path.
+
+Google consolidates signals for well-implemented permanent redirects. It is not instant and not a reason to chain five historical CMS migrations.
+
+## Why it matters
+
+Migrations live or die on the redirect map. “We’ll add 301s later” is how organic traffic falls off a cliff while Googlebot indexes the new empty tree.
+
+<CorrectExample>
+Old path, **one** 301 to the final HTTPS canonical. Internal links already updated to the destination (redirects are a safety net, not the IA):
+
+```http
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/guides/espresso-machines
+```
+
+Map is a file in git: `from,to,status`. No hop through the HTTP apex in between.
+</CorrectExample>
+
+<IncorrectExample why="Googlebot burns hops; users land late; some bots stop at hop 5.">
+`/blog/2021/post` → `/blog/post` → `/posts/post` → `/guides/post` → HTTPS www version, plus a leftover 302 because “we might revert.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast Premium has a redirect manager. Core Yoast does not. If you use Premium, export the map; do not keep redirects only in MySQL with no backup.
+2. Changing permalinks in WP Settings without a redirect plugin **breaks** inbound links.
+
+**Rank Math**
+
+1. Rank Math → Redirections. 301 vs 302 is a dropdown people leave on 302.
+2. Auto-delete redirects after N hits is a footgun for old backlinks.
+
+**AIOSEO**
+
+1. Redirects addon. Same: permanent vs temporary, and “regex” rules that swallow `/blog` entirely.
+2. Do not enable both Rank Math and AIOSEO redirect modules.
+
+**Feature gap:** Rank Math’s redirect UI is the most used among free-ish stacks. Yoast wants Premium. SEOPress Redirections is capable; regex is still how you accidentally 301 the whole site to `/`. Prefer server/CDN maps for >10k rules.
+
+## Code implementation
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/blog/espresso-machines",
+        destination: "/guides/espresso-machines",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+App Router: `redirect()` in a server page is **307/308** depending on `permanent` in `next.config`; in Server Actions / `redirect()` from `next/navigation` it is a temporary redirect by default — do not use it for SEO migrations of GET pages. For migrations prefer `next.config` or middleware/`proxy.ts` **308**.
+
+Pages Router: `next.config.js` redirects or `_middleware` — same “one hop, permanent” rule.
+
+At tens of thousands of rules, generate nginx/CDN maps in CI, not a giant `redirects()` array.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “302 always passes less PageRank so never use it.” Use 302 when the change **is** temporary; do not 301 a seasonal URL you will reuse.
+- **DEPRECATED:** Meta-refresh as an SEO redirect.
+- JavaScript `location.href` as the only redirect (slow, unreliable for Googlebot).
+- Redirecting everything unknown to `/` (soft-404 factory).
+- Leaving old sitemaps listing pre-redirect URLs.
+
+## Senior / production notes
+
+Classify: exact 1:1, regex folders, and “gone” (`410` — next topic). Measure chain length in a crawler after every release.
+
+Geolocation redirects that strand Googlebot in one country fight international SEO. Use hreflang + a banner, not a hard 302 by IP, unless the product truly cannot ship.
+
+Query strings: decide whether `/page?ref=twitter` 301s to `/page`. Default: canonicalize, do not explode redirect rules per UTM.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| `curl -I` old URL | Single 301/308 to final URL | 302 chain; loop |
+| Crawl of the map | 0 chains >1 hop | A→B→C |
+| GSC Page indexing | Old URLs “Page with redirect” | Soft 404 / duplicate |
+| Internal link crawl | Links point at destinations | Sitewide links still hit 301s |

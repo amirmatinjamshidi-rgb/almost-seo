@@ -1,0 +1,131 @@
+---
+title: دستورهای ایندکس
+description: "robots meta، X-Robots-Tag، noindex، nofollow، nosnippet — چه می‌کنند، چه نمی‌کنند، و با robots.txt چه تداخلی دارند."
+module: 03-technical-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+دستور ایندکس به گوگل می‌گوید **بعد از fetch موفق چه کند**. دو کانال معادل:
+
+- HTML: `<meta name="robots" content="noindex,follow">` (یا `googlebot` فقط برای گوگل).
+- HTTP: `X-Robots-Tag: noindex, follow` (برای PDF، تصویر، JSON لازم است).
+
+توکن‌های مهم (Search Central فعلی):
+
+- `index` / `noindex` — واجد ایندکس یا نه.
+- `follow` / `nofollow` — آیا لینک‌های این URL برای کشف/سیگنال استفاده شود. `nofollow` اینجا hint **سطح صفحه** است، نه همان `rel=nofollow` پر لینک.
+- `nosnippet`، `max-snippet`، `max-image-preview`، `notranslate`، `noarchive`، `unavailable_after`.
+
+`noindex` فقط اگر URL **قابل crawl** باشد کار می‌کند. با `Disallow` در robots.txt، Googlebot تگ را هیچ‌وقت نمی‌بیند.
+
+canonical (`rel=canonical`) **ترجیح** است، دستور نیست. `noindex` + self-canonical متناقض پیام قاطی است؛ هر URL یک شغل.
+
+## چرا مهم است
+
+`noindex` غلط روی قالب (pagination، فیلتر، thank-you) همان شبی است که هزاران URL «گم» می‌شوند. نبود `noindex` روی duplicate نازک ایندکس را آلوده می‌کند.
+
+<CorrectExample title="درست">
+صفحهٔ تشکر:
+
+```html
+<meta name="robots" content="noindex, follow" />
+```
+
+PDF که نباید ایندکس شود:
+
+```http
+HTTP/1.1 200 OK
+X-Robots-Tag: noindex
+```
+
+hub دسته که **باید** رتبه بگیرد: بدون robots meta، یا صریح `index,follow`. sitemap شاملش است.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="دستور دیده نمی‌شود؛ URL ممکن است از لینک ورودی با اسنیپت خالی ایندکس بماند.">
+```txt
+# robots.txt
+Disallow: /thank-you
+```
+
+```html
+<!-- هیچ‌وقت fetch نمی‌شود -->
+<meta name="robots" content="noindex" />
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. پر پست: Advanced ← اجازه به موتور جستجو. همان `noindex` را می‌نویسد.
+2. Search Appearance ← Content types / Taxonomies برای `noindex` سطح قالب.
+3. Yoast پیش‌فرض `max-image-preview:large` هم می‌گذارد — مگر الزام حقوقی، دست نزن.
+
+**Rank Math**
+
+1. Robots Meta در ادیتور و در Titles & Meta per نوع.
+2. Rank Math راحت `nofollow` سطح صفحه می‌گذارد. پیش‌فرض صفحهٔ واقعی باید `index,follow` بماند.
+
+**AIOSEO**
+
+1. Search Appearance ← Advanced. همان تفکیک: پر پست در مقابل نوع.
+2. بعد از ذخیره `<head>` رندرشده را ببین؛ بعضی قالب‌ها meta را می‌کنند.
+
+**جا خالی واقعی:** Rank Math توکن robots بیشتری در UI نشان می‌دهد (از جمله `noarchive`). Yoast فهرست کوتاه‌تر است. robots meta در SEOPress شبیه Yoast است؛ مطمئن شو از تنظیم سراسری + پست همزمان `index` و `noindex` درنمی‌آید.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: { index: false, follow: true },
+  },
+};
+```
+
+برای فایل باینری در Route Handlerهای App Router:
+
+```ts
+export async function GET() {
+  return new Response(pdfBuffer, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "X-Robots-Tag": "noindex",
+    },
+  });
+}
+```
+
+Pages Router: `next/head` `<meta name="robots" …>` یا `headers()` در `getServerSideProps`. robots را فقط در `useEffect` کلاینت نگذار.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** `noindex,nofollow` به‌عنوان پیش‌فرض سری صفحه‌بندی. معمولاً `noindex,follow` یا همان نمایی که می‌خواهی ایندکس شود؛ `nofollow` کشف صفحهٔ ۲+ را گرسنه می‌کند.
+- **DEPRECATED:** meta `robots` به‌جای authentication.
+- قاطی کردن `googlebot` و `robots` با مقدار مخالف «برای احتیاط.»
+- `nosnippet` روی هر صفحه برای «توقف AI.» اسنیپت SERP خودت در Google Search را هم می‌کشد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+در مقیاس، robots را از **همان فلگ CMS** که sitemap را حذف می‌کند بران. مغز دوتکه (پلاگین noindex، sitemap سفارشی هنوز URL را لیست می‌کند) سردرگمی شماره یک «Excluded by ‘noindex’ tag» در GSC است — آن exclude اغلب *عمدی* است.
+
+`unavailable_after` برای پیشنهاد منقضی است، ابزار پاکسازی عمومی نیست.
+
+برای خوشهٔ hreflang، یک لوکیل را `noindex` نکن و در مجموعهٔ `hreflang` لوکیل دیگر رهایش نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source / `curl -I` | تگ یا `X-Robots-Tag` با نیت یکی است | قالب بدون meta؛ CDN هدر را می‌کند |
+| URL Inspection | روی URL پول‌ساز «Indexing allowed» | noindex روی قالبی که می‌خواستی رتبه بگیرد |
+| GSC Page indexing | تعداد noindex با قالب‌های شناخته‌شده می‌خواند | جهش ناگهانی بعد از save پلاگین |
+| robots.txt در مقابل meta | URLهای noindex هنوز در robots.txt allowاند | ترکیب Disallow + noindex |

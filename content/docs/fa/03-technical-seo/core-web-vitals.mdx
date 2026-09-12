@@ -1,0 +1,118 @@
+---
+title: Core Web Vitals
+description: INP، LCP و CLS به‌عنوان سیگنال page experience — دادهٔ field در مقابل lab، و در وردپرس و Next.js واقعاً چه چیزی را تکان می‌دهد.
+module: 03-technical-seo
+topic_order: 6
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Core Web Vitals (CWV) متریک **field** است که گوگل در page experience استفاده می‌کند. از ۲۰۲۶ سه تا:
+
+- **LCP** (Largest Contentful Paint) — بارگذاری: کی محتوای اصلی ظاهر شد.
+- **INP** (Interaction to Next Paint) — پاسخ‌گویی: جایگزین FID. تأخیر کلیک/تپ/کلید در طول عمر صفحه.
+- **CLS** (Cumulative Layout Shift) — پایداری دیداری.
+
+آستانه در web.dev / Search Central مستند است (good / needs improvement / poor). **CrUX / GSC** همان است که سیستم رتبه می‌بیند، نه نمرهٔ Lighthouse روی لپ‌تاپ خلوت. lab (Lighthouse، WebPageTest) برای دیباگ است.
+
+CWV سیگنال مقیاس **tie-breaker** بین خیلی‌هاست، جایگزین ربط نیست. URL «poor» هنوز می‌تواند رتبه بگیرد؛ URL «good» هنوز ممکن است نگیرد.
+
+## چرا مهم است
+
+پسرفت INP از تگ شخص ثالث، تصویر LCP بدون ابعاد، و CLS از تبلیغ تزریقی شکست‌های معمول پروداکشن‌اند. قالب را درست کن، نه یک پست هیرو.
+
+<CorrectExample title="درست">
+تصویر LCP در HTML با ابعاد و فرمت مدرن؛ فونت با `font-display`؛ بنر layout را جابه‌جا نمی‌کند:
+
+```html
+<img
+  src="/hero.avif"
+  width="1200"
+  height="630"
+  fetchpriority="high"
+  alt="دستگاه اسپرسو روی میز"
+/>
+```
+
+INP: کار سنگین از main thread بیرون؛ handler کلیک پشت باندل ۴۰۰ ms آنالیتیکس نماند. INP فیلد در GSC برای گروه URL «good».
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="lab روی دسکتاپ سبز است؛ INP/LCP موبایل فیلد فقیر می‌ماند — گوگل field را استفاده می‌کند.">
+هیرو background CSS روی PNG چهار مگ، وب‌فونت بلاک، بنر کوکی H1 را ۸۰ px جابه‌جا می‌کند، GTM شش تگ روی اولین input بار می‌کند. Lighthouse دسکتاپ ۹۸. GSC موبایل «poor.»
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast پلاگین CWV نیست. LCP را درست نمی‌کند. caching/CDN به‌علاوهٔ پایپلاین تصویر (WebP هسته، یا optimizer جدا).
+2. Yoast + سه پلاگین «سرعت» که همه minify می‌کنند روی هم نگذار.
+
+**Rank Math**
+
+1. Instant Indexing / schema INP را تکان نمی‌دهد.
+2. ادعاهای «حذف CSS بلااستفاده» Rank Math با Autoptimize/LiteSpeed بد قاطی می‌شود. یک optimizer.
+
+**AIOSEO**
+
+1. همان: پلاگین SEO ≠ استک پرفورمنس.
+2. JS فرانت اضافهٔ AIOSEO (بعضی ویجت TOC/آنالیتیکس) می‌تواند INP را بزند — ماژول بلااستفاده را خاموش کن.
+
+**جا خالی واقعی:** هیچ‌کدام از Yoast / Rank Math / AIOSEO / SEOPress جایگزین CDN، image CDN، یا پروفایل INP نیستند. SEOPress مزیت خاص CWV ندارد.
+
+## پیاده‌سازی کد
+
+```tsx
+import type { Metadata } from "next";
+import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Espresso machines",
+};
+
+export default function Page() {
+  return (
+    <main>
+      <h1>Espresso machines</h1>
+      <Image
+        src="/hero.avif"
+        alt="دستگاه اسپرسو روی میز"
+        width={1200}
+        height={630}
+        priority
+      />
+    </main>
+  );
+}
+```
+
+App Router: LCP را در HTML **سرور** نگه دار. جزیرهٔ کلاینت برای ویجت. INP را با web-vitals / CrUX اندازه بگیر. Pages Router: همان `next/image` + `priority` روی تصویر LCP؛ تعویض هیرو در `useEffect` نکن.
+
+`loading="lazy"` روی تصویر LCP را قاطی نکن — LCP را دیر می‌کند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** FID به‌عنوان vital پاسخ‌گویی (جایگزین INP).
+- **DEPRECATED:** «باید Lighthouse ۱۰۰ باشد وگرنه رتبه نمی‌گیری.»
+- **DEPRECATED:** AMP تنها راه page experience.
+- بهینه کردن دسکتاپ وقتی گروه URL در GSC موبایل است.
+- ویدیوی autoplay با پلیر بدون اندازه (CLS).
+
+## نکته‌های سطح بالا / پروداکشن
+
+گزارش در سطح **origin و گروه URL**. بنر کوکی سایت‌واید می‌تواند CLS همهٔ قالب‌ها را خراب کند. INP شخص ثالث: اگر قانون اجازه داد، tag manager روی interaction نه روی load.
+
+SSR/RSC به LCP از TTFB + HTML کمک می‌کند؛ اگر درخت کلاینت ۳۰۰ kB hydrate شود INP را خودکار درست نمی‌کند.
+
+بودجهٔ پرفورمنس در CI (Lighthouse CI) **و** GSC CWV هفتگی. اختلاف دارند؛ field برندهٔ بحث است.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| GSC ← Core Web Vitals | گروه URL «good» | موبایل poor، دسکتاپ نادیده |
+| CrUX / PSI field | همان داستان GSC | فقط lab سبز |
+| پنل Performance | عنصر LCP همان هیروی عمدی است | LCP لوگوی کوکی است |
+| trace تعامل | INP زیر «good» مستند | long task روی اولین کلیک |

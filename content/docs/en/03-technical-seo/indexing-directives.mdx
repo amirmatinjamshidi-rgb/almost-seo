@@ -1,0 +1,131 @@
+---
+title: Indexing directives
+description: "robots meta, X-Robots-Tag, noindex, nofollow, nosnippet — what they do, what they do not, and how they interact with robots.txt."
+module: 03-technical-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Indexing directives tell Google **what to do after a successful fetch**. The two equivalent channels:
+
+- HTML: `<meta name="robots" content="noindex,follow">` (or `googlebot` for Google only).
+- HTTP: `X-Robots-Tag: noindex, follow` (required for PDFs, images, JSON).
+
+Important tokens (Google Search Central, current):
+
+- `index` / `noindex` — eligible or not for the index.
+- `follow` / `nofollow` — whether to use links on this URL for discovery/signals. `nofollow` here is a **page-level** hint, not the same as per-link `rel=nofollow`.
+- `nosnippet`, `max-snippet`, `max-image-preview`, `notranslate`, `noarchive`, `unavailable_after`.
+
+`noindex` only works if the URL is **crawlable**. Combined with `Disallow` in robots.txt, Googlebot never sees the tag.
+
+Canonical (`rel=canonical`) is a **preference**, not a directive. Conflicting `noindex` + self-canonical is a mixed message; pick one job per URL.
+
+## Why it matters
+
+Wrong `noindex` on templates (pagination, filters, thank-you pages) is how sites “lose” thousands of URLs overnight. Missing `noindex` on thin duplicates is how they pollute the index.
+
+<CorrectExample>
+Thank-you page:
+
+```html
+<meta name="robots" content="noindex, follow" />
+```
+
+PDF that must not be indexed:
+
+```http
+HTTP/1.1 200 OK
+X-Robots-Tag: noindex
+```
+
+Category hub that **should** rank: no robots meta, or explicit `index,follow`. Sitemap includes it.
+</CorrectExample>
+
+<IncorrectExample why="Directive never observed; URL may stay indexed from inbound links with an empty snippet.">
+```txt
+# robots.txt
+Disallow: /thank-you
+```
+
+```html
+<!-- never fetched -->
+<meta name="robots" content="noindex" />
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Per post: Advanced → Allow search engines to show this. That writes `noindex`.
+2. Search Appearance → Content types / Taxonomies for template-level `noindex`.
+3. Yoast also emits `max-image-preview:large` by default — leave it unless legal requires otherwise.
+
+**Rank Math**
+
+1. Robots Meta in the editor and in Titles & Meta per type.
+2. Rank Math can add `nofollow` at page level too easily. Default should stay `index,follow` for real pages.
+
+**AIOSEO**
+
+1. Search Appearance → Advanced. Same split: per-post vs type.
+2. Check the rendered `<head>` after save; some themes strip meta.
+
+**Feature gap:** Rank Math exposes more robots tokens in the UI (including `noarchive`). Yoast keeps the list shorter. SEOPress robots meta is similar to Yoast; confirm it does not emit both `index` and `noindex` from conflicting global + post settings.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: true,
+    googleBot: { index: false, follow: true },
+  },
+};
+```
+
+For a binary file in App Router Route Handlers:
+
+```ts
+export async function GET() {
+  return new Response(pdfBuffer, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "X-Robots-Tag": "noindex",
+    },
+  });
+}
+```
+
+Pages Router: `next/head` `<meta name="robots" …>` or `headers()` in `getServerSideProps`. Do not set robots only in client `useEffect`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** `noindex,nofollow` as the default for paginated series. Usually `noindex,follow` or index the view you want; `nofollow` starves discovery of page 2+.
+- **DEPRECATED:** Meta `robots` as a substitute for authentication.
+- Mixing `googlebot` and `robots` with opposite values “to be safe.”
+- `nosnippet` on every page to “stop AI.” That also kills your SERP snippet in Google Search.
+
+## Senior / production notes
+
+At scale, drive robots from the **same CMS flag** that excludes the sitemap. Split-brain (plugin noindex, custom sitemap still lists the URL) is the #1 GSC “Excluded by ‘noindex’ tag” confusion — that exclusion is often *intentional*.
+
+`unavailable_after` is for expiring offers, not a general cleanup tool.
+
+For hreflang clusters, do not `noindex` one locale and leave it in another locale’s `hreflang` set.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View source / `curl -I` | Tag or `X-Robots-Tag` matches intent | Theme missing meta; CDN strips header |
+| URL Inspection | “Indexing allowed” on money URLs | noindex on the template you wanted ranked |
+| GSC Page indexing | noindex count matches known templates | Sudden spike after a plugin save |
+| robots.txt vs meta | noindex URLs still allowed in robots.txt | Disallow + noindex combo |

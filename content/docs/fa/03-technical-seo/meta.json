@@ -1,0 +1,22 @@
+{
+  "title": "سئوی تکنیکال",
+  "defaultOpen": true,
+  "pages": [
+    "site-architecture",
+    "crawl-budget",
+    "robots-txt",
+    "xml-sitemaps",
+    "indexing-directives",
+    "core-web-vitals",
+    "mobile-first-indexing",
+    "https-mixed-content",
+    "redirects",
+    "404-vs-410",
+    "duplicate-content-at-scale",
+    "log-file-analysis",
+    "javascript-seo-rendering",
+    "site-migration",
+    "international-seo-structure",
+    "hacked-site-recovery"
+  ]
+}

@@ -1,0 +1,93 @@
+---
+title: Log file analysis
+description: Using access logs to see what Googlebot actually fetches — the ground truth GSC sampling will not show.
+module: 03-technical-seo
+topic_order: 12
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Search Console is a sample and a product UI. **Access logs** are every request: UA, path, status, bytes, time, sometimes bot verification via reverse DNS / `googlebot` IP ranges.
+
+You parse logs to answer: which URLs Googlebot hits, how often, status-code mix, whether money URLs are crawled, whether traps dominate, whether `503` is training Googlebot to back off.
+
+Verify Googlebot (reverse DNS to `googlebot.com` / `google.com`, then forward confirm). Do not trust the UA string alone — it is spoofed.
+
+This is not a ranking factor. It is **observability** for crawl budget, migrations, and outages.
+
+## Why it matters
+
+After a launch, GSC may lag days. Logs show within hours if Googlebot is stuck on `/search?q=` or `500`s on `/guides`. Migrations without log checks are faith-based.
+
+<CorrectExample>
+Daily job: filter verified Googlebot, aggregate by path prefix and status.
+
+Findings: `/guides` 200s, median 80 ms; `/filter` disallowed so zero hits; new `/guides/foo` fetched within 24 h of sitemap ping. Action: none, or fix the one `500` template.
+</CorrectExample>
+
+<IncorrectExample why="You optimize for a crawler that is not Google, or you miss that Googlebot never saw the new host.">
+“SEO log analyzer” dashboard of *all* bots including scrapers. Or Cloudflare HTML challenge on Googlebot IP ranges so logs fill with `403` and nobody notices.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. No log analysis. Use host logs, Cloudflare, or a parser (Screaming Frog Log File Analyser, custom BigQuery).
+2. Yoast crawl settings do not replace server logs.
+
+**Rank Math**
+
+1. Analytics modules are not access logs.
+2. 404 monitor is WordPress PHP 404s, not CDN 404s in front.
+
+**AIOSEO**
+
+1. Same: plugin 404 lists ≠ Googlebot behavior at the edge.
+2. Do not grant log plugins write access they do not need.
+
+**Feature gap:** Zero of Yoast / Rank Math / AIOSEO / SEOPress are log pipelines. Enterprise: ship nginx/CDN logs to object storage. Shared WP hosting: request daily logs or you are flying blind.
+
+## Code implementation
+
+```ts
+// observability only — example: reject unverified “Googlebot” at the edge is a WAF job
+// App Router: do not try to parse logs inside next start.
+
+export async function GET() {
+  return Response.json({ ok: true });
+}
+```
+
+Next.js does not give you Googlebot logs. Export from Vercel/Cloudflare/nginx. Sample pipeline: CDN log → sample → filter `user-agent` contains `Googlebot` → verify IP → warehouse.
+
+Pages Router: same. Middleware/`proxy.ts` can **count** requests but is not a substitute for origin logs (you will miss cached hits unless you log at CDN).
+
+Never log query strings that contain PII to a public bucket.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Treating Bingbot/Yandex/GPTBot hits as Google crawl budget.
+- **DEPRECATED:** UA sniffing without IP verify.
+- Sampling 1% of logs and concluding a URL is never crawled.
+- Ignoring `304`/`robots.txt` fetches (they are normal).
+- Blocking Googlebot in WAF because it “looked like an attack” (burst after a sitemap ping).
+
+## Senior / production notes
+
+Slice logs by **template** (`/product/*`, `/blog/*`). Watch crawl vs index: heavy crawl + GSC “crawled currently not indexed” is quality/duplicate, not budget. No crawl + important URLs is robots, internal links, or capacity (5xx).
+
+During migration: plot Googlebot 301 vs 200 on old and new hosts daily.
+
+Legal: logs may be personal data under some regimes; retention policy is not optional in production.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Reverse DNS sample | Real Googlebot | Spoof UA |
+| Money URL hits | Regular 200s | Only params |
+| Status mix | Mostly 200/304/301 expected | 5xx / WAF 403 to Googlebot |
+| New URL after publish | Appears in logs | Silent for days while junk crawls |

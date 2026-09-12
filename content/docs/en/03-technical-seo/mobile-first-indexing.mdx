@@ -1,0 +1,108 @@
+---
+title: Mobile-first indexing
+description: Google primarily indexes the mobile version of the page — what must be in the mobile HTML, and what “desktop-only” content costs you.
+module: 03-technical-seo
+topic_order: 7
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Google Search uses **mobile-first indexing**: the mobile crawling and rendering of your URL is the primary one for indexing. Separate `m.` sites and `Vary: User-Agent` cloaks are legacy patterns. Responsive HTML (same URL, CSS that reflows) is the default.
+
+What Googlebot-smartphone does not see in the mobile DOM — hidden tabs that never make it into HTML, desktop-only copy injected only for `min-width` via JS after a desktop UA, links missing in the mobile nav — is what the index may miss.
+
+Viewport: `<meta name="viewport" content="width=device-width, initial-scale=1">` is table stakes.
+
+## Why it matters
+
+A “full” desktop article with a mobile stub is not two experiences; it is one indexed stub. Interstitials, non-playable mobile video, and truncated accordions that omit text from the HTML all shrink what can rank.
+
+<CorrectExample>
+Same URL, same primary content in the initial HTML for all viewports. Accordions are CSS/JS disclosure; text is in the DOM:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<article>
+  <h1>Espresso machines</h1>
+  <p>Full spec sheet and buying guide…</p>
+  <details>
+    <summary>Warranty</summary>
+    <p>Three years, parts and labour.</p>
+  </details>
+</article>
+```
+
+Internal links in the mobile nav match desktop destinations (maybe fewer, not different).
+</CorrectExample>
+
+<IncorrectExample why="Smartphone Googlebot indexes a thin page; desktop users see the real article that never entered the index that way.">
+Mobile CSS `display:none` on 80% of the article **and** the content is not in the HTML (fetched only on desktop UA). Or a separate `m.example.com` with different canonicals and missing hreflang.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not make the theme responsive. If the theme serves a different template by UA, fix the theme.
+2. Breadcrumbs and schema should match the visible mobile content.
+
+**Rank Math**
+
+1. Same: schema on desktop-only fields that mobile HTML lacks will fail or mismatch.
+2. AMP modules: Google does not require AMP. Do not run a second AMP URL unless you have a reason and canonicals are correct.
+
+**AIOSEO**
+
+1. Confirm Open Graph / canonical remain on the responsive URL, not an `m.` duplicate.
+2. Disable AMP add-ons if you are fully responsive.
+
+**Feature gap:** SEOPress AMP integration is optional noise. All four plugins assume one URL; they cannot fix a UA-sniff theme.
+
+## Code implementation
+
+```tsx
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+export default function Page() {
+  return (
+    <article>
+      <h1>Espresso machines</h1>
+      {/* full copy in server HTML; CSS hides chrome, not paragraphs */}
+    </article>
+  );
+}
+```
+
+App Router `viewport` export. Do not branch `headers().get("user-agent")` to withhold copy. Pages Router: `_document` viewport meta; same HTML.
+
+`useMediaQuery` to *not render* primary content on the server is the classic Next.js mobile-first failure.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Separate mobile site as the recommended setup.
+- **DEPRECATED:** AMP required for mobile ranking or Top Stories (beyond specific product surfaces that have their own rules — do not assume AMP).
+- **DEPRECATED:** “Hidden accordion content is ignored.” Text in the DOM can be used; do not hide *by omitting it*.
+- Desktop-only internal links (footer hubs missing on mobile).
+- Intrusive mobile interstitials that block the first paint of content.
+
+## Senior / production notes
+
+If you still have `m.` or `?mobile=1`, 301 to the responsive URL and retire the host. Googlebot-smartphone in logs should fetch the same paths as users.
+
+Dynamic serving (same URL, different HTML by UA) is allowed but expensive to keep equivalent. Treat it as technical debt.
+
+When debugging “content not in index,” run URL Inspection → view crawled page, not Chrome desktop.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| URL Inspection crawled HTML | Full article text present | Stub / missing sections |
+| Viewport meta | Present | Missing; “page is not mobile friendly” |
+| GSC Mobile usability (legacy reports may vary) | No viewport/tap issues | Text too small, links too close |
+| Log UA | Googlebot-smartphone on main URLs | Only desktop Googlebot on the real HTML |

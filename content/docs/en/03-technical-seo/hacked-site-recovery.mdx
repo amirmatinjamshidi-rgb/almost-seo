@@ -1,0 +1,104 @@
+---
+title: Hacked site recovery
+description: Malware, injected spam, and cloaking — how to clean the index after a compromise without making the SEO damage worse.
+module: 03-technical-seo
+topic_order: 16
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A hacked site in Search is usually: spam pages Google indexed (`/cheap-viagra` on your host), injected links/hidden text, **cloaking** (Googlebot sees spam, users see the real site), or phishing interstitials. GSC Security Issues / manual actions may already be open.
+
+Recovery is **security first**, then SEO:
+
+1. Take the hole away (patch CMS, rotate secrets, kill webshells).
+2. Stop serving spam (delete files, DB rows, unexpected cron, extra admins).
+3. Tell Google the junk is gone: `404`/`410` those URLs, **do not 301 them to the homepage**.
+4. Request review in GSC when the site is actually clean.
+5. Watch logs for re-infection.
+
+This is not a “disavow the spam URLs” problem. Those URLs are **your host**. Disavow is for inbound links you do not control.
+
+## Why it matters
+
+Leaving spam live trains Google that the host is a spam generator. Redirecting spam to money pages can look like a doorway. Cleaning without closing the hole means you do this every month.
+
+<CorrectExample>
+Incident response: snapshot, patch, rotate keys, grep the public tree for unknown PHP/JS, dump new posts in WP, dump `.htaccess` rewrites you did not write. Spam URLs return **410**. Sitemap rebuilt from known-good URLs. GSC Security Issues → request review with a short factual note. Users hit the real HTTPS site with a valid cert.
+</CorrectExample>
+
+<IncorrectExample why="You launder spam into the homepage and leave the backdoor. Google still sees cloaking or a re-hack.">
+301 every unknown path to `/`. “SEO cleanup plugin” that only `noindex`s spam while the files still `200`. Paying a black-hat to “remove the penalty” without patching WordPress.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast will not detect webshells. Use Wordfence / host malware scan / official WP recovery docs.
+2. After cleanup, regenerate sitemaps so spam posts disappear from XML.
+3. If spam posts were `publish`, trash them and 410 the permalinks.
+
+**Rank Math**
+
+1. Instant Indexing is not a malware tool. Do not ping thousands of spam URLs.
+2. Redirects: 410 the spam paths; do not regex-301 `.*` to home.
+
+**AIOSEO**
+
+1. Same sitemap rebuild.
+2. Ignore “submit all URLs” until the tree is clean.
+
+**Feature gap:** Security plugins ≠ SEO plugins. SEOPress has no special recovery magic. Host-level restore from a **pre-hack** backup plus patch is the real tool.
+
+## Code implementation
+
+```ts
+import type { MetadataRoute } from "next";
+import { getTrustedUrls } from "@/lib/content";
+
+export default async function sitemap(): MetadataRoute.Sitemap {
+  const urls = await getTrustedUrls();
+  return urls.map((u) => ({ url: u, lastModified: new Date() }));
+}
+```
+
+App Router: inventory `app/` for unexpected routes; check `public/` for dropped HTML spam; rotate env tokens. `robots.ts` should not stay `Disallow: /` after you recover — that hides the clean site too.
+
+Edge: WAF rules after you understand the vector. Do not challenge Googlebot forever as a “security” measure.
+
+Pages Router: check `pages/` and `public/` the same way.
+
+Never ship a “hidden admin” login at `/wp-login-secret` and call it security; patch and 2FA.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Disavow file for **your own** spam URLs.
+- **DEPRECATED:** Waiting for a “penalty to expire” without cleanup.
+- **DEPRECATED:** New domain as the first move (you abandon brand + fail to patch the process).
+- 301 spam to the homepage.
+- Re-submitting sitemaps that still list the spam.
+
+## Senior / production notes
+
+Cloaking checks: fetch as Googlebot UA **and** as a browser from a second network. If they differ, assume you are not done.
+
+Japanese / pharmacy / casino doorway templates on random PHP files are still common on neglected WP. Search GSC for queries you would never rank for.
+
+Legal phishing: host and Search need the pages gone; a branded 410 page is enough.
+
+Document the timeline for the GSC review. Reviewers look for evidence the hole is closed, not for a poetic apology.
+
+If the site is a Next app, still check the WordPress (or Strapi) **origin** that got hacked — headless does not make spam URLs impossible if the CDN caches injected HTML.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC Security Issues | Clean after review | Still listed |
+| Sample spam URLs | 410/404 | 200 or 301 home |
+| URL Inspection on a money URL | Real content, no injected links | Hidden spam in crawled HTML |
+| Fresh logs | No unknown POSTs to shells | New PHP files reappear |
+| Search `site:` | Junk URLs dropping | New doorway URLs daily |

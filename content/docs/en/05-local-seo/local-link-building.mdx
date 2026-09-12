@@ -1,0 +1,118 @@
+---
+title: Local link building
+description: Citations and community links that support a real location — chambers, partners, sponsorships — versus city-page doorways and fake directories.
+module: 05-local-seo
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Local off-page is still **citations** (NAP on other hosts) plus **links** from places that already talk about the neighborhood or the trade. The fundamentals of Module 04 apply. The local twist: proximity and real-world presence matter more than a generic guest post on an unrelated blog.
+
+Useful sources when they are real:
+
+- Chamber, guild, university, hospital, or municipal lists.
+- Partners and suppliers who already send customers.
+- Sponsorships you actually paid for (qualify `sponsored` when it is an ad).
+- Local news that covered an event, not a spun “top 10 dentists” network.
+- Data aggregators / maps products you legitimately claim (Apple Business Connect, Bing Places, where they exist).
+
+Not useful / policy-hostile: automated citation blasts, PBN “local blogs,” doorway `/plumber-tehran-1` through `/plumber-tehran-80`, fake embedded-map directories.
+
+GBP itself is not a “backlink” you build; the website field is a pointer. Do not buy “Google Map citations.”
+
+## Why it matters
+
+A café with a chamber listing, a supplier href, and consistent NAP will usually beat a factory of geo-pages with no shop. Local prominence is partly off-site corroboration of the same entity.
+
+<CorrectExample>
+Real sponsorship, honest rel if paid, destination = the location URL:
+
+```html
+<p>
+  Neighborhood festival sponsor:
+  <a href="https://www.example.com/locations/example-st">Example Labs Café</a>
+</p>
+```
+
+If the festival sold the slot as advertising, `rel="sponsored"`. NAP on their sponsors page matches GBP.
+</CorrectExample>
+
+<IncorrectExample why="Eighty thin city URLs and paid local PBNs are doorways plus a link scheme. Maps will not save them.">
+```html
+<a href="https://www.example.com/seo-company-saadat-abad">SEO Saadat Abad</a>
+<a href="https://www.example.com/seo-company-vanak">SEO Vanak</a>
+```
+
+Each page is three sentences and a stuffed H1. Plus 200 “citation” submissions to sites that do not list businesses.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Do not noindex the location URL you want cited. Yoast canonical must be that branch.
+2. Yoast cannot submit citations. Spreadsheet + humans.
+
+**Rank Math**
+
+1. Rank Math redirections: 301 old neighborhood URLs after a move. Do not 301 every city doorway onto `/` and call it local SEO.
+2. Instant Indexing a doorway template does not make it a location.
+
+**AIOSEO**
+
+1. AIOSEO Local: one location post per **real** branch. Cloning the CPT for keywords is the doorway pattern.
+2. Disable XML sitemap inclusion for those clones if you already shipped them and are killing them (`noindex` + drop from sitemap, then 301/410).
+
+**Feature gap:** No plugin buys local links. SEOPress / Yoast / Rank Math / AIOSEO will all sitemap a doorway CPT if you ask. The gap is IA, not a missing “citation booster.”
+
+## Code implementation
+
+```tsx
+export default function LocationPage({ nearby }: { nearby: { href: string; label: string }[] }) {
+  return (
+    <main>
+      <h1>Example Labs Café</h1>
+      <p>12 Example St</p>
+      <nav aria-label="Related">
+        {nearby.map((n) => (
+          <a key={n.href} href={n.href}>
+            {n.label}
+          </a>
+        ))}
+      </nav>
+    </main>
+  );
+}
+```
+
+App Router: internal links to real hubs (menu, booking), not to generated city siblings. Pages Router: same. `generateStaticParams` should list **stores**, not every string in a city CSV.
+
+Outbound to partners: normal `href` if editorial; `rel="sponsored"` if you paid (Module 04).
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Citation volume” from Fiverr packs as a local ranking lever.
+- **DEPRECATED:** Exact-match `city + keyword` domains as the local strategy (they become doorways).
+- Reciprocal “local partners” pages that are just link farms.
+- Embedding a map and calling it a citation.
+- Using Module 04 PBN tactics with “local” in the article title.
+
+## Senior / production notes
+
+Prioritize **unlinked mentions in local press** the same way as Module 04: one ask for a URL. Civic and university hosts move slowly and last.
+
+Multi-location brands: each store’s citations should use **that** store’s NAP, not HQ mashed with a city keyword.
+
+If you operate where Google Maps is weak, local links still help users and Bing/Apple/map peers. Do not invent GBP-only KPIs that the market cannot support.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Referring hosts | Chamber, press, partners | Citation-blast junk |
+| Location URL | `200`, in sitemap, cited | Doorway clones ranking instead |
+| Anchors | Brand + URL | Only “best [service] [city]” |
+| GBP website field | Same canonical location | Random city landing |

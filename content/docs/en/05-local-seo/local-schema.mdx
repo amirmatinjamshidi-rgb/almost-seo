@@ -1,0 +1,152 @@
+---
+title: Local schema
+description: LocalBusiness JSON-LD that matches the real NAP and GBP — types, geo, hours, and the markup that gets ignored or treated as spam.
+module: 05-local-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**LocalBusiness** (or a subtype: `CafeOrCoffeeShop`, `Dentist`, `HardwareStore`, …) in JSON-LD describes the entity on the page. Google documents this under structured data for local businesses. Markup is a **hint**. It will not create a GBP listing or a map pack by itself.
+
+Required honesty:
+
+- `@type` matches what you are, not the type with the “best” rich result rumor.
+- `name`, `address`, `telephone` match NAP and GBP (previous topics).
+- `geo` (`GeoCoordinates`) is the real pin, not a competitor’s door.
+- `openingHoursSpecification` matches the door and GBP. Do not leave stale hours in JSON-LD.
+- `url` is the canonical location (or home for a single-location site).
+- `sameAs` can include the Maps / profile URL you control, plus real social profiles.
+
+Multiple locations: **one LocalBusiness per location page**, not one blob with three addresses. A parent `Organization` may `department` or simply link to branches.
+
+`AggregateRating` only with visible reviews (review-management topic).
+
+## Why it matters
+
+Wrong types and leftover hours are how rich results fail or how Googlebot sees a different shop than Maps. Consistent markup makes the entity easier to join. It is not a local ranking cheat code.
+
+<CorrectExample>
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  "name": "Example Labs Café",
+  "url": "https://www.example.com/locations/example-st",
+  "telephone": "+982155550101",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "12 Example St",
+    "addressLocality": "Tehran",
+    "postalCode": "12345",
+    "addressCountry": "IR"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 35.7219,
+    "longitude": 51.3347
+  },
+  "openingHoursSpecification": [{
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Saturday","Sunday","Monday","Tuesday","Wednesday"],
+    "opens": "08:00",
+    "closes": "18:00"
+  }]
+}
+</script>
+```
+
+Coordinates are **this** café. Hours match GBP. No fake rating.
+</CorrectExample>
+
+<IncorrectExample why="Restaurant type on an SEO agency, HQ geo on every city page, and invented stars: markup the spam policies already cover as misleading.">
+```json
+{
+  "@type": "Hospital",
+  "name": "Best SEO Tehran",
+  "geo": { "latitude": 0, "longitude": 0 },
+  "aggregateRating": { "ratingValue": "5", "reviewCount": "9999" }
+}
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast Local SEO / Organization: choose the Schema.org type that matches. Output in page source — confirm one LocalBusiness, not Yoast + theme + another plugin.
+2. Disable duplicate schema from page builders.
+
+**Rank Math**
+
+1. Rank Math → Schema → Local Business / the location post type. Set geo from a real map click, not a default 0,0.
+2. Rank Math + AIOSEO together = duplicate graphs. One emitter.
+
+**AIOSEO**
+
+1. AIOSEO Local schema. Maps embed should use the same coordinates as JSON-LD.
+2. “Enhanced” location schema that adds ratings: only if reviews are on the page.
+
+**Feature gap:** Rank Math and AIOSEO expose more local fields in the free-ish UI. Yoast splits Local into an add-on. SEOPress Local Business is competent; still one graph. Google’s Rich Results Test / URL Inspection beats any plugin preview.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+import { nap } from "@/lib/nap";
+
+export const metadata: Metadata = {
+  title: "Example Labs Café — Example St",
+};
+
+export const localBusiness = {
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  name: nap.name,
+  url: "https://www.example.com/locations/example-st",
+  telephone: nap.telephone,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: nap.street,
+    addressLocality: nap.locality,
+    postalCode: nap.postalCode,
+    addressCountry: "IR",
+  },
+  geo: { "@type": "GeoCoordinates", latitude: 35.7219, longitude: 51.3347 },
+};
+```
+
+App Router: pass `localBusiness` into the site’s `JsonLd` component on that route only. Pages Router: same, or `next/head`. Do not emit LocalBusiness on `/blog/how-to-make-espresso`.
+
+Use the same `nap` module as NAP consistency. Geo constants in git with a comment “matches GBP pin.”
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Add LocalBusiness and you will enter the pack.”
+- **DEPRECATED:** Keyword in `name` because schema is “how Google reads the title.”
+- Multiple plugins emitting four `LocalBusiness` graphs on one URL.
+- `addressCountry` wrong (`IR` vs `Iran` vs empty) while GBP is correct — pick ISO 3166-1 alpha-2 and stick to it.
+- Copy-pasting a competitor’s Place ID / coordinates.
+- Sitewide Organization + LocalBusiness with conflicting phones.
+
+## Senior / production notes
+
+Graph design: `Organization` on the homepage, `LocalBusiness` subtypes on location URLs, `WebSite` as this encyclopedia already does. Do not flatten everything into one type.
+
+Hours: generate from the same CMS field that prints the table for humans. Split-brain hours are the #1 local markup bug after NAP drift.
+
+If you close a branch: take GBP down, `404`/`410` or 301 the page, **remove** the JSON-LD in the same release.
+
+Rich results eligibility changes; validate with Google’s tools, not a 2019 screenshot of a pack.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source / Rich Results Test | One LocalBusiness; valid | Errors; 0,0 geo; fake type |
+| NAP vs GBP | Match | Schema still old office |
+| Hours vs door | Match | JSON-LD 24/7, door closed |
+| URL Inspection | Markup on the location URL | Markup only on `/` for a chain |

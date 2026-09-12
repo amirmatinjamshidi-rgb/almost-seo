@@ -1,0 +1,131 @@
+---
+title: JavaScript SEO and rendering
+description: SSR, RSC, CSR, and Google’s Web Rendering Service — what Googlebot sees when the first HTML is an empty shell.
+module: 03-technical-seo
+topic_order: 13
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Googlebot fetches HTML, then may **render** with a headless Chromium-like pipeline (Web Rendering Service). Indexing uses the rendered DOM **plus** HTTP headers from the fetch. If the first response is `<div id="root"></div>` and the article exists only after client JS, you depend on WRS: queued, delayed, and able to fail (blocked JS, timeouts, errors).
+
+Patterns:
+
+- **SSR / RSC** — main content in the first HTML. Best default for public docs and content.
+- **SSG** — HTML at build time. Fine when URLs are known and fresh enough.
+- **CSR** — crawlable only if Google successfully renders. Fragile for money pages.
+- **Dynamic rendering** (bot-only prerender) — Google’s own guidance has moved away from this as a long-term strategy. Prefer real SSR.
+
+`robots.txt` must allow the JS/CSS Google needs. `noindex` in the first HTML still applies even if JS later removes it (first response wins for several directives — do not flip robots after hydration).
+
+## Why it matters
+
+A React app that “looks indexed” in Chrome can be empty in URL Inspection. Ranking work on titles that only exist in `useEffect` is a technical bug.
+
+<CorrectExample>
+App Router server page: article body in the RSC payload / HTML. Client components only for tabs, search-as-you-type, charts.
+
+```tsx
+export default async function GuidePage() {
+  const guide = await getGuide();
+  return (
+    <main>
+      <h1>{guide.title}</h1>
+      <article>{guide.body}</article>
+    </main>
+  );
+}
+```
+
+URL Inspection “view crawled page” shows the H1 and article text without clicking.
+</CorrectExample>
+
+<IncorrectExample why="Googlebot’s first HTML has no main content; WRS may lag or fail; meta robots in client JS is too late.">
+```tsx
+"use client";
+import { useEffect, useState } from "react";
+
+export default function GuidePage() {
+  const [html, setHtml] = useState("");
+  useEffect(() => {
+    fetch("/api/guide").then((r) => r.text()).then(setHtml);
+  }, []);
+  return <div id="root" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast prints canonical and robots in PHP HTML. If a page builder hydrates the title only in JS, Yoast cannot save you.
+2. Keep the_content in the initial HTML.
+
+**Rank Math**
+
+1. Schema in `application/ld+json` in the first HTML — good. Schema injected after React mount — weaker.
+2. Instant Indexing does not render the page for Google.
+
+**AIOSEO**
+
+1. Same: head tags server-side.
+2. Disable front-end apps that replace the post body with a client router.
+
+**Feature gap:** Headless WP (REST/GraphQL + Next) is a Next.js rendering problem, not a Yoast toggle. SEOPress output in the PHP response is equivalent. Builders that ship an empty app shell fail all four plugins.
+
+## Code implementation
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Espresso machines",
+  robots: { index: true, follow: true },
+};
+
+export default async function Page() {
+  const article = await getArticle();
+  return (
+    <article>
+      <h1>{article.title}</h1>
+      {article.body}
+    </article>
+  );
+}
+```
+
+App Router: default to Server Components. `"use client"` at the page root is the smell. Stream if you must; do not wait for the browser.
+
+Pages Router: `getServerSideProps` / `getStaticProps` to HTML. `next export` CSR-only is the old trap.
+
+If you must CSR a widget, put the crawlable summary in the server HTML next to it.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Googlebot does not run JavaScript” (it does; it is still not a reason to CSR money pages).
+- **DEPRECATED:** Dynamic rendering as the recommended architecture.
+- **DEPRECATED:** Hash routes (`/#/product/1`) as indexable URLs.
+- Blocking `/_next/static` in robots.txt.
+- Putting `noindex` in initial HTML for logged-out shells that JS then “opens.”
+
+## Senior / production notes
+
+Measure **time-to-rendered-content** in Inspector, not only TTFB. WRS has a resource/time budget; infinite client fetches lose.
+
+Hydration errors that throw can leave Google with a broken DOM. Treat them as SEO bugs.
+
+For ecommerce, product data in JSON-LD plus visible HTML; JSON-LD alone with an empty body is not a strategy.
+
+This encyclopedia’s docs are MDX compiled on the server — that is the pattern to copy.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| URL Inspection crawled HTML | H1 + article present | Empty root |
+| `curl` first HTML | Main text present | Spinner only |
+| robots.txt | JS/CSS allowed | Blocked `/_next` |
+| Disable JS in Chrome | Core article still readable | Blank page |

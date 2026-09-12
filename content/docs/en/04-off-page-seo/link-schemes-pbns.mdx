@@ -1,0 +1,108 @@
+---
+title: Link schemes and PBNs
+description: What Google’s link-scheme and expired-domain policies cover — how to recognize a private blog network, and how to unwind one without making it worse.
+module: 04-off-page-seo
+topic_order: 7
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **link scheme** is any attempt to manipulate ranking with links you would not show a reviewer: buying/selling links that pass ranking credit, excessive exchanges, automated spam, compelling users to link, and scaled guest-post / insert campaigns with commercial anchors.
+
+A **PBN** (private blog network) is a set of sites you control (or rent) whose **job** is to link to money URLs. Shared footprints: recycled hosting/IP/themes, thin spun articles, expired domains with leftover inbound links, and a dashboard of “nodes.” Google’s spam policies also call out **expired-domain abuse** (repurposing a domain for its old links) and **site reputation abuse** (hosting third-party spam on a trusted host).
+
+This page is **detection and cleanup**, not a build guide. Module 14 covers related myths. If you want a network, you are reading the wrong encyclopedia.
+
+## Why it matters
+
+Schemes can “work” until a classifier or a manual reviewer catches the footprint. Then the money site loses the links, often the rankings, sometimes a manual action. Cleanup costs more than the agency invoice.
+
+<CorrectExample>
+Inherited a site. Audit finds 80 similar WordPress blogs all linking with the same exact-match anchor. You stop paying the vendor, request removals, disavow residue (previous topic), and keep creating assets people cite on their own.
+
+```txt
+# placement log excerpt
+2024-03 vendor-x  guest-post  paid  no rel=sponsored  TARGET /best-vpn
+2024-03 vendor-x  guest-post  paid  no rel=sponsored  TARGET /best-vpn
+```
+
+Legal keeps the invoices. SEO keeps the log. No new inserts.
+</CorrectExample>
+
+<IncorrectExample why="Building or buying a PBN is a spam policy violation. Expired domains 301ing into a money URL are called out as expired-domain abuse.">
+```html
+<!-- do not do this -->
+<a href="https://money.example/best-casino">best casino bonus</a>
+```
+
+Copied across dozens of aged domains you just registered, 301s from old newspapers into `/best-casino`, and sitewide footer links. “We’ll nofollow later if we get caught” is not a strategy.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast on a PBN node will happily print perfect canonicals. That does not legalize the network.
+2. If you are the **money site**: do not `noindex` real pages while a cloaked version is shown to Googlebot (cloaking — Module 14).
+
+**Rank Math**
+
+1. Rank Math Redirections on a freshly attached expired domain pointing everything to a casino URL is the abuse pattern. Do not.
+2. Instant Indexing those nodes faster does not help you.
+
+**AIOSEO**
+
+1. Same redirect warning.
+2. If you manage a *legitimate* multi-site (real brands), keep separate organizations, separate content teams, and links only when editorial. Multisite ≠ PBN.
+
+**Feature gap:** Plugins cannot detect “this WordPress install is node 14.” SEOPress, Yoast, Rank Math, AIOSEO all work equally well as PBN plumbing — that is not a feature. Hosting and process are the control.
+
+## Code implementation
+
+Do **not** automate outbound link graphs between properties you control for ranking. If you run several *real* products, links should be ordinary editorial or navigation with honest copy:
+
+```tsx
+export function RealProductNav() {
+  return (
+    <nav aria-label="Products">
+      <a href="https://www.example.com/">Example Labs</a>
+      <a href="https://docs.example.com/">Docs</a>
+    </nav>
+  );
+}
+```
+
+App Router `proxy.ts` / middleware that swaps links or HTML for `Googlebot` is cloaking. Pages Router `_middleware` same. Never ship UA-based extra anchors.
+
+Cleanup engineering: remove hidden template links, revert theme footers, drop the expired-domain 301 map, serve `410` on spun posts you are killing.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “PBNs work if the footprints are unique enough.” Uniqueness is not a policy exemption.
+- **DEPRECATED:** `nofollow` on the money-site sidebar as a way to run the network “safely.”
+- **DEPRECATED:** Disavow as a planned phase of a paid-link campaign.
+- Reciprocal three-way links as a loophole.
+- Hosting casino/pharma articles on a news domain you rent (site reputation abuse).
+- Calling the network “digital PR” in the invoice.
+
+## Senior / production notes
+
+Due diligence on agencies: ask for **live URLs**, not screenshots; check WHOIS/hosting overlap; search unique sentence fingerprints. If they will not show placements before a large retainer, walk away.
+
+If you already ran a scheme: stop → document → remove what you control → request third-party removals → disavow the rest → request manual-action review if one exists. Do not 301 the PBN nodes onto the money site (that concentrates the problem).
+
+New owners: a “strong backlink profile” on a cheap expired domain is a liability until proven otherwise.
+
+This encyclopedia will not list footprints to evade. Reviewers already have them.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Referring hosts | Diverse real publishers | Same theme/IP/CMS cluster |
+| Anchors | Mixed, branded, URL | Only “best [money keyword]” |
+| GSC manual actions | Clean | Unnatural links |
+| Expired domains | Not 301ing into money URLs | Newspaper → casino |
+| Your templates | No hidden sitewide money hrefs | Footer network |

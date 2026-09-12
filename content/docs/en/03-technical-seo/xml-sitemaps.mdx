@@ -1,0 +1,106 @@
+---
+title: XML sitemaps
+description: What belongs in a sitemap, how lastmod should behave, and how Next.js and WordPress should emit URL lists Google can trust.
+module: 03-technical-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+An XML sitemap is a **hint list** of canonical URLs you want discovered. Google does not promise to crawl or index every loc. A good sitemap is:
+
+- Only **indexable** URLs: `200`, not `noindex`, not canonicalized to someone else, not login-walled.
+- **Absolute** `https` URLs on the preferred host.
+- Split with a **sitemap index** when you exceed 50,000 URLs or 50 MB uncompressed (the documented limits).
+- `lastmod` only when it reflects a real change to that URL’s content, in W3C datetime.
+
+`priority` and `changefreq` are effectively ignored by Google. Do not spend engineering on them.
+
+Images/video/news sitemap extensions exist when those content types are first-class. A generic URL sitemap is the default.
+
+## Why it matters
+
+Sitemaps are how large sites tell Googlebot about URLs with weak internal links (new articles, deep products). A polluted sitemap trains Google that your loc list is junk and slows discovery of what you actually care about.
+
+<CorrectExample>
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.example.com/guides/espresso-machines</loc>
+    <lastmod>2026-09-01</lastmod>
+  </url>
+</urlset>
+```
+
+`robots.txt` contains `Sitemap: https://www.example.com/sitemap.xml`. GSC sitemap report shows submitted = indexed in a sensible ratio, not 2 million submitted / 40 thousand indexed.
+</CorrectExample>
+
+<IncorrectExample why="You advertised 404s, parameter junk, and noindex URLs as the site’s official inventory.">
+Sitemap includes `/page?id=1&session=abc`, HTTP and HTTPS duplicates, URLs that `301` elsewhere, and 12,000 tag archives you noindexed in the plugin yesterday but forgot to rebuild.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Site features → XML sitemaps on. Root is usually `/sitemap_index.xml`.
+2. Search Appearance: if a type is `noindex`, Yoast should drop it from the sitemap. After bulk noindex, fetch the sitemap and confirm.
+
+**Rank Math**
+
+1. Sitemap Settings per type. Exclude empty categories.
+2. News/video sitemaps only if you are actually a news/video publisher meeting those programs’ rules.
+
+**AIOSEO**
+
+1. Sitemaps → General. Disable “include all images” if attachments are not landing pages.
+2. HTML sitemap is not a substitute for XML.
+
+**Feature gap:** Yoast’s index-of-sitemaps is predictable. Rank Math/AIOSEO add extra sitemap types (news, video, RSS) that people enable “just in case.” SEOPress XML sitemaps can attach images per post; useful for image search, noise if every decorative GIF is listed.
+
+## Code implementation
+
+```ts
+import type { MetadataRoute } from "next";
+import { getIndexableUrls } from "@/lib/content";
+
+export default async function sitemap(): MetadataRoute.Sitemap {
+  const pages = await getIndexableUrls();
+
+  return pages.map((p) => ({
+    url: p.canonical,
+    lastModified: p.updatedAt,
+    alternates: p.languages,
+  }));
+}
+```
+
+Filter in `getIndexableUrls()`: published, `robots.index !== false`, canonical is self. Pages Router: custom `pages/sitemap.xml.tsx` or a generated `public/sitemap.xml` in CI. Do not commit a stale static sitemap for a daily publisher.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** `priority` / `changefreq` as ranking or crawl knobs.
+- **DEPRECATED:** “If it is in the sitemap, it will be indexed.”
+- Listing both `www` and apex, or trailing-slash and non-slash variants.
+- `lastmod` stamped `now()` on every rebuild so Google learns to ignore it.
+- Sitemap only on staging, forgotten in prod robots.txt.
+
+## Senior / production notes
+
+Partition sitemaps by type (`/sitemap-guides.xml`, `/sitemap-products.xml`) so GSC can show which template fails. When you noindex a section, **remove it the same release** — sitemap and robots meta must ship together.
+
+For hreflang sites, either list each locale URL with `xhtml:link` alternates (as this encyclopedia’s `app/sitemap.ts` does) or submit per-locale sitemaps and keep them symmetric. Do not list only `en` and hope `fa` is discovered.
+
+News sitemaps have a freshness window; do not dump year-old articles there.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC Sitemaps | Fetched; submitted URLs are ones you want | “Couldn’t fetch”; massive discovered-not-indexed |
+| Sample 20 locs | All `200`, self-canonical, indexable | 3xx/4xx/noindex in the sample |
+| robots.txt | `Sitemap:` line present | Line missing or HTTP URL |
+| Diff vs last release | lastmod moved only on edited URLs | Entire file lastmod today |

@@ -1,0 +1,131 @@
+---
+title: سئوی جاوااسکریپت و رندر
+description: SSR، RSC، CSR و Web Rendering Service گوگل — وقتی HTML اول پوستهٔ خالی است Googlebot چه می‌بیند.
+module: 03-technical-seo
+topic_order: 13
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Googlebot HTML را می‌گیرد، بعد ممکن است با پایپلاین شبیه Chromium هدلس **رندر** کند (Web Rendering Service). ایندکس از DOM رندرشده **به‌علاوهٔ** هدر HTTP همان fetch استفاده می‌کند. اگر پاسخ اول `<div id="root"></div>` باشد و مقاله فقط بعد از JS کلاینت وجود داشته باشد، به WRS وابسته‌ای: صف، تأخیر، و امکان شکست (JS بسته‌شده، timeout، خطا).
+
+الگوها:
+
+- **SSR / RSC** — محتوای اصلی در HTML اول. بهترین پیش‌فرض برای داک و محتوای عمومی.
+- **SSG** — HTML هنگام بیلد. وقتی URLها معلوم‌اند و به‌اندازه تازه، خوب است.
+- **CSR** — فقط اگر گوگل موفق رندر کند قابل crawl است. برای صفحهٔ پول‌ساز شکننده.
+- **Dynamic rendering** (prerender فقط برای بات) — راهنمای خود گوگل از این به‌عنوان استراتژی بلندمدت فاصله گرفته. SSR واقعی را ترجیح بده.
+
+`robots.txt` باید JS/CSS لازم گوگل را allow کند. `noindex` در HTML اول حتی اگر JS بعداً بردارد هنوز اعمال می‌شود (برای چند دستور پاسخ اول می‌برد — robots را بعد از hydration عوض نکن).
+
+## چرا مهم است
+
+اپ React که در Chrome «ایندکس‌شده به‌نظر می‌رسد» می‌تواند در URL Inspection خالی باشد. کار رتبه روی title که فقط در `useEffect` است باگ تکنیکال است.
+
+<CorrectExample title="درست">
+صفحهٔ سرور App Router: بدنهٔ مقاله در payload RSC / HTML. کامپوننت کلاینت فقط برای تب، سرچ همزمان تایپ، نمودار.
+
+```tsx
+export default async function GuidePage() {
+  const guide = await getGuide();
+  return (
+    <main>
+      <h1>{guide.title}</h1>
+      <article>{guide.body}</article>
+    </main>
+  );
+}
+```
+
+«view crawled page» در URL Inspection بدون کلیک H1 و متن مقاله را نشان می‌دهد.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="HTML اول Googlebot محتوای اصلی ندارد؛ WRS ممکن است تأخیر یا شکست بخورد؛ meta robots در JS کلاینت دیر است.">
+```tsx
+"use client";
+import { useEffect, useState } from "react";
+
+export default function GuidePage() {
+  const [html, setHtml] = useState("");
+  useEffect(() => {
+    fetch("/api/guide").then((r) => r.text()).then(setHtml);
+  }, []);
+  return <div id="root" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast canonical و robots را در HTML پی‌اچ‌پی چاپ می‌کند. اگر صفحه‌ساز title را فقط در JS hydrate کند، Yoast نجاتت نمی‌دهد.
+2. `the_content` را در HTML اولیه نگه دار.
+
+**Rank Math**
+
+1. schema در `application/ld+json` در HTML اول — خوب. schema بعد از mount ریکت — ضعیف‌تر.
+2. Instant Indexing صفحه را برای گوگل رندر نمی‌کند.
+
+**AIOSEO**
+
+1. همان: تگ head سمت سرور.
+2. اپ فرانت که بدنهٔ پست را با روتر کلاینت عوض می‌کند خاموش کن.
+
+**جا خالی واقعی:** WP هدلس (REST/GraphQL + Next) مشکل رندر Next.js است، نه toggle یواست. خروجی SEOPress در پاسخ PHP معادل است. بیلدری که app shell خالی می‌فرستد هر چهار پلاگین را شکست می‌دهد.
+
+## پیاده‌سازی کد
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Espresso machines",
+  robots: { index: true, follow: true },
+};
+
+export default async function Page() {
+  const article = await getArticle();
+  return (
+    <article>
+      <h1>{article.title}</h1>
+      {article.body}
+    </article>
+  );
+}
+```
+
+App Router: پیش‌فرض Server Component. `"use client"` در ریشهٔ صفحه بو است. اگر لازم است stream کن؛ منتظر مرورگر نمان.
+
+Pages Router: `getServerSideProps` / `getStaticProps` به HTML. `next export` فقط-CSR تلهٔ قدیمی است.
+
+اگر ویجت باید CSR باشد، خلاصهٔ قابل crawl را در HTML سرور کنارش بگذار.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «Googlebot جاوااسکریپت اجرا نمی‌کند» (می‌کند؛ هنوز دلیل CSR صفحهٔ پول‌ساز نیست).
+- **DEPRECATED:** dynamic rendering به‌عنوان معماری توصیه‌شده.
+- **DEPRECATED:** مسیر hash (`/#/product/1`) به‌عنوان URL ایندکس‌پذیر.
+- بستن `/_next/static` در robots.txt.
+- گذاشتن `noindex` در HTML اولیه برای پوستهٔ logged-out که JS بعد «باز» می‌کند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+**زمان تا محتوای رندرشده** را در Inspector اندازه بگیر، نه فقط TTFB. WRS بودجهٔ منبع/زمان دارد؛ fetch کلاینت بی‌نهایت می‌بازد.
+
+خطای hydration که throw کند می‌تواند DOM شکسته‌ای برای گوگل بگذارد. SEO باگ حسابش کن.
+
+برای فروشگاه، دادهٔ محصول در JSON-LD به‌علاوهٔ HTML دیدنی؛ JSON-LD تنها با بدنهٔ خالی استراتژی نیست.
+
+داک همین دانشنامه MDX کامپایل‌شده روی سرور است — همان الگو را کپی کن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| HTML crawlشده در URL Inspection | H1 + مقاله هست | root خالی |
+| HTML اول `curl` | متن اصلی هست | فقط spinner |
+| robots.txt | JS/CSS allow | `/_next` بسته |
+| خاموش کردن JS در Chrome | مقالهٔ اصلی هنوز خواناست | صفحهٔ خالی |

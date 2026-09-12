@@ -1,0 +1,133 @@
+---
+title: ویژگی لینک
+description: "nofollow، sponsored، ugc — hint نه سوییچ — و کی لینک پولی یا کاربرساخته باید qualify شود."
+module: 04-off-page-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+`rel` روی انکر به خزنده می‌گوید **با آن لینک چه کند**. توکن فعلی گوگل برای این کار:
+
+- **`nofollow`** — «این را endorsement حساب نکن.» گوگل ممکن است هنوز URL را برای کشف استفاده کند.
+- **`sponsored`** — جاگذاری پولی، تبلیغ، افیلیت: پول (یا ارزش معادل) روی لینک اثر داشته.
+- **`ugc`** — محتوای کاربرساخته: کامنت، فروم، دفترچهٔ مهمان.
+
+می‌شود توکن‌ها را ترکیب کرد (`rel="nofollow sponsored"`). گوگل این‌ها را **hint** می‌داند، نه دستور سخت سبک robots. این **معنی‌اش این نیست** که روی لینک پولی ولشان کنی. سیاست اسپم هنوز می‌خواهد لینک تبلیغ qualify شود.
+
+`rel="follow"` توکن واقعی نیست. مرورگر و گوگل پیش‌فرض لینک عادی‌اند. مردم در دک می‌نویسندش.
+
+`<meta name="robots" content="nofollow">` سطح صفحه چکش دیگری است (ماژول ۰۳). کل مقاله را nofollow نکن تا «PageRank ذخیره شود.»
+
+لینک داخلی: تقریباً هیچ‌وقت `nofollow`. کشف می‌خواهی.
+
+## چرا مهم است
+
+لینک پولی unqualified همان link scheme است حتی اگر مقاله قشنگ باشد. nofollow کردن افراطی همهٔ URL خروجی سایت خودت «PageRank مجسمه» نمی‌سازد؛ فقط دربارهٔ ارجاعی که پشتش ایستادی دروغ می‌گوید.
+
+<CorrectExample title="درست">
+واحد افیلیت و تبلیغ رابطه را اعلام می‌کنند:
+
+```html
+<a href="https://partner.example/espresso" rel="sponsored">
+  Buy the machine we tested
+</a>
+
+<a href="https://ads.example/click/123" rel="nofollow sponsored">
+  Advertiser
+</a>
+```
+
+کامنت:
+
+```html
+<a href="https://random-user.example" rel="ugc nofollow">user site</a>
+```
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="گست‌پست پولی با انکر تجاری exact-match و بدون rel qualifying مسئلهٔ سیاست اسپم است، نه تاکتیک «خاکستری.»">
+```html
+<p>
+  For the
+  <a href="https://www.example.com/best-vpn-deal">best VPN deal</a>
+  this week, see our partner.
+</p>
+```
+
+فاکتور در پرونده. `rel` خالی.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. UI لینک هستهٔ WP / Gutenberg: روی لینک پولی خروجی `sponsored` یا `nofollow` بگذار. Yoast خودکار URL افیلیت را qualify نمی‌کند.
+2. با پلاگین اضافه ذهنیت «همهٔ لینک خارجی nofollow» راه ننداز. ارجاع editorial که *منظورت* است باید لینک عادی بماند.
+3. `ugc` کامنت: WP اغلب روی URL نویسندهٔ کامنت `nofollow` می‌گذارد. نگه دار.
+
+**Rank Math**
+
+1. Rank Math ← General Settings ← Links: «Nofollow All External Links» سوییچ کند است. همان ارجاعی که می‌خواستی به خبرنگار بدهی را هم nofollow می‌کند. خاموش بگذار؛ استثنا را per لینک بزن.
+2. Rank Math در ادیتور `nofollow` اضافه می‌کند. برای تبلیغ، نه برای هر href.
+
+**AIOSEO**
+
+1. گزینهٔ سراسری nofollow-external در بعضی نسخه‌ها — همان footgun.
+2. بلوک افیلیت / تبلیغ پلاگین دیگر باید هنوز `sponsored` بدهد. AIOSEO `echo $affiliate` سفارشی را نمی‌فهمد.
+
+**جا خالی واقعی:** nofollow سراسری Rank Math راه آسان خراب کردن ارجاع خروجی صادق است. Yoast ساکت‌تر است. SEOPress می‌تواند `sponsored`/`ugc` در UI لینک بگذارد؛ باز کار per لینک است. هیچ‌کدام فوتر قالب را برای لینک تبلیغ شبیه unpaid اسکن نمی‌کنند.
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+
+export function AffiliateCta({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} rel="sponsored" target="_blank">
+      {label}
+    </Link>
+  );
+}
+
+export function CommentAuthorUrl({ href, name }: { href: string; name: string }) {
+  return (
+    <a href={href} rel="ugc nofollow">
+      {name}
+    </a>
+  );
+}
+```
+
+App Router: `next/link` مقدار `rel` را پاس می‌دهد. برای hop کاملاً خارجی `<a>` کافی است. Pages Router: همان `rel` روی `<a>` یا `Link`.
+
+`rel` را در `useEffect` بعد از paint حساب نکن. HTML اول باید URL پولی را qualify کرده باشد (Googlebot و کاربر).
+
+Markdown همین دانشنامه: `rel` فقط وقتی مقصد پولی یا UGC است. ارجاع داک لینک عادی می‌ماند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** مجسمه‌سازی PageRank با nofollow همهٔ لینک خروجی.
+- **DEPRECATED:** `rel="follow"` به‌عنوان بوستر رتبه.
+- **DEPRECATED:** «گوگل nofollow را کامل نادیده می‌گیرد پس sponsored را ول کن.» hint هنوز برای سیاست مهم است.
+- qualify در کپی دیدنی («تبلیغ») ولی `href` خام برای Googlebot — ناسازگار، هنوز ریسک.
+- `nofollow` روی pagination داخلی برای «غلیظ کردن juice.»
+
+## نکته‌های سطح بالا / پروداکشن
+
+مدل CMS: `linkKind: editorial | sponsored | ugc` روی ماژولی که href رندر می‌کند، بعد نگاشت به `rel`. طراح افیلیت را در rich text پیست می‌کند — هاست افیلیت شناخته‌شده بدون `sponsored` را lint کن.
+
+تبلیغ برنامه‌ای (`<ins class="adsbygoogle">`) در HTML تو `<a rel>` نیست؛ شبکهٔ تبلیغ کلیک را اداره می‌کند. لینک پولی **editorial** تو هنوز `rel` می‌خواهد.
+
+اگر سایتی با سال‌ها گست‌پست unpaid به ارث بردی، اضافه کردن `sponsored` از این به بعد تاریخ را بازنویسی نمی‌کند. همهٔ لینک ورودی که کنترل نمی‌کنی را انبوه nofollow نکن (آن disavow است، موضوع بعد).
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| view-source CTA پولی | `rel` شامل `sponsored` و/یا `nofollow` | `<a href>` لخت |
+| کامنت | `ugc` و/یا `nofollow` | follow خام روی URL کاربر |
+| سوییچ سراسری پلاگین | خاموش، مگر استثنای مستند | کل سایت خروجی را nofollow می‌کند |
+| قالب افیلیت | HTML اول `rel` دارد | `rel` در JS کلاینت اضافه می‌شود |

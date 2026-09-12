@@ -1,0 +1,118 @@
+---
+title: NAP consistency
+description: Name, address, and phone must match across the site, GBP, and citations — formatting noise versus a different entity.
+module: 05-local-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**NAP** is Name, Address, Phone. Local systems join citations when those strings look like the same entity. They split (or distrust) when the site says `Example Labs`, GBP says `Example Lab SEO`, and a directory says a previous tenant’s number.
+
+Consistency is **semantic**, not ASCII-identical in every comma:
+
+- Same legal / public name (see GBP: no keyword stuffing).
+- Same street address and locality. Suite numbers included or omitted **the same way** everywhere you can control.
+- Same primary phone in E.164 or a single national format you pick and reuse (`+98 21 …` vs `021-…` — pick one public form).
+- Tracking numbers: if marketing needs a unique DNI number, keep a **published primary** NAP on the location page, schema, and GBP. Do not let every landing page invent a new “main” line.
+
+Old addresses after a move must 301 the old location URL and get updated in GBP and major citations. Leftover NAP is a second business.
+
+## Why it matters
+
+Mismatched NAP is how you run two “almost” entities. The pack may show the wrong pin, the wrong phone, or a competitor who kept the old number. This is data hygiene, not a ranking hack.
+
+<CorrectExample>
+One source of truth (CMS), reused in footer, location page, schema, and the GBP fields you type by hand:
+
+```txt
+Example Labs Café
+12 Example St, District 3
++98 21 5555 0101
+```
+
+Footer, `LocalBusiness` JSON-LD, and GBP use that triple. Campaign pages may append UTM; they do not change the visible address.
+</CorrectExample>
+
+<IncorrectExample why="Three names and two phones teach systems you are not one business. Call tracking as the only number on the homepage makes citations diverge.">
+```txt
+Header: Example Labs SEO Agency Tehran
+Footer: Exmpl Lab, 12 Exampl Street
+GBP: Best Café SEO | 0912-000-0000
+Schema: a PO Box in another city
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast Local / Organization: fill name, address, phone once. Put the widget or shortcode in the footer so the theme does not hardcode a second NAP.
+2. After a move, update Yoast **and** every classic-editor page that pasted the old block.
+
+**Rank Math**
+
+1. Rank Math Local SEO: business address and phone. Multiple locations = multiple NAP records, not one mashed string.
+2. Rank Math knowledge graph phone must match GBP.
+
+**AIOSEO**
+
+1. AIOSEO Local SEO locations. Disable leftover “default location” if it still holds the old office.
+2. Themes with a Customizer phone field will fight the plugin — one winner.
+
+**Feature gap:** Rank Math and AIOSEO make multi-location NAP easier in-plugin. Yoast wants Local SEO add-on. SEOPress Local Business is a single form unless you duplicate posts. None of them update Yelp, Apple Maps, or Iranian directories for you. Spreadsheet + owners still win.
+
+## Code implementation
+
+```ts
+export const nap = {
+  name: "Example Labs Café",
+  street: "12 Example St",
+  locality: "Tehran",
+  postalCode: "12345",
+  telephone: "+982155550101",
+} as const;
+
+export function NapBlock() {
+  return (
+    <address>
+      <strong>{nap.name}</strong>
+      <br />
+      {nap.street}, {nap.locality} {nap.postalCode}
+      <br />
+      <a href={`tel:${nap.telephone}`}>{nap.telephone}</a>
+    </address>
+  );
+}
+```
+
+App Router: import `nap` into the location page, footer, and JSON-LD (next topic). Pages Router: same module, no copy-paste. Do not read NAP from `process.env` in the client only — first HTML must contain it.
+
+International: `/fa/` and `/en/` may translate labels; do not translate the street number into a different building.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Citations must be character-identical including `St.` vs `Street` or you get a penalty.” Normalize what you control; do not panic over a directory’s formatter.
+- **DEPRECATED:** Hundreds of low-quality directory submissions as the main local tactic.
+- Embedding a Map iframe with a **different** query than your NAP.
+- Suite-less GBP + suite-only schema.
+- Leaving WhatsApp-only as the phone in schema when GBP has a landline (or the reverse) with no explanation.
+
+## Senior / production notes
+
+Ops: NAP lives in git or CMS, not in a designer’s Figma file. Moves get a checklist: GBP, site, schema, Google Ads location extensions, Apple Business Connect if you use it, top citations.
+
+Call tracking: provision numbers as `additional` in schema only if you still publish `telephone` as the stable line. Privacy: do not put a personal mobile in JSON-LD if the public line is a desk number.
+
+Multi-location: each branch a record. Never concatenate “Tehran / Isfahan / Shiraz” into one `address` field.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Site vs GBP vs schema | Same name, street, primary phone | Slogan name / old office |
+| `tel:` href | Matches visible number | `tel:` to a dead campaign line |
+| Crawl of templates | One NAP module | Hardcoded strays in old posts |
+| Move | Old URL 301; GBP updated | Two pins, two phones |

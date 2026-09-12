@@ -1,0 +1,122 @@
+---
+title: Review management
+description: Asking for honest reviews, responding in public, and the Google policies that make fake or gated stars a liability.
+module: 05-local-seo
+topic_order: 4
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Reviews on Google (and other surfaces) are **user content** about the location. They affect conversion and feed prominence. They are not a field you type into WordPress.
+
+Google’s review policies (current Business Profile / Maps guidance) forbid:
+
+- Fake reviews, including ones you write, buy, or swap.
+- **Incentivized** reviews (discounts for stars) where the policy disallows them.
+- Gating: “only happy customers get the Google link; unhappy people get a form.”
+- Reviewing your own business or pressuring staff to flood the listing.
+
+Allowed: ask customers **who already interacted** to share feedback, link to the review form without filtering by sentiment, reply publicly without threatening or stuffing keywords.
+
+Stars in schema (`AggregateRating`) must reflect a **visible, real** review system on the page. Fake 4.9 in JSON-LD is spam.
+
+## Why it matters
+
+A location with no reviews and a competitor with a trail of real ones loses the click even at equal distance. A bought-review spike can take the listing down. Reputation is ops plus policy, not a plugin score.
+
+<CorrectExample>
+After a paid visit, the receipt or SMS points at the official GBP review URL. No “5 stars only.” Staff replies to criticism with a fix, not with “visit our cheap SEO”:
+
+```txt
+Thanks for coming in. If you want to rate the café on Google, here is the listing.
+If something went wrong, email hello@example.com — we read that too.
+```
+
+On-site testimonials are clearly labeled, dated, and not copied into `AggregateRating` unless you actually display that average.
+</CorrectExample>
+
+<IncorrectExample why="Bought reviews, QR-for-5-stars, and keyword-stuffed owner replies violate review and spam policies. Schema 4.9 with no visible reviews is lying to Googlebot.">
+```html
+<script type="application/ld+json">
+{"@type":"LocalBusiness","aggregateRating":{"ratingValue":"4.9","reviewCount":"3840"}}
+</script>
+```
+
+Plus a vendor invoice for “50 Google reviews this month.”
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not pull GBP reviews. Do not paste fake `AggregateRating` via a snippet plugin.
+2. If you use a testimonial block, it is on-page copy, not Google Maps reviews.
+
+**Rank Math**
+
+1. Rank Math schema → reviews / rating: only if the template **shows** those reviews. Hidden JSON-LD ratings are a classic rich-result spam pattern.
+2. Rank Math “FAQ / review” modules on a location page do not replace GBP.
+
+**AIOSEO**
+
+1. AIOSEO Local / schema rating fields: same rule — visible or omit.
+2. Do not enable review schema sitewide from a dummy 5-star default.
+
+**Feature gap:** Some WordPress review-slider plugins will emit `AggregateRating` from items you typed. Yoast/Rank Math/AIOSEO/SEOPress will serialize whatever you enter. None verify against Google. The gap is policy, not UI.
+
+## Code implementation
+
+```ts
+export const locationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  name: "Example Labs Café",
+  url: "https://www.example.com/locations/example-st",
+  telephone: "+982155550101",
+  // omit aggregateRating unless reviews render in HTML
+};
+
+export function ReviewAsk() {
+  return (
+    <p>
+      <a href="https://search.google.com/local/writereview?placeid=YOUR_PLACE_ID">
+        Review us on Google
+      </a>
+    </p>
+  );
+}
+```
+
+App Router: Place ID from GBP, not guessed. Pages Router: same link, server-rendered. Do not `useEffect`-swap the href after you detect a low star (gating).
+
+Never fetch a “buy reviews” API. If you show first-party reviews, store them in your DB with dates and render HTML + matching JSON-LD.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “More reviews always rank you #1 in the pack” as a standalone lever (distance and relevance still exist).
+- **DEPRECATED:** Filtering unhappy customers to a Google form and happy ones to Maps.
+- Keyword stuffing in owner responses (`best plumber Vanak`).
+- Buying reviews on Telegram / freelancer sites.
+- Copying competitors’ review text.
+- Schema stars without on-page reviews.
+
+## Senior / production notes
+
+Process: train staff on **when** to ask (after service), not on a quota of five-star screenshots. Escalations go to a human, not to a “we will report you” reply on Maps.
+
+Multi-location: each Place ID has its own reviews. Do not paste Branch A’s quotes onto Branch B.
+
+Legal: defamation and takedown have their own paths; fake a review report in GBP when it truly breaks policy, not when it is merely a 2-star.
+
+YMYL locals (clinics, lawyers): incentivized reviews are extra radioactive.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GBP reviews | Real names, mixed dates, mixed stars | Burst of 5-stars same week, same prose |
+| Ask flow | Same URL for everyone | Gating by sentiment |
+| JSON-LD | No rating, or rating matches visible HTML | 4.9 / thousands, empty page |
+| Owner replies | Human, on-topic | Keyword spam |

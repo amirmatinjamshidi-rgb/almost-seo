@@ -1,0 +1,121 @@
+---
+title: robots.txt
+description: robots.txt چه می‌تواند و چه نمی‌تواند — allow، disallow، اشاره‌گر sitemap — و اشتباه پروداکشنی که کل سایت را مخفی می‌کند.
+module: 03-technical-seo
+topic_order: 3
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+`robots.txt` از ریشهٔ **هاست** fetch می‌شود (`https://www.example.com/robots.txt`). به خزندهٔ سازگار می‌گوید کدام مسیر را **درخواست** کند. سیستم کنترل دسترسی نیست و deindex قابل اعتماد هم نیست.
+
+پارسر robots.txt گوگل (spec فعلی، مبتنی بر استاندارد IETF) از `User-agent`، `Allow`، `Disallow`، `Sitemap` پشتیبانی می‌کند. `Allow` / `Disallow` prefix match هستند؛ قانون طولانی‌تر / مشخص‌تر می‌تواند override کند. `Crawl-delay` دستور Googlebot نیست.
+
+اگر Googlebot disallow باشد، URL را **fetch نمی‌کند**. ممکن است هنوز از روی لینک **ایندکس** شود، با اسنیپت کم یا هیچ. وقتی می‌خواهی از ایندکس بیرون برود، `noindex` (meta یا `X-Robots-Tag`) روی URL قابل crawl بگذار.
+
+`robots.txt` باید `200` با `text/plain` باشد. `404` یعنی «محدودیتی نیست.» `503` روی robots.txt می‌تواند crawl هاست را نگه دارد.
+
+## چرا مهم است
+
+یک `Disallow: /` جامانده از استیجینگ سریع‌ترین راه افتادن سایت از Search است. برعکس، نبستن تلهٔ crawl (ادمین، فیلتر، سرچ بی‌نهایت) بودجه را می‌سوزاند و duplicate می‌سازد.
+
+<CorrectExample title="درست">
+```txt
+# https://www.example.com/robots.txt
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /*?*sort=
+
+User-agent: *
+Allow: /
+
+Sitemap: https://www.example.com/sitemap.xml
+```
+
+استیجینگ HTTP auth یا هاست جدا با robots.txtی که `Disallow: /` است **و** HTMLاش `noindex`. پروداکشن آن فایل را کپی نمی‌کند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot نمی‌تواند crawl کند، پس noindex هیچ‌وقت اجرا نمی‌شود؛ URL ممکن است به‌عنوان listing روح در ایندکس بماند.">
+```txt
+User-agent: *
+Disallow: /
+
+# به‌علاوه هر صفحه <meta name="robots" content="noindex"> هم دارد
+# که Googlebot هیچ‌وقت نمی‌بیند
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast می‌تواند robots.txt مجازی بنویسد (Tools ← File editor) یا فایل فیزیکی نگه می‌داری. هر دو را با قانون متناقض هم‌زمان نگذار.
+2. `noindex` پر URL در Yoast **robots.txt نیست**. قاطی‌شان نکن.
+
+**Rank Math**
+
+1. Rank Math ← General Settings ← Edit robots.txt. همان ریسک تضاد اگر Apache/nginx هم فایل بدهد.
+2. Instant Indexing API ربطی به robots.txt ندارد.
+
+**AIOSEO**
+
+1. Tools ← Robots.txt. خروجی ادغام‌شده را قبل از ذخیره ببین.
+2. Toggleهای «block search tools» ممکن است `Disallow`ی بگذارند که نخواستی — فایل تولیدشده را بخوان.
+
+**جا خالی واقعی:** هر سه UI robots.txt می‌سازند. هیچ‌کدام جلوی فرستادن قانون استیجینگ را نمی‌گیرند. SEOPress ← Tools ← robots.txt همان کلاس ادیتور است. همیشه پروداکشن را `curl` کن.
+
+## پیاده‌سازی کد
+
+```ts
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  if (process.env.VERCEL_ENV !== "production") {
+    return { rules: { userAgent: "*", disallow: "/" } };
+  }
+
+  return {
+    rules: [
+      {
+        userAgent: "Googlebot",
+        allow: "/",
+        disallow: ["/api/", "/cart", "/checkout"],
+      },
+      { userAgent: "*", allow: "/" },
+    ],
+    sitemap: "https://www.example.com/sitemap.xml",
+  };
+}
+```
+
+در App Router اگر هر دو باشند `app/robots.ts` بر `public/robots.txt` می‌برد — یکی نگه دار. Pages Router: `public/robots.txt` استاتیک. هیچ‌وقت `/_next/static` یا CSS/JS لازم برای رندر را نبند.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** robots.txt به‌عنوان مرز امنیتی. راز داخل پوشهٔ «disallow» اگر لینک شود هنوز نشت می‌کند.
+- **DEPRECATED:** `Crawl-delay` برای Googlebot.
+- **DEPRECATED:** Disallow = حذف از ایندکس.
+- بستن `/wp-json/` به خیال مخفی کردن محتوا؛ جایگزین `noindex` روی آرشیو نازک نیست.
+- اشتباه wildcard: `Disallow: /tmp` بسته به قانون prefix ممکن است `/tmp-offers` را هم ببندد — با تستر robots.txt گوگل / Inspector تست کن.
+
+## نکته‌های سطح بالا / پروداکشن
+
+برند چندزیردامنه‌ای **per host** به robots.txt نیاز دارد. `cdn.example.com` و `www.example.com` فایل شریک نیستند.
+
+در مقیاس، robots.txt را از همان allowlist لبهٔ WAF بساز تا مارکتینگ `/blog` را یک جا disallow و جای دیگر allow نکند.
+
+Google-Extended و خزندهٔ AI توکن خودشان را دارند. بستنشان تصمیم محصول است، نه اهرم رتبهٔ Google Search. gist «همه بات‌ها مگر Googlebot» را کپی نکن که ابزار inspection لازم را هم می‌بندد.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| `curl -I https://www.example.com/robots.txt` | `200`، `text/plain` | `404` که فکر کردی محدودکننده است؛ `503` گیرکرده |
+| گزارش robots.txt در GSC / URL Inspection | URL پول‌ساز allow است | «Blocked by robots.txt» روی مقاله |
+| زنده در مقابل استیجینگ | استیجینگ disallow؛ پرود allow | پرود همان فایل استیجینگ است |
+| Rich Results / Inspector fetch | CSS/JS بسته نیست | صفحه نصفه رندر می‌شود |

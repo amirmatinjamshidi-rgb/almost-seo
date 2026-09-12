@@ -1,0 +1,129 @@
+---
+title: Brand mentions
+description: Linked and unlinked mentions as entity evidence — what you can ask for, what you cannot manufacture, and how sameAs should look.
+module: 04-off-page-seo
+topic_order: 5
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A **brand mention** is your name (or product name) appearing on another host, with or without an `href`. Linked mentions are citations. Unlinked mentions still feed how humans — and, to a degree, language systems — associate an entity with a topic. Google does not publish a “mention score.”
+
+What you can do honestly:
+
+- Make the **canonical name** consistent (legal name, product, language variants).
+- Publish a crawlable **About / Org** URL that other sites can cite.
+- Ask a publisher who already wrote the name to add a URL (unlinked-mention outreach).
+- Put official profiles in `sameAs` (Organization JSON-LD) so machines can join the entity.
+
+What you cannot do: spray the brand in comment spam, buy “mention packages,” or expect an unlinked forum post to replace an editorial link.
+
+Knowledge panels and entity understanding are **not** a button in Yoast. They emerge from consistency across the web plus Google’s own sources. Do not hire a vendor who “guarantees the panel.”
+
+## Why it matters
+
+If the only time the web says your name is in PBN posts, you built a scheme, not a brand. If journalists use the name without linking, you are visible to readers and still under-cited — that is an outreach gap, not a technical bug.
+
+<CorrectExample>
+Organization page plus honest `sameAs` (profiles you actually control):
+
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Example Labs",
+  "url": "https://www.example.com/",
+  "sameAs": [
+    "https://www.linkedin.com/company/example-labs",
+    "https://github.com/example-labs"
+  ]
+}
+</script>
+```
+
+A magazine writes “Example Labs” in a roundup. You email once: “If useful, the method is at https://www.example.com/research/crawl-log-study.” They may add the href. They may not.
+</CorrectExample>
+
+<IncorrectExample why="Fake citations and stuffed ‘also known as’ lists do not create an entity. They look like spam.">
+```html
+<p>
+  Example Labs Example Labs Example Labs best SEO company Tehran
+  <a href="https://www.example.com">Example Labs</a>
+</p>
+```
+
+Plus `sameAs` pointing at Wikipedia pages you do not control and social profiles that 404.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast → Search Appearance → Knowledge Graph / Organization. Fill legal name, logo, same social URLs you will put in `sameAs`.
+2. Wrong `Person` vs `Organization` for a company site splits the entity. Pick one and stick to it.
+
+**Rank Math**
+
+1. Rank Math → Titles & Meta → Local SEO / Knowledge Graph. Same fields. Do not add ten “additional” aliases that are keyword phrases.
+2. Social metadata should match the live profile URLs.
+
+**AIOSEO**
+
+1. AIOSEO → Search Appearance → Knowledge Graph. Logo aspect ratio aside, the **URL list** must 200.
+2. Do not enable every social network with `#` placeholders.
+
+**Feature gap:** All four plugins emit Organization JSON-LD. None of them create Wikipedia or news mentions. SEOPress Knowledge Graph is the same class of form. Empty `sameAs` is better than 404s.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Example Labs",
+  alternates: { canonical: "https://www.example.com/" },
+};
+
+export const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Example Labs",
+  url: "https://www.example.com/",
+  sameAs: [
+    "https://www.linkedin.com/company/example-labs",
+    "https://github.com/example-labs",
+  ],
+};
+```
+
+App Router: inject with the existing `JsonLd` component (this site does). Pages Router: `next/head` script tag with `application/ld+json`. Keep `sameAs` in one module so the footer icons and JSON-LD cannot drift.
+
+Do not generate fake review markup to “boost the brand.” That is another spam policy.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Unlinked mentions pass PageRank.” They do not pass link equity. They may still help humans and entity association.
+- **DEPRECATED:** Buying Wikipedia citations as an SEO service (ToS + policy risk).
+- Stuffing NAP on every guest post as if that were local SEO (local is Module 05).
+- Changing the public brand name every quarter and wondering why entities split.
+- Counting press-release wires as independent mentions when they are syndicated duplicates.
+
+## Senior / production notes
+
+Track mentions in two buckets: **linked** (GSC / crawlers) and **unlinked** (media monitoring). Only the first is a link-building KPI. The second is PR.
+
+Trademarks: legal take-downs of scam domains using your name are brand protection, not “negative SEO.” Do not disavow a scam host and forget to file the abuse report.
+
+Multilingual: `/en/` and `/fa/` can share one Organization `name` with `alternateName`. Do not invent two companies.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| `sameAs` URLs | All `200`, yours | 404, competitor, Wikipedia wish |
+| GSC Links vs PR list | Major hits appear | Only PBN hosts |
+| Org JSON-LD | One type, one canonical `url` | Person + Organization fighting |
+| Unlinked outreach | One polite ask | Blast “add link or else” |

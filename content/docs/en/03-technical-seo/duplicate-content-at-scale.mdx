@@ -1,0 +1,102 @@
+---
+title: Duplicate content at scale
+description: Parameters, faceted nav, HTTP variants, and printers — how duplicates arise in catalogs and how to collapse them without burning crawl.
+module: 03-technical-seo
+topic_order: 11
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Duplicate content in technical SEO is **multiple URLs returning substantially the same document**. Google picks a canonical. You can help with:
+
+- `rel=canonical` (hint).
+- **301** (stronger, when you never want the extra URL).
+- Parameter handling: do not link junk; `robots.txt` for traps; `noindex` for useful-but-not-search filters.
+- Consistent trailing slash, host, HTTPS (see other topics).
+
+This is not “Google penalizes duplicates” as a manual action by default. It is **wasted crawl, split signals, and the wrong URL in the SERP**.
+
+At scale the generators are: sort/filter query strings, session IDs, print views, tracking params, paginated views that clone page 1, UTM copies, and CMS preview URLs left public.
+
+## Why it matters
+
+A 2,000-SKU shop can emit 2 million filter URLs. Googlebot never finishes the real SKUs. Canonicals that point at themselves on every facet make it worse.
+
+<CorrectExample>
+Facet `?color=red` if it is **not** a landing page: either noindex+follow and omitted from sitemap, or 301 to the category. Self-canonical on the clean category only. Internal links in the HTML point at the clean URL. Tracking params stripped server-side or canonicalized.
+</CorrectExample>
+
+<IncorrectExample why="Every combination is indexable, self-canonical, and in the sitemap.">
+Footer dumps 50,000 “filter” links. Canonical on `?sort=price` points to itself. `rel=canonical` on page 2 points at page 1 **and** you wanted page 2 indexed — mixed intent. (If page 2 is unique, canonical should be page 2.)
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Canonical is automatic per post. Conflicts start with plugins that add `?replytocom` and archives.
+2. Disable unused archives (author, date) so they do not duplicate the blog.
+
+**Rank Math**
+
+1. Canonical can be overridden per post — people paste the homepage by mistake.
+2. Strip category / pagination canonical settings: read twice.
+
+**AIOSEO**
+
+1. Search Appearance → Advanced canonical. Do not let “no pagination canonical” and a SEO plugin fight.
+2. WooCommerce: product + product + category filters need a dedicated facet policy, not default blog canonicals.
+
+**Feature gap:** Yoast’s archive noindex defaults are conservative. Rank Math/AIOSEO expose more archive types as indexable. SEOPress WooCommerce canonicals are a separate checklist — variations vs parent product.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ color?: string }>;
+}): Promise<Metadata> {
+  const { color } = await searchParams;
+  const canonical = "https://www.example.com/guides/espresso-machines";
+
+  if (color) {
+    return { alternates: { canonical }, robots: { index: false, follow: true } };
+  }
+
+  return { alternates: { canonical } };
+}
+```
+
+App Router: never let `searchParams` create an indexable URL unless that facet is a real landing page with unique copy. Pages Router: `getServerSideProps` canonical from the clean path, ignore UTM.
+
+Trailing slash: set `skipTrailingSlashRedirect` only if you already canonicalize one way.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Duplicate content penalty” as the first diagnosis for every overlap.
+- **DEPRECATED:** `rel=canonical` as a directive Google must obey.
+- Cross-domain canonical to a site you do not control, hoping to steal ranking.
+- Canonical to a `noindex` URL or a 404.
+- Using canonical instead of a 301 when the extra URL should never exist.
+
+## Senior / production notes
+
+Write a **facet policy**: which combinations are landing pages (unique H1, copy, in sitemap, linked from hubs), which are `noindex`, which are 301, which are disallowed. Engineering implements the policy; SEO does not “set canonical in the plugin” after 8 million URLs exist.
+
+Log Googlebot vs unique canonicals. If 90% of hits are duplicates, architecture is the bug.
+
+Syndicated content: canonical to the origin if that is the contract; otherwise expect Google to choose.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Duplicate URL `curl` | Canonical / robots match policy | Self-canonical junk |
+| Sitemap | Only landing URLs | Every facet |
+| GSC duplicates / alternate | Expected clusters | Random filters winning |
+| Crawl unique vs total URLs | Ratio sane | 100× explosion |

@@ -1,0 +1,115 @@
+---
+title: Site architecture
+description: How URL hierarchy, hub pages, and click depth decide what Googlebot discovers and what users can actually find.
+module: 03-technical-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+Site architecture is the graph of URLs: what links to what, how deep money pages sit, and whether the folder names match a real information hierarchy. Googlebot discovers most URLs by following HTML links. A sitemap helps, but links carry attention. A useful default:
+
+- **Home / section hubs** collect the important children.
+- **Category → subcategory → object** (or Topic cluster → guide → supporting URL).
+- **Click depth:** important URLs reachable in few internal clicks from a crawlable hub, not only from a sitemap.
+- **One primary URL per intent.** Variants (sort, tracking params) should not become extra nodes in the graph.
+
+Flat dumps (`/p?id=18422` for every article with no hubs) and accidental trees (`/blog/2026/09/12/post` plus a duplicate `/post`) both waste crawl and split signals.
+
+## Why it matters
+
+Crawl budget, internal PageRank-like flow, and sitelinks all follow this graph. A brilliant article orphaned at depth 8 behind a parameter URL is a technical problem, not a “content quality” mystery.
+
+<CorrectExample>
+Hub that lists canonical children with real `<a href>`:
+
+```html
+<!-- https://example.com/guides -->
+<main>
+  <h1>Guides</h1>
+  <nav aria-label="Guides">
+    <ul>
+      <li><a href="/guides/espresso-machines">Espresso machines</a></li>
+      <li><a href="/guides/grinders">Grinders</a></li>
+    </ul>
+  </nav>
+</main>
+```
+
+Child canonical points at itself; parent is linked from the global nav. Screaming Frog crawl from `/` reaches both children.
+</CorrectExample>
+
+<IncorrectExample why="Googlebot and users cannot walk the tree; URLs exist only in the XML sitemap or in JavaScript routers with no crawlable href.">
+```html
+<script>
+  // cards rendered after click; no <a href> in the HTML
+  loadCards().then(paintGrid);
+</script>
+```
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Enable breadcrumbs (Settings → Advanced). They should match menus, not invent a second tree.
+2. Do not noindex category archives if those archives are your hubs. Noindex them only if they are thin date dumps.
+
+**Rank Math**
+
+1. Rank Math → General Settings → Links: strip category from permalinks only if you already have a stable unique slug and redirects from the old path.
+2. Keep the category archive as a real hub: intro text + child posts, not a 10-post loop with no unique copy.
+
+**AIOSEO**
+
+1. Search Appearance → Taxonomies: `noindex` tags that are not hubs; keep indexable categories that are.
+2. Breadcrumb templates must not emit a path that does not exist as HTML.
+
+**Feature gap:** Rank Math’s “remove category from URL” is easy to click and easy to break inbound links. Yoast is more conservative. SEOPress permalinks stay with core WP Settings → Permalinks; the plugin will not save you from a bad `%category%/%postname%` scheme plus no 301s.
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+
+export default function GuidesHub({ guides }: { guides: { slug: string; title: string }[] }) {
+  return (
+    <main>
+      <h1>Guides</h1>
+      <ul>
+        {guides.map((g) => (
+          <li key={g.slug}>
+            <Link href={`/guides/${g.slug}`}>{g.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+```
+
+App Router file tree should match public URLs (`app/guides/[slug]/page.tsx`). Do not hide the list behind a client fetch with empty server HTML. Pages Router: same `<Link href>` rule; `as` rewrites that never exist as real paths become a second architecture.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “Exact-match subfolders always rank better.” Folders are for humans and crawl, not a ranking cheat code.
+- **DEPRECATED:** “Everything must be three clicks from home” as a hard Google rule. Depth is a proxy for discoverability, not a documented limit.
+- Paginated archives with `rel=next/prev` as a ranking system (Google dropped next/prev as an indexing signal years ago). Still useful as UX.
+- Two competing menus that disagree with breadcrumbs.
+
+## Senior / production notes
+
+Enterprise IA is often several products bolted together (`/help`, `/blog`, `/docs`, `/shop`). Give each a hub and a crawlable cross-link policy. Faceted nav belongs in a later topic; default architecture should not emit every facet as a first-class folder.
+
+When you flatten or nest, treat it as a migration: 301 the old path, update internal links, resubmit sitemaps. Do not leave both trees live.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Screaming Frog from `/` | Money URLs found via HTML links | Only in sitemap / orphans |
+| Click depth report | Key URLs near hubs | Depth 10+ for primary articles |
+| GSC → Links / internal | Hubs show real internal inlinks | Hub has 0 internal |
+| Live nav vs URL bar | Paths match | Menu says `/guides`, URL is `/?p=12` |

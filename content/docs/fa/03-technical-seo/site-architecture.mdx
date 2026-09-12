@@ -1,0 +1,115 @@
+---
+title: معماری سایت
+description: سلسله‌مراتب URL، صفحهٔ hub و عمق کلیک — گوگل و کاربر واقعاً چه چیزی را پیدا می‌کنند.
+module: 03-technical-seo
+topic_order: 1
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+معماری سایت گراف URL است: چه چیزی به چه چیزی لینک می‌دهد، صفحات پول‌ساز چند کلیک عمق دارند، و اسم پوشه با سلسله‌مراتب واقعی اطلاعات می‌خواند یا نه. Googlebot بیشتر URLها را از لینک HTML پیدا می‌کند. sitemap کمک است؛ توجه روی لینک می‌ماند. الگوی مفید:
+
+- **خانه / hub بخش** بچه‌های مهم را جمع می‌کند.
+- **دسته ← زیردسته ← شیء** (یا خوشهٔ موضوع ← راهنما ← URL پشتیبان).
+- **عمق کلیک:** URL مهم از یک hub قابل crawl با چند کلیک داخلی برسد، نه فقط از sitemap.
+- **یک URL اصلی برای هر intent.** واریانت (sort، پارامتر tracking) گرهٔ اضافه در گراف نشود.
+
+dump تخت (`/p?id=18422` برای هر مقاله بدون hub) و درخت اتفاقی (`/blog/2026/09/12/post` به‌علاوهٔ duplicate `/post`) هر دو crawl را می‌سوزانند و سیگنال را دوپاره می‌کنند.
+
+## چرا مهم است
+
+بودجهٔ crawl، جریان داخلی شبیه PageRank، و sitelink همه از همین گراف می‌آیند. مقالهٔ درخشان یتیم در عمق ۸ پشت URL پارامتری، مشکل تکنیکال است نه راز «کیفیت محتوا».
+
+<CorrectExample title="درست">
+Hub که بچه‌های canonical را با `<a href>` واقعی لیست می‌کند:
+
+```html
+<!-- https://example.com/guides -->
+<main>
+  <h1>Guides</h1>
+  <nav aria-label="Guides">
+    <ul>
+      <li><a href="/guides/espresso-machines">Espresso machines</a></li>
+      <li><a href="/guides/grinders">Grinders</a></li>
+    </ul>
+  </nav>
+</main>
+```
+
+canonical بچه به خودش؛ والد از nav سراسری لینک دارد. crawl اسکریمینگ فراگ از `/` هر دو بچه را می‌بیند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot و کاربر نمی‌توانند درخت را راه بروند؛ URL فقط در XML sitemap است یا در روتر جاوااسکریپت بدون href قابل crawl.">
+```html
+<script>
+  // کارت‌ها بعد از کلیک رندر می‌شوند؛ در HTML هیچ <a href> نیست
+  loadCards().then(paintGrid);
+</script>
+```
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. breadcrumb را روشن کن (Settings ← Advanced). باید با منو یکی باشد، درخت دوم نسازد.
+2. اگر آرشیو دسته hub توست، `noindex`اش نکن. فقط وقتی thin dump تاریخ است ببند.
+
+**Rank Math**
+
+1. Rank Math ← General Settings ← Links: دسته را از permalink فقط وقتی بردار که slug پایدار داری و از مسیر قدیم 301 گذاشتی.
+2. آرشیو دسته را hub واقعی نگه دار: متن معرفی + پست‌های بچه، نه لوپ ۱۰ تایی بدون کپی یکتا.
+
+**AIOSEO**
+
+1. Search Appearance ← Taxonomies: تگ‌هایی که hub نیستند `noindex`؛ دسته‌هایی که هستند ایندکس بمانند.
+2. قالب breadcrumb مسیری نزند که HTMLاش وجود ندارد.
+
+**جا خالی واقعی:** «حذف دسته از URL» در Rank Math یک کلیک است و لینک ورودی را راحت می‌شکند. Yoast محافظه‌کارتر است. permalink در SEOPress همان Settings ← Permalinks وردپرس است؛ پلاگین تو را از طرح `%category%/%postname%` بدون 301 نجات نمی‌دهد.
+
+## پیاده‌سازی کد
+
+```tsx
+import Link from "next/link";
+
+export default function GuidesHub({ guides }: { guides: { slug: string; title: string }[] }) {
+  return (
+    <main>
+      <h1>Guides</h1>
+      <ul>
+        {guides.map((g) => (
+          <li key={g.slug}>
+            <Link href={`/guides/${g.slug}`}>{g.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+```
+
+درخت فایل App Router باید با URL عمومی بخواند (`app/guides/[slug]/page.tsx`). لیست را پشت fetch کلاینت با HTML سرور خالی قایم نکن. Pages Router: همان قانون `<Link href>`؛ `as` rewrite که به‌عنوان مسیر واقعی وجود ندارد معماری دوم می‌سازد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «ساب‌فولدر exact-match همیشه بهتر رتبه می‌گیرد.» پوشه برای آدم و crawl است، نه cheat code رتبه.
+- **DEPRECATED:** «همه‌چیز باید سه کلیک از خانه باشد» به‌عنوان قانون گوگل. عمق پروکسی کشف‌پذیری است، سقف مستند نیست.
+- آرشیو صفحه‌بندی با `rel=next/prev` به‌عنوان سیستم رتبه (گوگل next/prev را سال‌هاست سیگنال ایندکس نمی‌داند). برای UX هنوز مفید است.
+- دو منوی رقیب که با breadcrumb یکی نیستند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+IA سازمانی معمولاً چند محصول چسبیده است (`/help`، `/blog`، `/docs`، `/shop`). به هر کدام hub و سیاست لینک متقابل قابل crawl بده. nav فیلتری مال موضوع بعدی است؛ معماری پیش‌فرض هر facet را پوشهٔ درجه یک نکند.
+
+وقتی صاف یا تودرتو می‌کنی، مهاجرت است: مسیر قدیم 301، لینک داخلی به‌روز، sitemap دوباره submit. هر دو درخت را زنده نگذار.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| Screaming Frog از `/` | URL پول‌ساز از لینک HTML پیدا می‌شود | فقط در sitemap / یتیم |
+| گزارش عمق کلیک | URL کلیدی نزدیک hub | عمق ۱۰+ برای مقالهٔ اصلی |
+| GSC ← Links / internal | hub اینلینک داخلی واقعی دارد | hub صفر اینلینک |
+| nav زنده در مقابل نوار URL | مسیرها یکی‌اند | منو `/guides`، URL `/?p=12` |

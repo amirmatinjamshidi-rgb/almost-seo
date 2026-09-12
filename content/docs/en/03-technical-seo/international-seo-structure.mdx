@@ -1,0 +1,116 @@
+---
+title: International SEO structure
+description: "ccTLD, subdomain, subdirectory, hreflang, and x-default — pick one architecture and keep locale pairs honest."
+module: 03-technical-seo
+topic_order: 15
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+International SEO is **which URL is for which language/region** and how you tell Google the set.
+
+Common URL patterns:
+
+- **ccTLD** (`example.de`) — strongest geo hint, highest ops cost.
+- **Subdomain** (`de.example.com`) — separate hosts, separate robots/sitemaps.
+- **Subdirectory** (`example.com/de/`) — one host, simpler crawl, what this encyclopedia uses (`/en/`, `/fa/`).
+
+`hreflang` annotations (HTML, HTTP header, or sitemap) must be **reciprocal**: if `en` points at `fa`, `fa` points at `en`. Use language-region codes correctly (`en-US`, `fa-IR`). `x-default` is the fallback URL for unmatched locales (often a language picker or the default docs language), not “the best translation.”
+
+hreflang is not a ranking boost by itself. It **clusters** alternates so Google can serve the right URL. Content still has to match the locale.
+
+Auto-redirect by IP/Accept-Language that traps Googlebot in one country fights this system.
+
+## Why it matters
+
+Without structure, Google indexes one language and ignores the other, or shows English to Persian users (and the reverse). Broken hreflang is ignored; you paid for annotations nobody uses.
+
+<CorrectExample>
+Each locale URL self-canonical. Reciprocal hreflang including `x-default`:
+
+```html
+<link rel="canonical" href="https://www.example.com/fa/docs/03-technical-seo/robots-txt" />
+<link rel="alternate" hreflang="en" href="https://www.example.com/en/docs/03-technical-seo/robots-txt" />
+<link rel="alternate" hreflang="fa" href="https://www.example.com/fa/docs/03-technical-seo/robots-txt" />
+<link rel="alternate" hreflang="x-default" href="https://www.example.com/en/docs/03-technical-seo/robots-txt" />
+```
+
+Same path slug after the locale prefix. HTML `lang` and `dir` match (`fa` + `rtl`). Sitemap lists both URLs with the same alternate set.
+</CorrectExample>
+
+<IncorrectExample why="Cluster is invalid; Google drops the annotations. Users get the wrong language.">
+Only `en` pages include hreflang. `fa` pages omit the return link. Canonicals all point at `en`. A geo-302 sends every bot to `/de/`. Machine-translated thin copies for fifty locales with no unique value.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast SEO Premium + WPML/Polylang integrations emit hreflang. Verify view-source on **both** languages, not only default.
+2. Do not also install a second hreflang plugin.
+
+**Rank Math**
+
+1. Rank Math hreflang in the post editor / sitemap. Conflicts with WPML’s own tags if both fire.
+2. Confirm `x-default` is a real URL, not a 302 hopper.
+
+**AIOSEO**
+
+1. Language addons / sitemap hreflang. Same conflict risk.
+2. Open Graph `og:locale` should match the page, not the default site language.
+
+**Feature gap:** WPML+Yoast is the common pair. Rank Math and AIOSEO each want to own hreflang. SEOPress + Polylang is another valid pair — **one** emitter. Test with `curl` both locales.
+
+## Code implementation
+
+```ts
+import type { Metadata } from "next";
+
+const path = "/docs/03-technical-seo/robots-txt";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: `https://www.example.com/fa${path}`,
+    languages: {
+      en: `https://www.example.com/en${path}`,
+      fa: `https://www.example.com/fa${path}`,
+      "x-default": `https://www.example.com/en${path}`,
+    },
+  },
+};
+```
+
+App Router: `[lang]` segment, `html lang` + `dir` on the locale layout (as this site does). `proxy.ts` / middleware should **not** 302 Googlebot by country.
+
+Pages Router: `next-i18n-router` or `locale` in `getStaticPaths`; still reciprocal URLs.
+
+Content: translate for real. Identical English under `/fa/` is a duplicate cluster, not international SEO.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Keyword-stuffed ccTLDs as a shortcut (`best-seo-germany.de` doorway).
+- **DEPRECATED:** `hreflang` as a substitute for unique content.
+- Mixing subdirectory `/fa/` with a second `example.ir` that has no pairing.
+- Using `fa-FA` (invalid) instead of `fa` or `fa-IR`.
+- Language switcher that is JS-only with no crawlable `href`.
+
+## Senior / production notes
+
+Ops cost usually beats “SEO purity.” Subdirectories on one host win for most product docs. ccTLDs when legal/hosting/brand demand it.
+
+Keep **filename/slug parity** (`robots-txt.mdx` in both trees) so alternates never 404. A missing translation should not point hreflang at a 404; omit the pair or fall back explicitly.
+
+GSC International targeting (legacy) is not a replacement for hreflang. ccTLDs already geo-hint.
+
+This site: `hideLocale: "never"`, `x-default` → `en`. Do not invent `/` as a third copy of English.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source both locales | Reciprocal hreflang | One-way |
+| GSC hreflang / Page indexing | No “no return tag” flood | Errors on every URL |
+| Language switcher | `<a href>` to the other locale | JS-only |
+| `curl -A Googlebot` | No geo-302 | Forced country URL |

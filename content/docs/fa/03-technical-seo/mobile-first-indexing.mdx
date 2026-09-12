@@ -1,0 +1,108 @@
+---
+title: ایندکس موبایل‌اول
+description: گوگل عمدتاً نسخهٔ موبایل صفحه را ایندکس می‌کند — چه چیزی باید در HTML موبایل باشد و محتوای «فقط دسکتاپ» چه هزینه‌ای دارد.
+module: 03-technical-seo
+topic_order: 7
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Google Search از **mobile-first indexing** استفاده می‌کند: crawl و رندر موبایل URL، نسخهٔ اصلی ایندکس است. سایت جدا `m.` و cloak با `Vary: User-Agent` الگوی قدیمی است. HTML واکنش‌گرا (همان URL، CSS که reflow می‌کند) پیش‌فرض است.
+
+چیزی که Googlebot-smartphone در DOM موبایل نمی‌بیند — تب مخفی که هیچ‌وقت به HTML نمی‌آید، کپی فقط-دسکتاپ که بعد از UA دسکتاپ با JS تزریق می‌شود، لینک غایب در nav موبایل — ممکن است ایندکس هم نبیند.
+
+viewport: `<meta name="viewport" content="width=device-width, initial-scale=1">` حداقل کار است.
+
+## چرا مهم است
+
+مقالهٔ «کامل» دسکتاپ با stub موبایل دو تجربه نیست؛ یک stub ایندکس‌شده است. interstitial، ویدیوی غیرقابل پخش موبایل، و آکاردئونی که متن را از HTML حذف می‌کند، چیزی را که می‌تواند رتبه بگیرد کوچک می‌کنند.
+
+<CorrectExample title="درست">
+همان URL، همان محتوای اصلی در HTML اولیه برای همهٔ viewport. آکاردئون disclosure سی‌اس‌اس/جی‌اس است؛ متن در DOM است:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<article>
+  <h1>Espresso machines</h1>
+  <p>برگهٔ مشخصات کامل و راهنمای خرید…</p>
+  <details>
+    <summary>گارانتی</summary>
+    <p>سه سال، قطعه و اجرت.</p>
+  </details>
+</article>
+```
+
+لینک داخلی nav موبایل همان مقصد دسکتاپ است (شاید کمتر، نه متفاوت).
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot گوشی صفحهٔ نازک ایندکس می‌کند؛ کاربر دسکتاپ مقالهٔ واقعی را می‌بیند که آن‌طور وارد ایندکس نشده.">
+روی موبایل CSS `display:none` روی ۸۰٪ مقاله **و** محتوا در HTML نیست (فقط با UA دسکتاپ fetch می‌شود). یا `m.example.com` جدا با canonical متفاوت و hreflang غایب.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast قالب را واکنش‌گرا نمی‌کند. اگر قالب با UA قالب دیگری می‌دهد، قالب را درست کن.
+2. breadcrumb و schema باید با محتوای دیده‌شدهٔ موبایل بخوانند.
+
+**Rank Math**
+
+1. همان: schema روی فیلد فقط-دسکتاپ که HTML موبایل ندارد شکست یا mismatch می‌خورد.
+2. ماژول AMP: گوگل AMP نمی‌خواهد. URL دوم AMP راه ننداز مگر دلیل داری و canonical درست است.
+
+**AIOSEO**
+
+1. Open Graph / canonical روی URL واکنش‌گرا بماند، نه duplicate `m.`.
+2. اگر کاملاً responsive هستی add-on AMP را خاموش کن.
+
+**جا خالی واقعی:** یکپارچگی AMP در SEOPress نویز اختیاری است. هر چهار پلاگین یک URL فرض می‌کنند؛ قالب UA-sniff را درست نمی‌کنند.
+
+## پیاده‌سازی کد
+
+```tsx
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+export default function Page() {
+  return (
+    <article>
+      <h1>Espresso machines</h1>
+      {/* کپی کامل در HTML سرور؛ CSS کروم را مخفی می‌کند، پاراگراف را نه */}
+    </article>
+  );
+}
+```
+
+App Router export `viewport`. با `headers().get("user-agent")` کپی را پس نگیر. Pages Router: meta viewport در `_document`؛ همان HTML.
+
+`useMediaQuery` برای *رندر نکردن* محتوای اصلی روی سرور شکست کلاسیک mobile-first در Next.js است.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** سایت موبایل جدا به‌عنوان setup توصیه‌شده.
+- **DEPRECATED:** AMP لازم برای رتبهٔ موبایل یا Top Stories (فراتر از سطح محصول خاص با قانون خودش — AMP را فرض نکن).
+- **DEPRECATED:** «محتوای آکاردئون مخفی نادیده گرفته می‌شود.» متن در DOM می‌تواند استفاده شود؛ با *حذف کردن* مخفی نکن.
+- لینک داخلی فقط-دسکتاپ (hub فوتر روی موبایل غایب).
+- interstitial مزاحم موبایل که اولین paint محتوا را می‌بندد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+اگر هنوز `m.` یا `?mobile=1` داری، به URL واکنش‌گرا 301 کن و هاست را بازنشسته کن. Googlebot-smartphone در لاگ باید همان مسیر کاربر را fetch کند.
+
+dynamic serving (همان URL، HTML متفاوت بر اساس UA) مجاز است ولی معادل نگه داشتنش گران است. بدهی تکنیکال حسابش کن.
+
+وقتی دیباگ «محتوا در ایندکس نیست»، URL Inspection ← صفحهٔ crawlشده را ببین، نه Chrome دسکتاپ.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| HTML crawlشده در URL Inspection | متن کامل مقاله هست | stub / بخش غایب |
+| meta viewport | هست | نیست؛ «page is not mobile friendly» |
+| قابلیت موبایل GSC (گزارش قدیمی ممکن است عوض شود) | مشکل viewport/tap نیست | متن خیلی کوچک، لینک خیلی نزدیک |
+| UA لاگ | Googlebot-smartphone روی URL اصلی | فقط Googlebot دسکتاپ روی HTML واقعی |

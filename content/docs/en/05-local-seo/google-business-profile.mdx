@@ -1,0 +1,125 @@
+---
+title: Google Business Profile
+description: Maps and the local pack start from a verified profile — categories, service area vs storefront, and the spam patterns that get a listing suspended.
+module: 05-local-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Google Business Profile** (GBP; formerly Google My Business) is the listing Google uses for Maps and the local pack. Organic blue links are a different system. Local results weigh **relevance**, **distance**, and **prominence** (Google’s documented trio). GBP is how you declare the entity: name, primary category, address or service area, hours, attributes, photos, products/services.
+
+Rules that keep listings alive:
+
+- **One profile per real location** (or a honest service-area business without a public storefront). Do not drop pins in cities you do not serve.
+- **Name = the real business name**, not `Best Plumber Tehran | Emergency 24h`. Keyword stuffing in the title is against GBP policies.
+- **Primary category** is the job; additional categories are extras, not a stuffing list.
+- **Verification** (postcard, email, video, etc., whatever Google offers for that listing) must succeed and stay yours. Hijacked profiles are an ops incident.
+
+Coverage of Maps and GBP varies by country. The product rules still apply wherever the listing exists. Schema and NAP (later topics) support the same entity; they do not replace a profile.
+
+## Why it matters
+
+For “near me” and city+service queries, the pack often takes the click before organic. A perfect docs site with a suspended GBP loses the map. A stuffed name might win a week and then vanish.
+
+<CorrectExample>
+Storefront café, one pin, real hours, primary category `Cafe`:
+
+```txt
+Name: Example Labs Café
+Primary category: Cafe
+Address: 12 Example St, matching the lease and the site footer
+Hours: the hours on the door
+Website: https://www.example.com/locations/example-st
+```
+
+Photos are of *this* room. Products/services match what you sell. Posts are optional; the core fields are not.
+</CorrectExample>
+
+<IncorrectExample why="Keyword-stuffed names, fake offices, and duplicate pins are GBP policy violations. Suspension wipes the pack, not just a ranking dip.">
+```txt
+Name: Best SEO Agency Tehran | Google First Page | ارزان
+Address: a virtual office you never staff
+Categories: SEO, Restaurant, Hospital, Lawyer
+```
+
+Plus a second “location” in every suburb with the same phone.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast Local SEO (paid add-on) can store the same NAP you put in GBP. It does not create the Google listing. Create and verify in Google’s Business Profile manager / Maps.
+2. Organization knowledge graph in core Yoast should match the GBP name, not a keyword slogan.
+
+**Rank Math**
+
+1. Rank Math → Local SEO / Knowledge Graph: business type, address, multiple locations if they are real.
+2. Rank Math cannot verify GBP. Do not treat its “Local SEO score” as Maps ranking.
+
+**AIOSEO**
+
+1. AIOSEO Local SEO module: locations, maps embed, NAP in the footer. Embed a Google Map of the *verified* pin, not a second invented coordinate.
+2. Multiple location pages only when each page is a real branch.
+
+**Feature gap:** Yoast Local is an add-on; Rank Math and AIOSEO ship more local UI in the main plugin. SEOPress Local Business is the same class of NAP/schema form. None of them talk to Google’s listing API as a substitute for the Business Profile UI. Duplicate location CPTs for suburbs you do not occupy are doorway pages (Module 06 / 14).
+
+## Code implementation
+
+The listing lives at Google. The site must expose a crawlable location URL the profile can point at:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Example Labs Café — Example St",
+  alternates: {
+    canonical: "https://www.example.com/locations/example-st",
+  },
+};
+
+export default function LocationPage() {
+  return (
+    <main>
+      <h1>Example Labs Café</h1>
+      <p>12 Example St</p>
+      <p>Open 08:00–18:00</p>
+    </main>
+  );
+}
+```
+
+App Router: `app/locations/[slug]/page.tsx` per real branch. Pages Router: `pages/locations/[slug].tsx`. Do not generate 200 city templates that all say “we serve [city]” with no office (doorways).
+
+`proxy.ts` must not geo-302 Googlebot to a random city URL (Module 03, international).
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Google My Business as the current product name in SOPs (it is Business Profile).
+- **DEPRECATED:** Stuffing the GBP title with keywords as a supported tactic.
+- **DEPRECATED:** Creating a listing for a PO box / coworking desk you never staff and calling it HQ.
+- Buying “GBP backlinks” or fake maps citations.
+- Letting an agency own the listing with an email you cannot recover.
+- Hours “open 24 hours” when you are not.
+
+## Senior / production notes
+
+Ownership: listing admin = a company Google account with 2FA, not a contractor’s Gmail. Document recovery codes.
+
+Chains: location groups in the Business Profile manager. Each store still needs accurate hours and a unique landing URL when the site has per-store pages.
+
+Service-area businesses: hide the address if policy requires it; do not also publish a fake storefront pin.
+
+If Maps is thin in a market, still keep one honest entity on the site. Do not compensate with 80 fake “Tehran SEO office” pages.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GBP dashboard | Verified; you are owner/manager | Suspended / “claimed by someone else” |
+| Name vs legal / site H1 | Same string | Keyword slogan in the title |
+| Website field | 200 location or home URL | 404, or a different brand |
+| Maps search for the name | One pin | Duplicates / wrong building |

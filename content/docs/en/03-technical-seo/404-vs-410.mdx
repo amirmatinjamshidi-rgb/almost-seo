@@ -1,0 +1,124 @@
+---
+title: 404 vs 410
+description: When a URL is gone temporarily versus gone for good — status codes, custom error pages, and what Googlebot should see.
+module: 03-technical-seo
+topic_order: 10
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+- **404 Not Found** — this URL has no document *now*. Google will recrawl; if it stays 404, it drops from the index over time.
+- **410 Gone** — this URL is intentionally removed. Google may drop it faster. Use when you will **not** bring it back (legal takedown, discontinued SKU you will not redirect).
+- **Soft 404** — HTTP `200` (or `302` to a catch-all) with “not found” or a thin homepage. Google treats it as an error anyway and you lose honest signals.
+
+Custom error pages should still send **404/410**, be useful (search, hubs), and **not** be `noindex` in a way that confuses the status (the status is the signal). Do not `200` the template.
+
+If a close equivalent exists, **301** instead of 404. 404 is for true absence.
+
+## Why it matters
+
+Ecommerce and news delete URLs constantly. 301 to a relevant parent preserves users. 404 on thousands of expired affiliate pages is correct. `200` on those pages is how “thin doorway” patterns appear.
+
+<CorrectExample>
+Deleted product with no successor:
+
+```http
+HTTP/1.1 410 Gone
+Content-Type: text/html; charset=utf-8
+```
+
+HTML explains it is gone, links the category hub, search box. Sitemap loc removed in the same deploy.
+
+Deleted product with a successor: **301** to the new SKU, not 410.
+</CorrectExample>
+
+<IncorrectExample why="Googlebot thinks the homepage is the document for thousands of old URLs; users are lied to.">
+Unknown paths `302` to `/`. Or WordPress serves the theme 404 template with `200 OK` because a plugin “pretty 404” rewrote the status.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not set 410. Use a redirect plugin or server rule for Gone.
+2. If you trash a post, WP 404s the old permalink — add 301s **before** delete when there is a replacement.
+
+**Rank Math**
+
+1. Redirections can send 410. Use for dead URLs you previously 200’d.
+2. 404 monitor is a log, not a fix. Do not 301 all 404s to `/`.
+
+**AIOSEO**
+
+1. Redirects addon: 410 option exists in some versions — verify the actual status with `curl`.
+2. Same anti-pattern: “redirect all 404s to homepage.”
+
+**Feature gap:** Rank Math’s 404 monitor is the most visible. Yoast Premium redirects; 410 is easy to forget. SEOPress 404 logs similarly. None should auto-redirect 404s to home.
+
+## Code implementation
+
+```tsx
+import { notFound, permanentRedirect } from "next/navigation";
+
+export default async function ProductPage({ params }: { params: Promise<{ sku: string }> }) {
+  const { sku } = await params;
+  const product = await getProduct(sku);
+
+  if (!product) notFound();
+  if (product.status === "discontinued" && product.successor) {
+    permanentRedirect(product.successor);
+  }
+
+  return <ProductView product={product} />;
+}
+```
+
+`notFound()` is 404 only. For a true 410, set status in a Route Handler (App Router pages cannot return an arbitrary `Response`):
+
+```ts
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ sku: string }> },
+) {
+  const { sku } = await params;
+  const product = await getProduct(sku);
+  if (product?.status === "discontinued" && !product.successor) {
+    return new Response(goneHtml(sku), {
+      status: 410,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+  return new Response(null, { status: 404 });
+}
+```
+
+App Router: call `notFound()` so `not-found.tsx` returns **404**, not an empty product at 200.
+
+Pages Router: `res.statusCode = 404` / `410` in `getServerSideProps`. Never `return { props: { notFound: true } }` while sending 200.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “410 always deindexes tomorrow.” Faster is typical, not a SLA.
+- **DEPRECATED:** Soft 404 as a UX win.
+- 404ing a URL you still link internally.
+- Serving `noindex` `200` instead of 404 for deleted posts (URL stays crawlable junk).
+- Custom 404 that is a doorway of unrelated keywords.
+
+## Senior / production notes
+
+Pipeline: unpublish → if successor, 301 → else 410 or 404 → drop sitemap → remove internal links. Track GSC “Not found (404)” vs “Soft 404.” Soft 404 is the report you act on.
+
+For parameterized junk (`/foo?session=`), prefer **404** or robots disallow + no internal links, not 10,000 410 rules.
+
+International: a URL gone in `en` but live in `fa` should not share a naive 410 at the CDN for all locales.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| `curl -I` deleted URL | 404 or 410 | 200 / 302 home |
+| GSC Page indexing | 404/410 counts match deletes | Soft 404 spike |
+| Sitemap | Loc gone | Loc still listed |
+| On-page 404 | Helpful, same host, real status | Indexed 200 “oops” page |

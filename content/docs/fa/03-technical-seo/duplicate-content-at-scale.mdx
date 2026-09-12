@@ -1,0 +1,102 @@
+---
+title: محتوای تکراری در مقیاس
+description: پارامتر، nav فیلتری، واریانت HTTP، و چاپ — duplicate در کاتالوگ از کجا می‌آید و بدون سوزاندن crawl چطور جمعش کنی.
+module: 03-technical-seo
+topic_order: 11
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+محتوای تکراری در سئوی تکنیکال یعنی **چند URL تقریباً همان سند را برمی‌گردانند**. گوگل یک canonical برمی‌دارد. کمک تو:
+
+- `rel=canonical` (hint).
+- **301** (قوی‌تر، وقتی URL اضافه را هرگز نمی‌خواهی).
+- مدیریت پارامتر: آشغال را لینک نکن؛ `robots.txt` برای تله؛ `noindex` برای فیلتر مفید-ولی-نه-سرچ.
+- اسلش انتهایی، هاست، HTTPS یکدست (موضوع‌های دیگر).
+
+این «گوگل duplicate را جریمه دستی می‌کند» به‌عنوان پیش‌فرض نیست. **crawl هدررفته، سیگنال دوپاره، و URL غلط در SERP** است.
+
+در مقیاس ژنراتورها: query sort/filter، session ID، نمای چاپ، پارامتر tracking، نمای صفحه‌بندی که صفحهٔ ۱ را کلون می‌کند، کپی UTM، و URL پیش‌نمایش CMS که عمومی مانده.
+
+## چرا مهم است
+
+فروشگاه ۲۰۰۰ SKU می‌تواند ۲ میلیون URL فیلتر بسازد. Googlebot هیچ‌وقت SKU واقعی را تمام نمی‌کند. canonical که روی هر facet به خودش اشاره کند بدترش می‌کند.
+
+<CorrectExample title="درست">
+facet با `?color=red` اگر **landing نیست**: یا noindex+follow و حذف از sitemap، یا 301 به دسته. self-canonical فقط روی دستهٔ تمیز. لینک داخلی HTML به URL تمیز. پارامتر tracking سمت سرور حذف یا canonicalize شود.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="هر ترکیب ایندکس‌پذیر، self-canonical، و داخل sitemap است.">
+فوتر ۵۰٬۰۰۰ لینک «فیلتر» می‌ریزد. canonical روی `?sort=price` به خودش است. `rel=canonical` صفحهٔ ۲ به صفحهٔ ۱ است **و** می‌خواستی صفحهٔ ۲ ایندکس شود — نیت قاطی. (اگر صفحهٔ ۲ یکتاست، canonical باید صفحهٔ ۲ باشد.)
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. canonical خودکار per پست است. تضاد از پلاگینی شروع می‌شود که `?replytocom` و آرشیو اضافه می‌کند.
+2. آرشیو بلااستفاده (نویسنده، تاریخ) را خاموش کن تا وبلاگ را duplicate نکنند.
+
+**Rank Math**
+
+1. canonical را می‌شود per پست عوض کرد — مردم هوم‌پیج را اشتباه پیست می‌کنند.
+2. تنظیم canonical حذف دسته / pagination: دو بار بخوان.
+
+**AIOSEO**
+
+1. Search Appearance ← Advanced canonical. نگذار «no pagination canonical» با پلاگین SEO بجنگد.
+2. WooCommerce: محصول + محصول + فیلتر دسته سیاست facet جدا می‌خواهد، نه canonical پیش‌فرض وبلاگ.
+
+**جا خالی واقعی:** پیش‌فرض noindex آرشیو Yoast محافظه‌کار است. Rank Math/AIOSEO نوع آرشیو بیشتری را ایندکس‌پذیر می‌کنند. canonical ووکامرس در SEOPress چک‌لیست جداست — variation در مقابل محصول والد.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ color?: string }>;
+}): Promise<Metadata> {
+  const { color } = await searchParams;
+  const canonical = "https://www.example.com/guides/espresso-machines";
+
+  if (color) {
+    return { alternates: { canonical }, robots: { index: false, follow: true } };
+  }
+
+  return { alternates: { canonical } };
+}
+```
+
+App Router: نگذار `searchParams` URL ایندکس‌پذیر بسازد مگر آن facet landing واقعی با کپی یکتاست. Pages Router: canonical در `getServerSideProps` از مسیر تمیز، UTM را نادیده بگیر.
+
+اسلش انتهایی: `skipTrailingSlashRedirect` را فقط وقتی بگذار که از قبل یک طرف را canonicalize می‌کنی.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «جریمهٔ duplicate content» به‌عنوان تشخیص اول هر هم‌پوشانی.
+- **DEPRECATED:** `rel=canonical` به‌عنوان دستوری که گوگل باید اطاعت کند.
+- canonical بین‌دامنه‌ای به سایتی که کنترل نمی‌کنی، به امید دزدیدن رتبه.
+- canonical به URL `noindex` یا 404.
+- استفاده از canonical به‌جای 301 وقتی URL اضافه هرگز نباید وجود داشته باشد.
+
+## نکته‌های سطح بالا / پروداکشن
+
+**سیاست facet** بنویس: کدام ترکیب landing است (H1 یکتا، کپی، در sitemap، لینک از hub)، کدام `noindex`، کدام 301، کدام disallow. مهندسی سیاست را پیاده می‌کند؛ SEO بعد از ۸ میلیون URL «canonical در پلاگین» نمی‌گذارد.
+
+لاگ Googlebot را در مقابل canonical یکتا بگذار. اگر ۹۰٪ ضربه duplicate است، معماری باگ است.
+
+محتوای syndication: اگر قرارداد این است canonical به origin؛ وگرنه انتظار انتخاب گوگل را داشته باش.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| `curl` URL تکراری | canonical / robots با سیاست می‌خواند | آشغال self-canonical |
+| Sitemap | فقط URL landing | هر facet |
+| duplicate / alternate در GSC | خوشهٔ مورد انتظار | فیلتر تصادفی برنده می‌شود |
+| crawl URL یکتا در مقابل کل | نسبت عاقلانه | انفجار ۱۰۰ برابر |

@@ -1,0 +1,93 @@
+---
+title: تحلیل فایل لاگ
+description: با access log ببین Googlebot واقعاً چه fetch می‌کند — حقیقت زمینی که نمونه‌گیری GSC نشان نمی‌دهد.
+module: 03-technical-seo
+topic_order: 12
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Search Console نمونه است و UI محصول. **access log** هر درخواست است: UA، مسیر، وضعیت، بایت، زمان، گاهی تأیید بات با reverse DNS / بازهٔ IP `googlebot`.
+
+لاگ را پارس می‌کنی تا جواب بدهی: Googlebot کدام URL را می‌زند، چند وقت یک‌بار، ترکیب status، آیا URL پول‌ساز crawl می‌شود، آیا تله غالب است، آیا `503` به Googlebot یاد می‌دهد عقب بنشیند.
+
+Googlebot را verify کن (reverse DNS به `googlebot.com` / `google.com`، بعد confirm جلو). به رشتهٔ UA تنها اعتماد نکن — جعل می‌شود.
+
+فاکتور رتبه نیست. **observability** برای بودجهٔ crawl، مهاجرت، و قطعی است.
+
+## چرا مهم است
+
+بعد از لانچ، GSC ممکن است روزها تأخیر داشته باشد. لاگ تا چند ساعت نشان می‌دهد Googlebot روی `/search?q=` گیر است یا روی `/guides` کد `500` می‌گیرد. مهاجرت بدون چک لاگ ایمان‌محور است.
+
+<CorrectExample title="درست">
+جاب روزانه: Googlebot تأییدشده را فیلتر کن، بر اساس پیشوند مسیر و وضعیت aggregate کن.
+
+یافته: `/guides` با 200، میانه ۸۰ ms؛ `/filter` disallow است پس صفر ضربه؛ `/guides/foo` جدید ظرف ۲۴ ساعت بعد از ping sitemap fetch شده. اقدام: هیچ، یا همان یک قالب `500` را درست کن.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="برای خزنده‌ای بهینه می‌کنی که گوگل نیست، یا نمی‌بینی Googlebot هاست جدید را هیچ‌وقت ندید.">
+داشبورد «آنالایزر لاگ SEO» از *همه* بات‌ها از جمله scraper. یا challenge HTML کلادفلر روی بازهٔ IP Googlebot تا لاگ پر `403` شود و کسی نفهمد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. تحلیل لاگ ندارد. از لاگ هاست، Cloudflare، یا پارسر (Screaming Frog Log File Analyser، BigQuery سفارشی) استفاده کن.
+2. تنظیم crawl یواست جایگزین لاگ سرور نیست.
+
+**Rank Math**
+
+1. ماژول Analytics، access log نیست.
+2. مانیتور 404 همان 404 پی‌اچ‌پی وردپرس است، نه 404 CDN جلو.
+
+**AIOSEO**
+
+1. همان: فهرست 404 پلاگین ≠ رفتار Googlebot در لبه.
+2. به پلاگین لاگ دسترسی نوشتنی که لازم ندارد نده.
+
+**جا خالی واقعی:** هیچ‌کدام از Yoast / Rank Math / AIOSEO / SEOPress پایپلاین لاگ نیستند. سازمانی: لاگ nginx/CDN را به object storage بفرست. هاست اشتراکی WP: لاگ روزانه بخواه وگرنه کور پروازی.
+
+## پیاده‌سازی کد
+
+```ts
+// فقط observability — مثال: رد «Googlebot» تأییدنشده کار WAF لبه است
+// App Router: داخل next start لاگ پارس نکن.
+
+export async function GET() {
+  return Response.json({ ok: true });
+}
+```
+
+Next.js لاگ Googlebot به تو نمی‌دهد. از Vercel/Cloudflare/nginx export کن. پایپلاین نمونه: لاگ CDN ← نمونه ← فیلتر `user-agent` شامل `Googlebot` ← verify IP ← انبار.
+
+Pages Router: همان. Middleware/`proxy.ts` می‌تواند درخواست را **بشمارد** ولی جایگزین لاگ origin نیست (hit کش‌شده را از دست می‌دهی مگر در CDN لاگ کنی).
+
+هرگز query string دارای PII را در باکت عمومی لاگ نکن.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** حساب کردن ضربهٔ Bingbot/Yandex/GPTBot به‌عنوان بودجهٔ crawl گوگل.
+- **DEPRECATED:** UA sniff بدون verify IP.
+- نمونه‌گیری ۱٪ لاگ و نتیجه که URL هیچ‌وقت crawl نمی‌شود.
+- نادیده گرفتن fetchهای `304`/`robots.txt` (عادی‌اند).
+- بستن Googlebot در WAF چون «حمله به‌نظر می‌رسید» (ترک بعد از ping sitemap).
+
+## نکته‌های سطح بالا / پروداکشن
+
+لاگ را بر اساس **قالب** برش بده (`/product/*`، `/blog/*`). crawl در مقابل ایندکس: crawl سنگین + «crawled currently not indexed» در GSC کیفیت/duplicate است، نه بودجه. بدون crawl + URL مهم یعنی robots، لینک داخلی، یا ظرفیت (5xx).
+
+حین مهاجرت: روزانه 301 در مقابل 200 گوگل‌بات روی هاست قدیم و جدید را رسم کن.
+
+حقوقی: لاگ در بعضی رژیم‌ها ممکن است دادهٔ شخصی باشد؛ سیاست نگهداری در پروداکشن اختیاری نیست.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| نمونه reverse DNS | Googlebot واقعی | UA جعلی |
+| ضربهٔ URL پول‌ساز | 200 منظم | فقط پارامتر |
+| ترکیب وضعیت | عمدتاً 200/304/301 مورد انتظار | 5xx / WAF 403 به Googlebot |
+| URL جدید بعد از انتشار | در لاگ ظاهر می‌شود | روزها سکوت؛ آشغال crawl می‌شود |

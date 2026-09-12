@@ -1,0 +1,116 @@
+---
+title: E-E-A-T off the page
+description: Experience, expertise, authoritativeness, and trust as rater concepts — which off-site evidence actually supports them, and what does not.
+module: 04-off-page-seo
+topic_order: 6
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**E-E-A-T** (Experience, Expertise, Authoritativeness, Trust) lives in Google’s **Search Quality Rater Guidelines**. It is how humans audit result quality. It is **not** a documented per-page score you can pull from an API, and stuffing “E-E-A-T” in a title does nothing.
+
+Off-page, the useful translation is: **do independent sources treat you as a real organization and real authors, for this topic?**
+
+- **Experience** — first-hand work: original photos, methods, “we measured / we shipped.” Hard to fake off-site without the work existing.
+- **Expertise** — credentials and track record others already describe.
+- **Authoritativeness** — who cites you, who you are in the field, not who you paid to call you an authority.
+- **Trust** — HTTPS, honest WHOIS/business details, real customer service, no scammy ads on the host. For YMYL topics (money, health), the bar is higher (Module 09).
+
+On-page E-E-A-T (byline, policy pages) is a different module. Here: citations, author pages on *other* sites, professional profiles, and not running a link scheme that torches trust.
+
+## Why it matters
+
+A medical or finance query will not be “fixed” by 200 guest posts. Raters — and ranking systems that approximate quality — look for independent corroboration. Off-page spam makes Trust worse even if a backlink graph looks thick.
+
+<CorrectExample>
+Author identity is the same person everywhere: site bio, conference talk, and a real publication.
+
+```html
+<!-- on your site -->
+<a href="https://www.example.com/authors/leila-nouri">Leila Nouri</a>
+wrote the protocol.
+
+<!-- on a conference host you do not control -->
+<p>
+  Speaker: Leila Nouri, Example Labs —
+  <a href="https://www.example.com/research/crawl-log-study">crawl-log study</a>
+</p>
+```
+
+Organization JSON-LD `sameAs` matches those profiles. No fake MD credentials.
+</CorrectExample>
+
+<IncorrectExample why="Invented authors, stock photos, and ‘medical reviewer’ labels on a PBN do not create expertise. For YMYL they are a trust problem.">
+```html
+<article>
+  <p>Medically reviewed by Dr. SEO Expert, MD</p>
+  <a href="https://www.example.com/best-cbd-gummies">Buy CBD</a>
+</article>
+```
+
+The “doctor” exists only in a plugin author box. Ten sister sites reuse the bio.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast → Search Appearance → Schema: `Person` for actual authors with a unique author archive that is not thin. `noindex` empty author archives (Module 03) if they duplicate the blog.
+2. Organization knowledge graph: real address/contact if you claim them. Fake NAP is local + trust damage.
+
+**Rank Math**
+
+1. Rank Math author schema / additional profiles (`sameAs` on the user). Link LinkedIn/GitHub that `200`.
+2. Do not enable 15 “Expert” schema types on a recipe blog.
+
+**AIOSEO**
+
+1. AIOSEO author SEO / E-E-A-T style modules: fill only true fields. Empty “awards” lists are noise.
+2. Multiple authors must not share one ghost byline for every money page.
+
+**Feature gap:** Yoast, Rank Math, AIOSEO, and SEOPress will all emit Person JSON-LD for a fake user. The plugin cannot phone the medical board. The gap is editorial policy, not a missing checkbox.
+
+## Code implementation
+
+```ts
+export const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Leila Nouri",
+  url: "https://www.example.com/authors/leila-nouri",
+  jobTitle: "Research engineer",
+  worksFor: { "@type": "Organization", name: "Example Labs" },
+  sameAs: ["https://github.com/leila-nouri"],
+};
+```
+
+App Router: author pages as real routes (`app/authors/[slug]/page.tsx`) with HTML bios, not only JSON-LD. Pages Router: `pages/authors/[slug].tsx`. If the Person `url` 404s, the off-page story collapses.
+
+Do not generate 50 author pages from a CSV of names for “E-E-A-T.” That is scaled fakery.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** “E-E-A-T is a ranking factor named in the algorithm notes.” It is a rater concept; systems try to measure quality, not a plugin score.
+- **DEPRECATED:** Guest posts on “high DA” blogs as a substitute for expertise.
+- Buying awards / “best of” badges that are paid directories.
+- Copying another site’s author bio.
+- Assuming a Wikipedia page is required. It is neither required nor something you should game.
+
+## Senior / production notes
+
+For YMYL, legal and compliance own claims; SEO owns crawlable truth (who wrote this, who funded it, when it was reviewed). Off-page: prefer citations from institutions in the same specialty over lifestyle blogs.
+
+When an expert leaves the company, do not keep their byline on new articles. Redirect or update the author URL; leaving a ghost is a trust bug.
+
+Agencies: if the client has no named humans, you cannot “implement E-E-A-T” with schema. You can only stop lying.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| Author URL | `200`, unique bio, matching `sameAs` | Stub archive / 404 |
+| Independent citations | Hosts in the actual field | Only sites you paid |
+| Claims | Credentials checkable | “Dr.” only in schema |
+| GSC / manual actions | No spam / site reputation issues | Money-blog network residue |

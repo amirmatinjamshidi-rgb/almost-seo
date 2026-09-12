@@ -1,0 +1,111 @@
+---
+title: Crawl budget
+description: Crawl capacity versus crawl demand — when Googlebot’s time on your host is the bottleneck, and when it is not.
+module: 03-technical-seo
+topic_order: 2
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+**Crawl budget** is not a number Google publishes per site. Search Central describes it as the combination of:
+
+- **Crawl capacity** — how many connections Googlebot is willing to use without hurting your host (server health, latency, 5xx rate).
+- **Crawl demand** — how much Google wants those URLs (popularity, staleness, importance in the graph).
+
+Small sites (low thousands of URLs, healthy 200s) almost never have a crawl-budget *problem*. They have an indexing or quality problem. Catalogs, faceted navigation, infinite calendars, and parameter explosions do.
+
+Symptoms: Googlebot spends hits on `/filter?color=red&sort=price` while new articles wait days; Crawl Stats show high 4xx/5xx; log files show bots looping session IDs.
+
+## Why it matters
+
+You cannot rank a URL Googlebot never fetches again. On large sites, wasting crawl on duplicates is the technical equivalent of publishing into a void.
+
+<CorrectExample>
+Parameters that must not be crawled are blocked, canonicals point at the clean URL, sitemap lists only indexable 200s:
+
+```txt
+# robots.txt
+User-agent: Googlebot
+Disallow: /*?*sort=
+Disallow: /*?*session=
+```
+
+```xml
+<url>
+  <loc>https://example.com/guides/espresso-machines</loc>
+  <lastmod>2026-09-01</lastmod>
+</url>
+```
+
+Server returns `200` quickly. Facet combinations either `noindex,follow` or `301` to a chosen canonical if they are not landing pages.
+</CorrectExample>
+
+<IncorrectExample why="Googlebot burns capacity on infinite URLs; new and important documents wait.">
+Every sort, filter, and UTM combination is `200` indexable, linked in the HTML footer as “see all 12,000 combinations,” and listed in the sitemap. `Crawl-delay` is set to 120 (Googlebot ignores `Crawl-delay`; you only hurt other bots or yourself).
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. XML sitemap should not include tag archives you noindexed, or attachment URLs.
+2. Search Appearance → disable author/date archives if they duplicate the blog index.
+
+**Rank Math**
+
+1. Sitemap Settings → exclude empty or noindexed types.
+2. Instant Indexing does not increase crawl capacity. It pings; Google still decides.
+
+**AIOSEO**
+
+1. Sitemaps → uncheck types that are not landing pages (often `media`).
+2. Do not enable HTML sitemaps that paginate tens of thousands of thin URLs.
+
+**Feature gap:** Rank Math and AIOSEO let you include more archive types in the sitemap with one toggle. Yoast’s defaults are tighter. SEOPress can dump every CPT into the sitemap if you check the box — same risk.
+
+## Code implementation
+
+```ts
+// app/robots.ts — block known trap parameters, never the whole site
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: "Googlebot",
+      allow: "/",
+      disallow: ["/*?*sort=", "/*?*sessionid="],
+    },
+    sitemap: "https://example.com/sitemap.xml",
+  };
+}
+```
+
+Emit sitemap URLs from the same source of truth as indexable routes. Do not scrape your own faceted links into `sitemap.ts`. Pages Router: `public/robots.txt` static file is fine; keep it in version control so a marketing experiment cannot ship `Disallow: /`.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** `Crawl-delay` in robots.txt as a Googlebot control. Googlebot does not use it.
+- **DEPRECATED:** “More sitemap URLs = more crawl.” Extra junk URLs compete for demand.
+- Obsessing over crawl budget on a 40-URL brochure site.
+- Blocking CSS/JS to “save crawl” so rendering breaks.
+- Confusing crawl budget with index coverage. Coverage is eligibility; budget is fetch rate.
+
+## Senior / production notes
+
+Measure in **logs**, not folklore: Googlebot requests / day, unique URLs, status codes, vs sitemap vs GSC “Crawled — currently not indexed.” Hosts that `503` Googlebot get capacity cut. CDN WAF rules that challenge Googlebot look like outages.
+
+News and jobs feeds need freshness (high demand). Archives of expired SKUs need `404`/`410` or canonical consolidation so demand dies.
+
+Multi-host setups (www, CDN, image subdomain): capacity is per host. Do not split the same HTML across hosts without a plan.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC Crawl stats | Fetch time stable; low 5xx | 5xx spikes; host “unavailable” |
+| Server logs (Googlebot) | Hits land on canonical money URLs | Majority on params/facets |
+| Sitemap vs log overlap | Sitemap URLs get fetched | Sitemap URLs never hit |
+| URL Inspection on a new URL | Crawled in a reasonable window | Weeks queued while facets crawl hourly |

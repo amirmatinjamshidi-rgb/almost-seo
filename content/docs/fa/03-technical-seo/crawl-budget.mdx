@@ -1,0 +1,111 @@
+---
+title: بودجهٔ crawl
+description: ظرفیت crawl در مقابل تقاضا — وقتی وقت Googlebot روی هاست گلوگاه است و وقتی نیست.
+module: 03-technical-seo
+topic_order: 2
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**Crawl budget** عددی نیست که گوگل پر سایت اعلام کند. Search Central ترکیب این‌هاست:
+
+- **ظرفیت crawl** — چند اتصال Googlebot حاضر است بزند بدون اینکه هاست را بزند (سلامت سرور، latency، نرخ 5xx).
+- **تقاضای crawl** — چقدر آن URLها را می‌خواهد (محبوبیت، کهنگی، اهمیت در گراف).
+
+سایت کوچک (چند هزار URL، 200 سالم) تقریباً هیچ‌وقت *مشکل* بودجهٔ crawl ندارد. مشکل ایندکس یا کیفیت دارد. کاتالوگ، faceted nav، تقویم بی‌نهایت، و انفجار پارامتر دارد.
+
+علائم: Googlebot روی `/filter?color=red&sort=price` می‌زند؛ مقاله‌های جدید روزها می‌مانند؛ Crawl Stats پر 4xx/5xx؛ لاگ نشان می‌دهد بات روی session ID حلقه می‌زند.
+
+## چرا مهم است
+
+URLی که Googlebot دوباره fetch نکند رتبه نمی‌گیرد. در سایت بزرگ، سوزاندن crawl روی duplicate معادل منتشر کردن در خلأ است.
+
+<CorrectExample title="درست">
+پارامترهایی که نباید crawl شوند بسته‌اند، canonical به URL تمیز، sitemap فقط 200 ایندکس‌پذیر:
+
+```txt
+# robots.txt
+User-agent: Googlebot
+Disallow: /*?*sort=
+Disallow: /*?*session=
+```
+
+```xml
+<url>
+  <loc>https://example.com/guides/espresso-machines</loc>
+  <lastmod>2026-09-01</lastmod>
+</url>
+```
+
+سرور سریع `200` می‌دهد. ترکیب facet یا `noindex,follow` است یا اگر landing نیست `301` به canonical انتخاب‌شده.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="Googlebot ظرفیت را روی URL بی‌نهایت می‌سوزاند؛ سند جدید و مهم منتظر می‌ماند.">
+هر sort و فیلتر و UTM، `200` ایندکس‌پذیر است، در فوتر HTML به‌عنوان «هر ۱۲۰۰۰ ترکیب» لینک شده، و در sitemap آمده. `Crawl-delay` روی ۱۲۰ (Googlebot `Crawl-delay` را نادیده می‌گیرد؛ فقط بات‌های دیگر یا خودت را می‌زنی).
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. XML sitemap نباید آرشیو تگی که `noindex` کردی یا URL پیوست را بیاورد.
+2. Search Appearance: اگر آرشیو نویسنده/تاریخ ایندکس وبلاگ را duplicate می‌کند، خاموش کن.
+
+**Rank Math**
+
+1. Sitemap Settings: نوع خالی یا noindex را کنار بگذار.
+2. Instant Indexing ظرفیت crawl را زیاد نمی‌کند. ping می‌زند؛ گوگل هنوز تصمیم می‌گیرد.
+
+**AIOSEO**
+
+1. Sitemaps: نوعی که landing نیست (اغلب `media`) را تیک نزن.
+2. HTML sitemap که ده‌ها هزار URL نازک را صفحه می‌کند روشن نکن.
+
+**جا خالی واقعی:** Rank Math و AIOSEO با یک toggle نوع آرشیو بیشتری به sitemap می‌گذارند. پیش‌فرض Yoast تنگ‌تر است. SEOPress اگر CPT را تیک بزنی همه را در sitemap می‌ریزد — همان ریسک.
+
+## پیاده‌سازی کد
+
+```ts
+// app/robots.ts — تلهٔ پارامتر را ببند، کل سایت را نه
+import type { MetadataRoute } from "next";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: "Googlebot",
+      allow: "/",
+      disallow: ["/*?*sort=", "/*?*sessionid="],
+    },
+    sitemap: "https://example.com/sitemap.xml",
+  };
+}
+```
+
+URL sitemap را از همان منبع حقیقت مسیرهای ایندکس‌پذیر بساز. لینک faceted خودت را در `sitemap.ts` scrape نکن. Pages Router: فایل استاتیک `public/robots.txt` خوب است؛ در git بماند تا آزمایش مارکتینگ `Disallow: /` نفرستد.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** `Crawl-delay` در robots.txt به‌عنوان کنترل Googlebot. Googlebot استفاده نمی‌کند.
+- **DEPRECATED:** «URL بیشتر در sitemap = crawl بیشتر.» URL آشغال برای تقاضا رقابت می‌کند.
+- وسواس بودجهٔ crawl روی سایت ۴۰ URL بروشور.
+- بستن CSS/JS برای «صرفه‌جویی crawl» تا رندر بشکند.
+- قاطی کردن بودجهٔ crawl با coverage ایندکس. coverage صلاحیت است؛ بودجه نرخ fetch.
+
+## نکته‌های سطح بالا / پروداکشن
+
+در **لاگ** اندازه بگیر، نه فولکلور: درخواست Googlebot در روز، URL یکتا، status، در مقابل sitemap و «Crawled — currently not indexed» در GSC. هاستی که به Googlebot `503` بدهد ظرفیتش کم می‌شود. قانون WAF CDN که Googlebot را challenge کند شبیه قطعی است.
+
+فید خبر و شغل freshness می‌خواهد (تقاضای بالا). آرشیو SKU منقضی `404`/`410` یا ادغام canonical می‌خواهد تا تقاضا بمیرد.
+
+چند هاست (www، CDN، زیردامنهٔ تصویر): ظرفیت per host است. همان HTML را بدون برنامه روی چند هاست تکه نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| GSC Crawl stats | زمان fetch پایدار؛ 5xx کم | جهش 5xx؛ هاست «unavailable» |
+| لاگ سرور (Googlebot) | ضربه روی URL canonical پول‌ساز | اکثریت روی پارامتر/facet |
+| هم‌پوشانی sitemap و لاگ | URLهای sitemap fetch می‌شوند | URL sitemap هیچ‌وقت نمی‌خورد |
+| URL Inspection روی URL جدید | در پنجرهٔ معقول crawl شده | هفته‌ها صف؛ facet ساعتی crawl می‌شود |

@@ -1,0 +1,104 @@
+---
+title: HTTPS و mixed content
+description: TLS به‌عنوان پیش‌فرض وب، HSTS، و mixed content که آیکون قفل را می‌شکند — و گاهی crawl را — در وردپرس و Next.js.
+module: 03-technical-seo
+topic_order: 8
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+Google Search **HTTPS** را حمل‌ونقل مورد انتظار می‌داند. URLهای HTTP باید روی هاست ترجیحی به HTTPS **301** شوند. mixed content سندی HTTPS است که هنوز تصویر، اسکریپت یا iframe HTTP بار می‌کند. مرورگر بلاک یا اخطار می‌دهد؛ Googlebot ممکن است همان دارایی را که در مرورگر قدیمی دیدی نگیرد.
+
+HSTS (`Strict-Transport-Security`) به مرورگر می‌گوید دفعهٔ بعد HTTP را رد کند. `preload` تعهد جدا و سخت‌برگشت است — فقط وقتی مطمئنی هیچ زیردامنه‌ای که باید HTTP بماند روی فهرست preload نیست.
+
+گواهی: زنجیرهٔ معتبر، منقضی‌نشده، مطابق هاست (www در مقابل apex).
+
+## چرا مهم است
+
+duplicate HTTP اگر هنوز `200` باشد سیگنال را دوپاره می‌کند. اسکریپت mixed می‌تواند رندر را بشکند. تصویر mixed ممکن است Googlebot را بدون دارایی LCP بگذارد. کاربر از اخطار interstitial برمی‌گردد.
+
+<CorrectExample title="درست">
+```http
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/guides
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+```
+
+هر `src`، `href` و canonical در HTML، `https://` است. URL `home` در CMS، HTTPS است. origin CDN به TLS حرف می‌زند.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="کاربر و بات دو سایت می‌بینند؛ اسکریپت در Chrome مدرن می‌میرد؛ canonicalها اختلاف دارند.">
+سایت «روی HTTPS است» ولی `siteurl` در `wp_options` برابر `http://` است، canonicalها HTTP چاپ می‌کنند، و هیرو `http://cdn.old-host.com/hero.jpg` است. HTTP هنوز صفحهٔ کامل را `200` می‌دهد.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Search Appearance / معرفی سایت: URL توییتر/OG از `home` می‌آید. اول WordPress Address و Site Address را درست کن.
+2. اگر URL هسته HTTP باشد canonical یواست HTTP می‌ماند.
+
+**Rank Math**
+
+1. General Settings ← links. canonicalسازی www/https را فقط بعد از کار کردن DNS و گواهی روشن کن.
+2. Rank Math جای Really Simple SSL / ریدایرکت سرور را نمی‌گیرد؛ فقط تگ چاپ می‌کند.
+
+**AIOSEO**
+
+1. Webmaster Tools / RSS: همان وابستگی به URL هسته.
+2. اسکنر mixed content در پلاگین امنیتی همپوشانی دارد — یک درست‌کننده بردار.
+
+**جا خالی واقعی:** هیچ پلاگین SEO، TLS را terminate نمی‌کند. SEOPress اعلان «HTTP به HTTPS» دارد؛ هنوز کار سرور است. Really Simple SSL پلاگین رتبه نیست؛ URL را بازنویسی می‌کند.
+
+## پیاده‌سازی کد
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: { remotePatterns: [{ protocol: "https", hostname: "cdn.example.com" }] },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "example.com" }],
+        destination: "https://www.example.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
+};
+
+export default nextConfig;
+```
+
+**لبه/CDN** را برای HTTP→HTTPS ترجیح بده، نه فقط سطح اپ. `metadataBase` در App Router باید `https://` باشد. Pages Router: ریدایرکت `next.config` + `assetPrefix` HTTPS.
+
+هرگز `next/image` منبع `http://` روی صفحهٔ HTTPS نده.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «HTTPS جهش بزرگ رتبه است.» مورد انتظار است؛ سایت HTTP مانده استثناست.
+- **DEPRECATED:** نادیده گرفتن mixed content چون «Googlebot Chrome نیست.» رندر هنوز به دارایی نیاز دارد.
+- preload HSTS روز اول مهاجرت.
+- گواهی wildcard بدون `www` یا برعکس.
+- canonical HTTPS ولی sitemap HTTP.
+
+## نکته‌های سطح بالا / پروداکشن
+
+زنجیره: DNS ← گواهی (ACM/Let’s Encrypt) ← 301 از HTTP به HTTPS ← 301 apex↔www ← HSTS بعد از یک هفته گزارش تمیز ← preload اختیاری.
+
+ویجت شخص ثالث روی HTTP قفل را می‌کشد. tag manager که پیکسل HTTP تزریق می‌کند: درست کن یا دور بریز.
+
+لینک داخلی پست قدیمی: بازنویسی گروهی در DB، نه فقط فیلتر پلاگین «fix mixed content» که هر درخواست HTML را CPU-tax می‌کند.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| `curl -I http://www.example.com/` | `301` به HTTPS | HTML `200` روی HTTP |
+| کنسول مرورگر | mixed content نیست | اسکریپت/تصویر HTTP بلاک‌شده |
+| URL Inspection در GSC | URL ترجیحی HTTPS | duplicate HTTP ایندکس‌شده |
+| گواهی | معتبر، SAN درست | نام نمی‌خواند / منقضی |

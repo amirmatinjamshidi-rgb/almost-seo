@@ -1,0 +1,134 @@
+---
+title: Link building fundamentals
+description: What a link is as a ranking signal, what Google’s spam policies actually forbid, and why volume without context is a trap.
+module: 04-off-page-seo
+topic_order: 1
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+A hyperlink is a citation: host A tells crawlers and users that URL B is worth visiting. Google has treated links as a vote-like signal for decades. It has **never** published a public PageRank score for your URLs, and it has spent years down-weighting easy-to-game links.
+
+Useful mental model:
+
+- **Editorial links** — a human chose to cite you in body copy because the destination helps their reader.
+- **Qualified links** — paid, user-generated, or untrusted placements marked with `rel="sponsored"`, `nofollow`, or `ugc` (next topic).
+- **Sitewide / template links** — footers, blogrolls, author bios on twenty properties you control. Cheap to mint, easy for systems to discount or treat as a scheme.
+- **Internal links** are not off-page. They are architecture (Module 03). Do not mix the two in a report.
+
+Google’s **spam policies** (link schemes, expired-domain abuse, site reputation abuse, scaled content that exists to place links) are the legal-feeling line. Practitioner blogs that still sell “DA 50 footprints” are not Search Central.
+
+You cannot force Google to “count” a link. You can make links that a reviewer would call honest, keep the destination crawlable (`200`, indexable, real content), and stop buying junk.
+
+## Why it matters
+
+Off-page work is slow and expensive. A month of marketplace blog posts can look like growth in a third-party “backlink” chart and still be a future manual action. A few citations from real publications on the URL you actually want ranked often outlast thousands of directory dumps.
+
+<CorrectExample>
+A journalist cites primary data. The link is in the article body, points at the research URL, and the research URL is indexable:
+
+```html
+<p>
+  Measurements from
+  <a href="https://www.example.com/research/crawl-log-study">
+    Example Labs’ crawl-log study
+  </a>
+  show Googlebot spending crawl on filter URLs instead of canonical guides.
+</p>
+```
+
+The destination has unique methodology, a date, and an author. You can produce the email thread if legal asks.
+</CorrectExample>
+
+<IncorrectExample why="Marketplace posts with identical footprints are a link scheme. The chart goes up; the risk sits on the domain.">
+```html
+<!-- 40 “guest posts” this week, all -->
+<a href="https://www.example.com/buy-espresso" rel="dofollow">
+  best cheap espresso machine
+</a>
+```
+
+Same three-paragraph bio, same outbound pattern, paid per post, no `sponsored`.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Yoast does not acquire links. It prints canonicals and robots so the URL you *want* cited is the one Googlebot fetches.
+2. Yoast → Search Appearance: keep the money URL indexable. A `noindex` research page cannot be a sensible link target.
+3. Premium “internal linking” suggestions are on-page. Do not report them as backlinks.
+
+**Rank Math**
+
+1. Rank Math’s “SEO score” and link counters inside the editor are not a backlink profile.
+2. Instant Indexing after a PR hit does not create the link. It only pings a URL that already exists.
+3. Do not use Rank Math redirections to 301 twenty aged domains onto one commercial URL (expired-domain abuse — see link schemes).
+
+**AIOSEO**
+
+1. Same: plugin hygiene ≠ off-page program.
+2. AIOSEO redirect manager: migrations yes; rented domain funnel no.
+
+**Feature gap:** None of Yoast / Rank Math / AIOSEO / SEOPress buy, negotiate, or qualify inbound links. SEOPress has no secret “link juice” module. If a plugin dashboard shows “backlinks,” treat it as a third-party API estimate, not GSC.
+
+## Code implementation
+
+Off-page does not live in `app/`. What the app *must* do is make the cited URL a real document:
+
+```tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Crawl-log study (2026)",
+  robots: { index: true, follow: true },
+  alternates: {
+    canonical: "https://www.example.com/research/crawl-log-study",
+  },
+};
+
+export default async function StudyPage() {
+  const study = await getStudy("crawl-log-study");
+  return (
+    <article>
+      <h1>{study.title}</h1>
+      <p>Published {study.date}</p>
+      {study.body}
+    </article>
+  );
+}
+```
+
+App Router: research and money pages as Server Components with stable canonicals. Pages Router: `getStaticProps` / `getServerSideProps` — same rule. A CSR empty shell is a broken citation target (Module 03, JavaScript rendering).
+
+Do not mint `/go/partner-12` hop URLs unless they `301`/`302` in one hop and you intended the redirect. Hidden hop chains look like cloaking-adjacent junk.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** Toolbar PageRank as something you optimize weekly.
+- **DEPRECATED:** “More links always win” regardless of source.
+- **DEPRECATED:** Exact-match anchor as a ranking cheat you can scale.
+- Counting `nofollow` / `sponsored` links as if they were the same as editorial citations in a KPI deck.
+- Pointing every new link at the homepage because “homepage PageRank.”
+- Treating Moz DA / Ahrefs DR as Google’s score.
+
+## Senior / production notes
+
+Define **linkable assets** before outreach: data, tools, documentation, original photography, a policy page people already cite. Then pick the URL that should receive the citation (often a study or hub, not `/buy`).
+
+Measure in **GSC** (links report, top linking sites) and in referrals in analytics — not only in a crawler’s index of the open web. Those indexes miss a lot and include a lot of junk.
+
+If the business wants “50 links this month,” rewrite the brief to “N placements on publications our buyers already read,” with `sponsored` when money changed hands.
+
+New sites: expect slow. Fake velocity is how schemes start.
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| GSC → Links | Citing hosts you recognize | Sudden burst of unknown PBNs |
+| `curl -I` destination | `200`, indexable, self-canonical | `noindex`, 404, redirect chain |
+| Placement | Body citation, relevant article | Footer / sidebar sitewide |
+| Commercial vs research | Money changed hands → qualified `rel` | Paid post, raw `follow` |

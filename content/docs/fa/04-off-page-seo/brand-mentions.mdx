@@ -1,0 +1,129 @@
+---
+title: منشن برند
+description: منشن با لینک و بدون لینک به‌عنوان شواهد entity — چه را می‌شود خواست، چه را نمی‌شود ساخت، و sameAs باید چه شکلی باشد.
+module: 04-off-page-seo
+topic_order: 5
+lang: fa
+last_reviewed: "2026-09"
+---
+
+## مفهوم
+
+**منشن برند** یعنی اسم تو (یا محصول) روی هاست دیگر ظاهر شود، با `href` یا بدون آن. منشن لینک‌دار citation است. منشن بدون لینک هنوز به آدم — و تا حدی به سیستم زبان — کمک می‌کند entity را به موضوع بچسباند. گوگل «نمرهٔ mention» منتشر نمی‌کند.
+
+کار صادقانه:
+
+- **اسم canonical** را یکدست نگه دار (اسم حقوقی، محصول، واریانت زبان).
+- URL **About / Org** قابل crawl بگذار که سایت‌های دیگر بتوانند ارجاع بدهند.
+- از ناشری که از قبل اسم را نوشته بخواه URL اضافه کند (outreach منشن بدون لینک).
+- پروفایل رسمی را در `sameAs` (Organization JSON-LD) بگذار تا ماشین entity را وصل کند.
+
+کاری که نمی‌شود: پاشیدن برند در اسپم کامنت، خرید «پکیج mention»، یا انتظار که پست فروم بدون لینک جای لینک editorial را بگیرد.
+
+پنل دانش و فهم entity **دکمه در Yoast نیستند.** از یکدستی در وب به‌علاوهٔ منبع خود گوگل درمی‌آیند. فروشنده‌ای که «پنل را تضمین می‌کند» استخدام نکن.
+
+## چرا مهم است
+
+اگر تنها وقتی وب اسمت را می‌گوید پست PBN باشد، scheme ساختی نه برند. اگر خبرنگار اسم را بدون لینک استفاده کند، برای خواننده دیده‌ای و هنوز کم‌ارجاعی — شکاف outreach است، نه باگ تکنیکال.
+
+<CorrectExample title="درست">
+صفحهٔ سازمان به‌علاوهٔ `sameAs` صادق (پروفایلی که واقعاً کنترل می‌کنی):
+
+```html
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Example Labs",
+  "url": "https://www.example.com/",
+  "sameAs": [
+    "https://www.linkedin.com/company/example-labs",
+    "https://github.com/example-labs"
+  ]
+}
+</script>
+```
+
+مجله در یک جمع‌بندی «Example Labs» می‌نویسد. یک‌بار ایمیل می‌زنی: «اگر مفید بود، روش اینجاست https://www.example.com/research/crawl-log-study.» ممکن است href اضافه کنند. ممکن است نه.
+</CorrectExample>
+
+<IncorrectExample title="غلط" why="ارجاع جعلی و فهرست «also known as» انباشته entity نمی‌سازد. شبیه اسپم است.">
+```html
+<p>
+  Example Labs Example Labs Example Labs best SEO company Tehran
+  <a href="https://www.example.com">Example Labs</a>
+</p>
+```
+
+به‌علاوهٔ `sameAs` به صفحهٔ ویکی‌پدیایی که کنترل نمی‌کنی و پروفایل سوشالی که 404 است.
+</IncorrectExample>
+
+## پیاده‌سازی وردپرس
+
+**Yoast SEO**
+
+1. Yoast ← Search Appearance ← Knowledge Graph / Organization. اسم حقوقی، لوگو، همان URL سوشالی که در `sameAs` می‌گذاری.
+2. `Person` غلط در مقابل `Organization` برای سایت شرکتی entity را دوپاره می‌کند. یکی بردار و بچسب.
+
+**Rank Math**
+
+1. Rank Math ← Titles & Meta ← Local SEO / Knowledge Graph. همان فیلدها. ده «alias» اضافه که عبارت کلمه است نگذار.
+2. metadata سوشال باید با URL پروفایل زنده بخواند.
+
+**AIOSEO**
+
+1. AIOSEO ← Search Appearance ← Knowledge Graph. نسبت لوگو به‌کنار، **فهرست URL** باید 200 باشد.
+2. هر شبکهٔ سوشال را با placeholder `#` روشن نکن.
+
+**جا خالی واقعی:** هر چهار پلاگین Organization JSON-LD می‌دهند. هیچ‌کدام منشن ویکی‌پدیا یا خبر نمی‌سازند. Knowledge Graph در SEOPress همان کلاس فرم است. `sameAs` خالی از 404 بهتر است.
+
+## پیاده‌سازی کد
+
+```ts
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Example Labs",
+  alternates: { canonical: "https://www.example.com/" },
+};
+
+export const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Example Labs",
+  url: "https://www.example.com/",
+  sameAs: [
+    "https://www.linkedin.com/company/example-labs",
+    "https://github.com/example-labs",
+  ],
+};
+```
+
+App Router: با همان کامپوننت `JsonLd` تزریق کن (همین سایت می‌کند). Pages Router: تگ script در `next/head` با `application/ld+json`. `sameAs` را در یک ماژول نگه دار تا آیکون فوتر و JSON-LD از هم جدا نشوند.
+
+برای «تقویت برند» markup نقد جعلی نساز. آن هم سیاست اسپم جداست.
+
+## اشتباه‌های رایج و افسانه‌های منسوخ
+
+- **DEPRECATED:** «منشن بدون لینک PageRank پاس می‌دهد.» اعتبار لینک پاس نمی‌دهد. ممکن است هنوز به آدم و entity association کمک کند.
+- **DEPRECATED:** خرید ارجاع ویکی‌پدیا به‌عنوان سرویس SEO (ریسک ToS + سیاست).
+- چپاندن NAP در هر گست‌پست انگار سئوی لوکال است (لوکال ماژول ۰۵ است).
+- عوض کردن اسم برند عمومی هر فصل و تعجب که entity دوپاره شد.
+- شمردن سیم خبری press-release به‌عنوان منشن مستقل وقتی duplicate سندیکایی‌اند.
+
+## نکته‌های سطح بالا / پروداکشن
+
+منشن را دو سطل کن: **لینک‌دار** (GSC / کراولر) و **بدون لینک** (مانیتورینگ رسانه). فقط اولی KPI لینک‌بیلدینگ است. دومی PR است.
+
+علامت تجاری: take-down حقوقی دامنهٔ کلاه که اسمت را استفاده می‌کند حفاظت برند است، نه «negative SEO.» هاست کلاه را disavow نکن و گزارش abuse را فراموش کنی.
+
+چندزبانه: `/en/` و `/fa/` می‌توانند یک Organization `name` با `alternateName` شریک شوند. دو شرکت اختراع نکن.
+
+## چطور مطمئن شوی
+
+| ابزار | قبول | رد |
+| --- | --- | --- |
+| URLهای `sameAs` | همه `200`، مال تو | 404، رقیب، آرزوی ویکی‌پدیا |
+| GSC Links در مقابل فهرست PR | hitهای بزرگ ظاهر می‌شوند | فقط هاست PBN |
+| Org JSON-LD | یک type، یک `url` canonical | Person + Organization در جنگ |
+| outreach بدون لینک | یک درخواست مودب | بلست «لینک بگذار وگرنه» |

@@ -1,0 +1,133 @@
+---
+title: Link attributes
+description: "nofollow, sponsored, ugc — hints not switches — and when paid or user-generated links must be qualified."
+module: 04-off-page-seo
+topic_order: 3
+lang: en
+last_reviewed: "2026-09"
+---
+
+## Concept
+
+`rel` on an anchor tells crawlers **how to treat that link**. Google’s current tokens for this job:
+
+- **`nofollow`** — catch-all “do not treat as an endorsement.” Google may still use the URL for discovery.
+- **`sponsored`** — paid placements, ads, affiliate: money (or equivalent value) influenced the link.
+- **`ugc`** — user-generated content: comments, forum posts, guestbooks.
+
+You may combine tokens (`rel="nofollow sponsored"`). Google treats these as **hints**, not a hard robots-style directive. That does **not** mean you can skip them on paid links. Spam policies still require qualifying advertising links.
+
+`rel="follow"` is not a real token. Browsers and Google default to a normal link. People write it in decks anyway.
+
+Page-level `<meta name="robots" content="nofollow">` is a different hammer (Module 03). Do not nofollow an entire article to “save PageRank.”
+
+Internal links: almost never `nofollow`. You want discovery.
+
+## Why it matters
+
+Unqualified paid links are a link scheme even if the article is pretty. Over-nofollowing every outbound URL on your own site does not “sculpt PageRank”; it just lies about which citations you stand behind.
+
+<CorrectExample>
+Affiliate and ad units declare the relationship:
+
+```html
+<a href="https://partner.example/espresso" rel="sponsored">
+  Buy the machine we tested
+</a>
+
+<a href="https://ads.example/click/123" rel="nofollow sponsored">
+  Advertiser
+</a>
+```
+
+Comments:
+
+```html
+<a href="https://random-user.example" rel="ugc nofollow">user site</a>
+```
+</CorrectExample>
+
+<IncorrectExample why="Paid guest post with a commercial exact-match anchor and no qualifying rel is a spam-policy problem, not a 'gray' tactic.">
+```html
+<p>
+  For the
+  <a href="https://www.example.com/best-vpn-deal">best VPN deal</a>
+  this week, see our partner.
+</p>
+```
+
+Invoice on file. `rel` empty.
+</IncorrectExample>
+
+## WordPress implementation
+
+**Yoast SEO**
+
+1. Core WP / Gutenberg link UI: add `sponsored` or `nofollow` on outbound paid links. Yoast does not auto-qualify affiliate URLs.
+2. Do not enable a blanket “nofollow all external links” mentality via extra plugins. Editorial citations you *mean* should stay normal links.
+3. Comment `ugc`: WP often emits `nofollow` on comment author URLs. Keep it.
+
+**Rank Math**
+
+1. Rank Math → General Settings → Links: “Nofollow All External Links” is a blunt switch. It will nofollow the journalist-facing citation *you* wanted to give. Leave it off; mark exceptions per link.
+2. Rank Math can add `nofollow` in the editor. Use it for ads, not for every href.
+
+**AIOSEO**
+
+1. Similar global nofollow-external option in some versions — same footgun.
+2. Affiliate / ad blocks from other plugins must still emit `sponsored`. AIOSEO will not notice a custom `echo $affiliate`.
+
+**Feature gap:** Rank Math’s global nofollow is the easy way to wreck honest outbound citations. Yoast is quieter. SEOPress can add `sponsored`/`ugc` in the link UI; still per-link work. None of them scan your theme footer for unpaid-looking ad links.
+
+## Code implementation
+
+```tsx
+import Link from "next/link";
+
+export function AffiliateCta({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} rel="sponsored" target="_blank">
+      {label}
+    </Link>
+  );
+}
+
+export function CommentAuthorUrl({ href, name }: { href: string; name: string }) {
+  return (
+    <a href={href} rel="ugc nofollow">
+      {name}
+    </a>
+  );
+}
+```
+
+App Router: `next/link` passes `rel` through. For purely external hops, `<a>` is fine. Pages Router: same `rel` on `<a>` or `Link`.
+
+Do not compute `rel` in `useEffect` after paint. The first HTML must already qualify the paid URL (Googlebot and users).
+
+Markdown in this encyclopedia: only add `rel` when the destination is paid or UGC. Docs citations stay normal links.
+
+## Common mistakes and outdated myths
+
+- **DEPRECATED:** PageRank sculpting by nofollowing all outbound links.
+- **DEPRECATED:** `rel="follow"` as a ranking booster.
+- **DEPRECATED:** “Google ignores nofollow completely so skip sponsored.” Hints still matter for policy.
+- Qualifying a link in visible copy (“ad”) but leaving raw `href` for Googlebot — inconsistent, still a risk.
+- `nofollow` on internal pagination to “concentrate juice.”
+
+## Senior / production notes
+
+CMS model: `linkKind: editorial | sponsored | ugc` on modules that render hrefs, then map to `rel`. Designers will paste affiliates into rich text — lint for known affiliate hosts without `sponsored`.
+
+Programmatic ads (`<ins class="adsbygoogle">`) are not `<a rel>` in your HTML; the ad network handles clicks. Your **editorial** paid links still need `rel`.
+
+If you inherit a site with years of unpaid guest posts, adding `sponsored` going forward does not rewrite history. Do not mass-nofollow every inbound link you do not control (that is disavow, next topic).
+
+## How to verify
+
+| Check | Pass | Fail |
+| --- | --- | --- |
+| View-source paid CTA | `rel` includes `sponsored` and/or `nofollow` | Bare `<a href>` |
+| Comments | `ugc` and/or `nofollow` | Raw follow on user URLs |
+| Global plugin switch | Off, unless a documented exception | Entire site nofollows outbound |
+| Affiliate template | First HTML has `rel` | `rel` added in client JS |
