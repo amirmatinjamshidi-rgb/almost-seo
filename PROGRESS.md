@@ -4,7 +4,9 @@
   - Next.js 16.3.5 + Fumadocs core/ui 16.15.9 + fumadocs-mdx 15.4.0 + pnpm
   - `pnpm build` green: `/en`, `/fa`, `/en/docs`, `/fa/docs`
   - `/` redirects 307 to `/en/`; `fa` uses `dir="rtl"`
-- [ ] Phase 1 — Architecture
+- [x] Phase 1 — Architecture (2026-09-12)
+  - Frontmatter schema, MDX examples, JsonLd, sitemap/robots, OG, hreflang, locale-split search
+  - `pnpm build` green; `/sitemap.xml` and `/robots.txt` live
 - [ ] Module 00 — Foundations (0/4 topics)
 - [ ] Module 01 — Keyword Research (0/6 topics)
 - [ ] Module 02 — On-page SEO (0/13 topics)
